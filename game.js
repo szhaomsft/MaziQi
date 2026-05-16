@@ -2297,7 +2297,7 @@ function scheduleRealtimeQueueFallback() {
             matchSearchTimer = null;
             showMatchFound(pickOnlineOpponent());
         }, 650 + Math.random() * 850);
-    }, 18000);
+    }, 12000);
 }
 
 function sendRealtimeMove(piece, moveTarget) {
