@@ -54,6 +54,7 @@ function publicRoom(room) {
     roomId: room.id,
     currentTurn: room.currentTurn,
     winner: room.winner,
+    moveCount: room.moveCount || 0,
     board: room.board,
     pieces: room.pieces,
     players: room.players.map(player => ({
@@ -84,6 +85,7 @@ function createRoom(ownerWs, requestedCode = '') {
     players: [{ ws: ownerWs, id: ownerWs.playerId, side: 'red', ...ownerWs.profile }],
     currentTurn: 'red',
     winner: null,
+    moveCount: 0,
     createdAt: Date.now(),
     lastMoveAt: Date.now(),
   };
@@ -196,6 +198,7 @@ function handleMessage(ws, data) {
       if (player.side !== room.currentTurn || piece?.side !== player.side) throw new Error('NOT_YOUR_TURN');
       if (!isHorseMoveLegal(room, piece, Number(msg.toCol), Number(msg.toRow))) throw new Error('ILLEGAL_MOVE');
       applyMove(room, piece, Number(msg.toCol), Number(msg.toRow));
+      room.moveCount += 1;
       room.winner = checkWinner(room);
       if (!room.winner) room.currentTurn = room.currentTurn === 'red' ? 'blue' : 'red';
       broadcast(room, 'game.state', publicRoom(room));

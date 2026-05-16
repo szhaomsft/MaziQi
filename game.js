@@ -39,6 +39,12 @@ let opponentRematchTimer = null;
 let chatTimers = [];
 let chatMessages = [];
 let recentOpponentNames = [];
+let realtimeClient = {
+    ws: null,
+    playerId: '',
+    side: '',
+    roomId: '',
+};
 const PLAYER_PROFILE_KEY = 'maziqi-player-profile-v1';
 const OPPONENT_PROFILE_KEY = 'maziqi-opponent-profiles-v1';
 const MATCH_HISTORY_KEY = 'maziqi-match-history-v1';
@@ -1999,6 +2005,226 @@ function createMatchSession(opponent) {
     };
 }
 
+function isRealtimeMatch() {
+    return onlineMatch.active && onlineMatch.realtime && realtimeClient.ws;
+}
+
+function closeRealtimeConnection() {
+    if (realtimeClient.ws) {
+        realtimeClient.ws.onclose = null;
+        realtimeClient.ws.close();
+    }
+    realtimeClient = { ws: null, playerId: '', side: '', roomId: '' };
+}
+
+function serverToLocalCoord(col, row) {
+    if (realtimeClient.side === 'blue') return { col: COLS - 1 - col, row: ROWS - 1 - row };
+    return { col, row };
+}
+
+function localToServerCoord(col, row) {
+    if (realtimeClient.side === 'blue') return { col: COLS - 1 - col, row: ROWS - 1 - row };
+    return { col, row };
+}
+
+function serverSideToLocal(side) {
+    return side === realtimeClient.side ? 'player' : 'ai';
+}
+
+function serverTurnToLocal(turn) {
+    return turn === realtimeClient.side ? 'player' : 'ai';
+}
+
+function realtimeOpponentFromState(state) {
+    const opponent = state.players.find(player => player.id !== realtimeClient.playerId) || {};
+    return {
+        name: opponent.name || '好友玩家',
+        avatar: opponent.avatar || '♞',
+        title: state.roomId?.startsWith('MZQ-') ? '好友房间' : '在线玩家',
+        accent: '#8ef3c5',
+        rating: opponent.rating || 1200,
+        wins: 0,
+        losses: 0,
+        bestRating: opponent.rating || 1200,
+        difficulty: 'medium',
+        style: '真人对局',
+        styleKey: 'balanced',
+        personality: 'balanced',
+        chatRate: 0,
+        rematchRate: 0,
+    };
+}
+
+function applyRealtimeState(state) {
+    const me = state.players.find(player => player.id === realtimeClient.playerId);
+    if (!me) return;
+    realtimeClient.side = me.side;
+    realtimeClient.roomId = state.roomId;
+
+    const opponent = realtimeOpponentFromState(state);
+    onlineMatch = {
+        ...createMatchSession(opponent),
+        roomId: state.roomId,
+        active: true,
+        searching: false,
+        opponent,
+        realtime: true,
+        privateRoom: true,
+        profileApplied: true,
+        firstTurn: serverTurnToLocal(state.currentTurn),
+        latency: 0,
+    };
+
+    gameState.board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    gameState.pieces = [];
+    state.pieces.forEach(serverPiece => {
+        const position = serverToLocalCoord(serverPiece.col, serverPiece.row);
+        const piece = {
+            id: serverPiece.id,
+            serverId: serverPiece.id,
+            side: serverSideToLocal(serverPiece.side),
+            col: position.col,
+            row: position.row,
+            alive: !!serverPiece.alive,
+        };
+        gameState.pieces.push(piece);
+        if (piece.alive) gameState.board[piece.row][piece.col] = piece;
+    });
+    gameState.currentTurn = state.winner ? null : serverTurnToLocal(state.currentTurn);
+    gameState.selectedPiece = null;
+    gameState.validMoves = [];
+    gameState.gameOver = !!state.winner;
+    gameState.winner = state.winner ? serverSideToLocal(state.winner) : null;
+    gameState.forfeit = false;
+    gameState.moveCount = Number(state.moveCount) || 0;
+    gameState.inputLocked = false;
+    animation.active = false;
+
+    updateOnlinePanel();
+    updateDifficultyButtons();
+    updateModeSpecificUI();
+    updateTurnIndicator();
+    render();
+    if (gameState.gameOver) {
+        showGameOver(gameState.winner === 'player' ? '你赢了！' : `${opponent.name} 赢了！`);
+    }
+}
+
+function connectRealtimeRoom(roomCode) {
+    const serverUrl = saveRealtimeServerUrl();
+    if (!serverUrl) return false;
+    closeRealtimeConnection();
+    document.getElementById('room-code-status').textContent = `正在连接 ${serverUrl}...`;
+    const ws = new WebSocket(serverUrl);
+    realtimeClient = { ws, playerId: '', side: '', roomId: roomCode };
+
+    ws.onopen = () => {
+        ws.send(JSON.stringify({
+            type: 'hello',
+            profile: {
+                name: playerProfile.name,
+                rating: playerProfile.rating,
+                avatar: playerProfile.avatar,
+            },
+        }));
+    };
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'hello' || message.type === 'hello.ok') {
+            realtimeClient.playerId = message.playerId || realtimeClient.playerId;
+            if (message.type === 'hello.ok') ws.send(JSON.stringify({ type: 'room.join', roomId: roomCode }));
+        } else if (message.type === 'room.created' || message.type === 'room.joined') {
+            document.getElementById('matchmaking-title').textContent = '等待好友加入';
+            document.getElementById('matchmaking-subtitle').textContent = `房间 ${roomCode} 已连接，等待另一位玩家...`;
+            document.getElementById('matched-ready').textContent = '等待中';
+        } else if (message.type === 'game.start' || message.type === 'game.state') {
+            showGameScreen();
+            applyRealtimeState(message);
+        } else if (message.type === 'chat.message') {
+            if (message.from !== realtimeClient.playerId) addChatMessage('opponent', message.text);
+        } else if (message.type === 'error') {
+            if (message.message === 'ROOM_NOT_FOUND') {
+                ws.send(JSON.stringify({ type: 'room.create', roomId: roomCode }));
+            } else {
+                document.getElementById('matchmaking-subtitle').textContent = `服务器错误：${message.message}`;
+            }
+        }
+    };
+    ws.onerror = () => {
+        document.getElementById('matchmaking-subtitle').textContent = '实时服务器连接失败，请检查地址或稍后再试。';
+    };
+    ws.onclose = () => {
+        if (isRealtimeMatch() && !gameState.gameOver) {
+            onlineMatch.opponentLeft = true;
+            setOpponentStatus('连接断开');
+        }
+    };
+    return true;
+}
+
+function connectRealtimeQueue() {
+    const serverUrl = localStorage.getItem(REALTIME_SERVER_KEY) || '';
+    if (!serverUrl) return false;
+    closeRealtimeConnection();
+    document.getElementById('matchmaking-subtitle').textContent = `正在连接实时服务器 ${serverUrl}...`;
+    const ws = new WebSocket(serverUrl);
+    realtimeClient = { ws, playerId: '', side: '', roomId: '' };
+
+    ws.onopen = () => {
+        ws.send(JSON.stringify({
+            type: 'hello',
+            profile: {
+                name: playerProfile.name,
+                rating: playerProfile.rating,
+                avatar: playerProfile.avatar,
+            },
+        }));
+    };
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'hello' || message.type === 'hello.ok') {
+            realtimeClient.playerId = message.playerId || realtimeClient.playerId;
+            if (message.type === 'hello.ok') ws.send(JSON.stringify({ type: 'queue.join' }));
+        } else if (message.type === 'queue.waiting') {
+            document.getElementById('matchmaking-title').textContent = '等待真实玩家';
+            document.getElementById('matchmaking-subtitle').textContent = '已进入实时匹配队列，等待另一位玩家加入。';
+        } else if (message.type === 'game.start' || message.type === 'game.state') {
+            showGameScreen();
+            applyRealtimeState(message);
+        } else if (message.type === 'chat.message') {
+            if (message.from !== realtimeClient.playerId) addChatMessage('opponent', message.text);
+        } else if (message.type === 'error') {
+            document.getElementById('matchmaking-subtitle').textContent = `服务器错误：${message.message}`;
+        }
+    };
+    ws.onerror = () => {
+        document.getElementById('matchmaking-subtitle').textContent = '实时服务器连接失败，已停止匹配。';
+    };
+    ws.onclose = () => {
+        if (isRealtimeMatch() && !gameState.gameOver) {
+            onlineMatch.opponentLeft = true;
+            setOpponentStatus('连接断开');
+        }
+    };
+    return true;
+}
+
+function sendRealtimeMove(piece, moveTarget) {
+    if (!isRealtimeMatch() || realtimeClient.ws.readyState !== WebSocket.OPEN) return false;
+    const to = localToServerCoord(moveTarget.col, moveTarget.row);
+    gameState.selectedPiece = null;
+    gameState.validMoves = [];
+    gameState.inputLocked = true;
+    render();
+    realtimeClient.ws.send(JSON.stringify({
+        type: 'game.move',
+        pieceId: piece.serverId ?? piece.id,
+        toCol: to.col,
+        toRow: to.row,
+    }));
+    return true;
+}
+
 function nextRoomId() {
     return `MZQ-${Math.floor(1000 + Math.random() * 9000)}`;
 }
@@ -2237,6 +2463,7 @@ function addChatMessage(from, text) {
 }
 
 function scheduleOpponentChat(group, chance = 1, minDelay = 650, maxDelay = 1800, allowAfterGameOver = false) {
+    if (onlineMatch.realtime) return;
     if (!onlineMatch.active || !onlineMatch.opponent || onlineMatch.opponentLeft || Math.random() > personalityChatChance(chance, group)) return;
     const typingDelay = Math.min(minDelay - 180, Math.max(240, minDelay * 0.45 + Math.random() * 360));
     const typingTimer = setTimeout(() => {
@@ -2256,6 +2483,7 @@ function scheduleOpponentChat(group, chance = 1, minDelay = 650, maxDelay = 1800
 }
 
 function scheduleAmbientOpponentChat(initial = false) {
+    if (onlineMatch.realtime) return;
     if (!onlineMatch.active || !onlineMatch.opponent || gameState.gameOver) return;
     const opponent = opponentPersonality();
     const quietMultiplier = opponent.personality === 'quiet' || opponent.personality === 'focused' ? 1.35 : 1;
@@ -2277,6 +2505,10 @@ function sendQuickChat(text) {
     if (!onlineMatch.active || onlineMatch.searching || gameState.gameOver) return;
     addChatMessage('me', text);
     advanceDailyMission('send-chat');
+    if (isRealtimeMatch() && realtimeClient.ws.readyState === WebSocket.OPEN) {
+        realtimeClient.ws.send(JSON.stringify({ type: 'chat.send', text }));
+        return;
+    }
     scheduleOpponentChat(chooseReplyChatGroup(text), 0.38, 700, 1900);
 }
 
@@ -2396,6 +2628,7 @@ function cancelMatchmaking(returnToMenu = true) {
     if (matchCountdownTimer) clearInterval(matchCountdownTimer);
     if (rematchResponseTimer) clearTimeout(rematchResponseTimer);
     clearChatTimers();
+    if (onlineMatch.searching || onlineMatch.realtime) closeRealtimeConnection();
     matchSearchTimer = null;
     matchCountdownTimer = null;
     rematchResponseTimer = null;
@@ -2462,6 +2695,7 @@ function startOnlineMatch() {
     updateOnlinePanel();
     updateDifficultyButtons();
     updateModeSpecificUI();
+    if (connectRealtimeQueue()) return;
 
     const poolPressure = Math.max(0, 8 - availableOpponents().length);
     matchSearchTimer = setTimeout(() => {
@@ -2521,6 +2755,7 @@ function startRoomChallenge() {
         updateOnlinePanel();
         updateDifficultyButtons();
         updateModeSpecificUI();
+        if (connectRealtimeRoom(roomCode)) return;
         matchSearchTimer = setTimeout(() => {
             matchSearchTimer = null;
             showMatchFound(pickRoomOpponent(roomCode), roomCode);
@@ -2635,6 +2870,7 @@ function handleCellClick(col, row) {
 
         if (moveTarget) {
             const piece = gameState.selectedPiece;
+            if (sendRealtimeMove(piece, moveTarget)) return;
             const fromCol = piece.col;
             const fromRow = piece.row;
             const capturedPiece = moveTarget.isCapture ? gameState.board[moveTarget.row][moveTarget.col] : null;
@@ -3043,6 +3279,11 @@ function updateOnlineResultDetails() {
         details.textContent = '';
         return;
     }
+    if (onlineMatch.realtime) {
+        const resultText = gameState.winner === 'player' ? '你获胜' : `${onlineMatch.opponent.name} 获胜`;
+        details.textContent = `实时房间 ${onlineMatch.roomId} · ${resultText} · 服务器已同步`;
+        return;
+    }
 
     applyOnlineMatchResult();
     const sign = onlineMatch.ratingDelta > 0 ? '+' : '';
@@ -3065,8 +3306,8 @@ function updateGameOverActions() {
     status.textContent = '';
 
     if (onlineMatch.active && onlineMatch.opponent) {
-        playAgainBtn.textContent = '匹配新对手';
-        rematchBtn.classList.remove('hidden');
+        playAgainBtn.textContent = onlineMatch.realtime ? '返回大厅' : '匹配新对手';
+        rematchBtn.classList.toggle('hidden', !!onlineMatch.realtime);
         returnLobbyBtn.classList.remove('hidden');
         return;
     }
@@ -3077,11 +3318,14 @@ function updateGameOverActions() {
 }
 
 function hasUnfinishedOnlineGame() {
-    return onlineMatch.active && onlineMatch.opponent && !onlineMatch.searching && !gameState.gameOver && !onlineMatch.profileApplied;
+    return onlineMatch.active && onlineMatch.opponent && !onlineMatch.searching && !gameState.gameOver && (onlineMatch.realtime || !onlineMatch.profileApplied);
 }
 
 function forfeitOnlineGame(reason = '中途离开') {
     if (!hasUnfinishedOnlineGame()) return false;
+    if (isRealtimeMatch() && realtimeClient.ws.readyState === WebSocket.OPEN) {
+        realtimeClient.ws.send(JSON.stringify({ type: 'game.resign' }));
+    }
     gameState.gameOver = true;
     gameState.winner = 'ai';
     gameState.forfeit = true;
@@ -3131,6 +3375,7 @@ function leaveOnlineRoom() {
         markOpponentAway(3 + Math.floor(Math.random() * 8));
     }
     document.getElementById('game-over-overlay').style.display = 'none';
+    closeRealtimeConnection();
     onlineMatch = { active: false, searching: false, opponent: null };
     resetOnlineChat();
     updateOnlinePanel();
@@ -3200,6 +3445,7 @@ function requestRematch() {
 }
 
 function scheduleOpponentRematchRequest() {
+    if (onlineMatch.realtime) return;
     if (!onlineMatch.active || !onlineMatch.opponent || onlineMatch.opponentLeft || opponentRematchTimer) return;
     opponentRematchTimer = setTimeout(() => {
         opponentRematchTimer = null;
@@ -3217,6 +3463,7 @@ function scheduleOpponentRematchRequest() {
 }
 
 function scheduleOpponentLeaveAfterGame() {
+    if (onlineMatch.realtime) return;
     if (!onlineMatch.active || !onlineMatch.opponent || onlineMatch.opponentLeft) return;
     const timer = setTimeout(() => {
         chatTimers = chatTimers.filter(item => item !== timer);
@@ -3366,6 +3613,10 @@ document.getElementById('restart-btn').addEventListener('click', () => {
 document.getElementById('play-again-btn').addEventListener('click', () => {
     if (onlineMatch.active) {
         document.getElementById('game-over-overlay').style.display = 'none';
+        if (onlineMatch.realtime) {
+            leaveOnlineRoom();
+            return;
+        }
         startOnlineMatch();
         return;
     }
