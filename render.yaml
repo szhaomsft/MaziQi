@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: maziqi-server
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    healthCheckPath: /health

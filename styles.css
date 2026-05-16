@@ -1511,6 +1511,7 @@ canvas {
     font-weight: 900;
 }
 
+#server-url-input,
 #room-code-input {
     padding: 12px 14px;
     color: #f4f7ff;
@@ -1522,6 +1523,12 @@ canvas {
     background: #20243f;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
+}
+
+#server-url-input {
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 #room-code-actions {

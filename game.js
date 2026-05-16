@@ -43,6 +43,7 @@ const PLAYER_PROFILE_KEY = 'maziqi-player-profile-v1';
 const OPPONENT_PROFILE_KEY = 'maziqi-opponent-profiles-v1';
 const MATCH_HISTORY_KEY = 'maziqi-match-history-v1';
 const DAILY_MISSIONS_KEY = 'maziqi-daily-missions-v1';
+const REALTIME_SERVER_KEY = 'maziqi-realtime-server-url-v1';
 const MAX_MATCH_HISTORY = 18;
 const DAILY_MISSION_DEFS = [
     { id: 'complete-online', title: '完成 2 局在线对局', target: 2, reward: 12 },
@@ -2479,7 +2480,11 @@ function generateRoomCode() {
 }
 
 function showRoomCodeOverlay() {
-    document.getElementById('room-code-status').textContent = '创建房间码后可以分享给朋友；当前离线版本会先进入同房间模拟对局。';
+    const serverInput = document.getElementById('server-url-input');
+    serverInput.value = localStorage.getItem(REALTIME_SERVER_KEY) || '';
+    document.getElementById('room-code-status').textContent = serverInput.value
+        ? '已填写实时服务器地址。创建/加入房间会优先连接服务器；连接失败会提示。'
+        : '创建房间码后可以分享给朋友；未填写服务器地址时会先进入同房间模拟对局。';
     document.getElementById('room-code-overlay').classList.remove('hidden');
 }
 
@@ -2503,6 +2508,7 @@ function startRoomChallenge() {
     }
 
     requestForfeitConfirmation('进入好友房间', () => {
+        saveRealtimeServerUrl();
         hideRoomCodeOverlay();
         cancelMatchmaking(false);
         showMatchmakingScreen();
@@ -2520,6 +2526,24 @@ function startRoomChallenge() {
             showMatchFound(pickRoomOpponent(roomCode), roomCode);
         }, 900 + Math.random() * 900);
     });
+}
+
+function normalizeRealtimeServerUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (raw.startsWith('ws://') || raw.startsWith('wss://')) return raw.replace(/\/+$/, '');
+    if (raw.startsWith('http://')) return raw.replace(/^http:\/\//, 'ws://').replace(/\/+$/, '');
+    if (raw.startsWith('https://')) return raw.replace(/^https:\/\//, 'wss://').replace(/\/+$/, '');
+    return `wss://${raw.replace(/\/+$/, '')}`;
+}
+
+function saveRealtimeServerUrl() {
+    const serverInput = document.getElementById('server-url-input');
+    const url = normalizeRealtimeServerUrl(serverInput.value);
+    serverInput.value = url;
+    if (url) localStorage.setItem(REALTIME_SERVER_KEY, url);
+    else localStorage.removeItem(REALTIME_SERVER_KEY);
+    return url;
 }
 
 function rememberOpponentMovePattern(piece, move) {
@@ -3260,14 +3284,19 @@ document.getElementById('room-code-overlay').addEventListener('click', (event) =
     if (event.target.id === 'room-code-overlay') hideRoomCodeOverlay();
 });
 document.getElementById('room-code-create').addEventListener('click', () => {
+    saveRealtimeServerUrl();
     const code = generateRoomCode();
     document.getElementById('room-code-input').value = code;
-    document.getElementById('room-code-status').textContent = `房间 ${code} 已创建。真实在线版本可用这个码让朋友加入；现在点击“进入房间”开始模拟。`;
+    const serverUrl = localStorage.getItem(REALTIME_SERVER_KEY);
+    document.getElementById('room-code-status').textContent = serverUrl
+        ? `房间 ${code} 已创建。服务器：${serverUrl}。朋友使用同一个服务器地址和房间码加入。`
+        : `房间 ${code} 已创建。未填写服务器地址时，点击“进入房间”会开始模拟。`;
 });
 document.getElementById('room-code-join').addEventListener('click', startRoomChallenge);
 document.getElementById('room-code-input').addEventListener('input', (event) => {
     event.target.value = normalizeRoomCode(event.target.value);
 });
+document.getElementById('server-url-input').addEventListener('change', saveRealtimeServerUrl);
 document.querySelectorAll('.lobby-tab').forEach(button => {
     button.addEventListener('click', () => {
         document.querySelectorAll('.lobby-tab').forEach(tab => tab.classList.toggle('active', tab === button));
