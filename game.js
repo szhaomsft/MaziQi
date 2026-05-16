@@ -2089,13 +2089,27 @@ function findRealtimeMoveAnimation(nextPieces, nextMoveCount) {
     }) || null;
 
     return {
-        piece: movedPiece,
+        piece: previousMovedPiece,
         fromCol: previousMovedPiece.col,
         fromRow: previousMovedPiece.row,
         toCol: movedPiece.col,
         toRow: movedPiece.row,
         capturedPiece,
     };
+}
+
+function applyRealtimeSnapshot(state, nextState, nextMoveCount) {
+    gameState.board = nextState.board;
+    gameState.pieces = nextState.pieces;
+    gameState.currentTurn = state.winner ? null : serverTurnToLocal(state.currentTurn);
+    gameState.selectedPiece = null;
+    gameState.validMoves = [];
+    gameState.gameOver = !!state.winner;
+    gameState.winner = state.winner ? serverSideToLocal(state.winner) : null;
+    gameState.forfeit = false;
+    gameState.moveCount = nextMoveCount;
+    gameState.inputLocked = false;
+    animation.active = false;
 }
 
 function applyRealtimeState(state) {
@@ -2121,20 +2135,13 @@ function applyRealtimeState(state) {
     const nextMoveCount = Number(state.moveCount) || 0;
     const nextState = buildRealtimePieces(state);
     const moveAnimation = findRealtimeMoveAnimation(nextState.pieces, nextMoveCount);
-    gameState.board = nextState.board;
-    gameState.pieces = nextState.pieces;
-    gameState.currentTurn = state.winner ? null : serverTurnToLocal(state.currentTurn);
     gameState.selectedPiece = null;
     gameState.validMoves = [];
-    gameState.gameOver = !!state.winner;
-    gameState.winner = state.winner ? serverSideToLocal(state.winner) : null;
-    gameState.forfeit = false;
-    gameState.moveCount = nextMoveCount;
     gameState.inputLocked = !!moveAnimation;
     animation.active = false;
 
     const finalizeState = () => {
-        gameState.inputLocked = false;
+        applyRealtimeSnapshot(state, nextState, nextMoveCount);
         updateOnlinePanel();
         updateDifficultyButtons();
         updateModeSpecificUI();
