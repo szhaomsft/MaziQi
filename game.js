@@ -36,6 +36,7 @@ let matchSearchTimer = null;
 let matchCountdownTimer = null;
 let rematchResponseTimer = null;
 let opponentRematchTimer = null;
+let realtimeQueueFallbackTimer = null;
 let chatTimers = [];
 let chatMessages = [];
 let recentOpponentNames = [];
@@ -2010,6 +2011,10 @@ function isRealtimeMatch() {
 }
 
 function closeRealtimeConnection() {
+    if (realtimeQueueFallbackTimer) {
+        clearTimeout(realtimeQueueFallbackTimer);
+        realtimeQueueFallbackTimer = null;
+    }
     if (realtimeClient.ws) {
         realtimeClient.ws.onclose = null;
         realtimeClient.ws.close();
@@ -2115,6 +2120,17 @@ function applyRealtimeSnapshot(state, nextState, nextMoveCount) {
 function applyRealtimeState(state) {
     const me = state.players.find(player => player.id === realtimeClient.playerId);
     if (!me) return;
+    if (realtimeQueueFallbackTimer) {
+        clearTimeout(realtimeQueueFallbackTimer);
+        realtimeQueueFallbackTimer = null;
+    }
+    const sameRealtimeRoom = onlineMatch.realtime && onlineMatch.roomId === state.roomId;
+    const previousResult = sameRealtimeRoom ? {
+        profileApplied: onlineMatch.profileApplied,
+        ratingDelta: onlineMatch.ratingDelta,
+        opponentRatingDelta: onlineMatch.opponentRatingDelta,
+        beginnerProtection: onlineMatch.beginnerProtection,
+    } : {};
     realtimeClient.side = me.side;
     realtimeClient.roomId = state.roomId;
 
@@ -2127,7 +2143,10 @@ function applyRealtimeState(state) {
         opponent,
         realtime: true,
         privateRoom: true,
-        profileApplied: true,
+        profileApplied: !!previousResult.profileApplied,
+        ratingDelta: previousResult.ratingDelta ?? null,
+        opponentRatingDelta: previousResult.opponentRatingDelta ?? null,
+        beginnerProtection: !!previousResult.beginnerProtection,
         firstTurn: serverTurnToLocal(state.currentTurn),
         latency: 0,
     };
@@ -2240,7 +2259,8 @@ function connectRealtimeQueue() {
             if (message.type === 'hello.ok') ws.send(JSON.stringify({ type: 'queue.join' }));
         } else if (message.type === 'queue.waiting') {
             document.getElementById('matchmaking-title').textContent = '等待真实玩家';
-            document.getElementById('matchmaking-subtitle').textContent = '已进入实时匹配队列，等待另一位玩家加入。';
+            document.getElementById('matchmaking-subtitle').textContent = '已进入实时匹配队列；如果等待太久，会自动为你匹配在线练习对手。';
+            scheduleRealtimeQueueFallback();
         } else if (message.type === 'game.start' || message.type === 'game.state') {
             showGameScreen();
             applyRealtimeState(message);
@@ -2260,6 +2280,24 @@ function connectRealtimeQueue() {
         }
     };
     return true;
+}
+
+function scheduleRealtimeQueueFallback() {
+    if (realtimeQueueFallbackTimer) clearTimeout(realtimeQueueFallbackTimer);
+    realtimeQueueFallbackTimer = setTimeout(() => {
+        realtimeQueueFallbackTimer = null;
+        if (!onlineMatch.searching || !realtimeClient.ws || gameState.gameOver) return;
+        if (realtimeClient.ws.readyState === WebSocket.OPEN) {
+            realtimeClient.ws.send(JSON.stringify({ type: 'queue.cancel' }));
+        }
+        closeRealtimeConnection();
+        document.getElementById('matchmaking-title').textContent = '为你找到在线对手';
+        document.getElementById('matchmaking-subtitle').textContent = '等待时间较长，已为你匹配一位在线练习对手。';
+        matchSearchTimer = setTimeout(() => {
+            matchSearchTimer = null;
+            showMatchFound(pickOnlineOpponent());
+        }, 650 + Math.random() * 850);
+    }, 18000);
 }
 
 function sendRealtimeMove(piece, moveTarget) {
@@ -3333,8 +3371,12 @@ function updateOnlineResultDetails() {
         return;
     }
     if (onlineMatch.realtime) {
+        applyOnlineMatchResult();
         const resultText = gameState.winner === 'player' ? '你获胜' : `${onlineMatch.opponent.name} 获胜`;
-        details.textContent = `实时房间 ${onlineMatch.roomId} · ${resultText} · 服务器已同步`;
+        const sign = onlineMatch.ratingDelta > 0 ? '+' : '';
+        const opponentSign = onlineMatch.opponentRatingDelta > 0 ? '+' : '';
+        const protectionLabel = onlineMatch.beginnerProtection ? ' · 新手保护已生效' : '';
+        details.textContent = `实时房间 ${onlineMatch.roomId} · ${resultText} · 你 ${sign}${onlineMatch.ratingDelta} / 对手 ${opponentSign}${onlineMatch.opponentRatingDelta} · 当前 ${playerProfile.rating}${protectionLabel}`;
         return;
     }
 
