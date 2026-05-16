@@ -2055,6 +2055,49 @@ function realtimeOpponentFromState(state) {
     };
 }
 
+function buildRealtimePieces(state) {
+    const board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    const pieces = state.pieces.map(serverPiece => {
+        const position = serverToLocalCoord(serverPiece.col, serverPiece.row);
+        const piece = {
+            id: serverPiece.id,
+            serverId: serverPiece.id,
+            side: serverSideToLocal(serverPiece.side),
+            col: position.col,
+            row: position.row,
+            alive: !!serverPiece.alive,
+        };
+        if (piece.alive) board[piece.row][piece.col] = piece;
+        return piece;
+    });
+    return { board, pieces };
+}
+
+function findRealtimeMoveAnimation(nextPieces, nextMoveCount) {
+    if (!Array.isArray(gameState.pieces) || !gameState.pieces.length || nextMoveCount <= (gameState.moveCount || 0)) return null;
+    const previousById = new Map(gameState.pieces.map(piece => [piece.serverId ?? piece.id, piece]));
+    const movedPiece = nextPieces.find(piece => {
+        const previous = previousById.get(piece.serverId ?? piece.id);
+        return piece.alive && previous?.alive && (previous.col !== piece.col || previous.row !== piece.row);
+    });
+    if (!movedPiece) return null;
+
+    const previousMovedPiece = previousById.get(movedPiece.serverId ?? movedPiece.id);
+    const capturedPiece = gameState.pieces.find(piece => {
+        const nextPiece = nextPieces.find(item => (item.serverId ?? item.id) === (piece.serverId ?? piece.id));
+        return piece.alive && (!nextPiece || !nextPiece.alive) && piece.col === movedPiece.col && piece.row === movedPiece.row;
+    }) || null;
+
+    return {
+        piece: movedPiece,
+        fromCol: previousMovedPiece.col,
+        fromRow: previousMovedPiece.row,
+        toCol: movedPiece.col,
+        toRow: movedPiece.row,
+        capturedPiece,
+    };
+}
+
 function applyRealtimeState(state) {
     const me = state.players.find(player => player.id === realtimeClient.playerId);
     if (!me) return;
@@ -2075,38 +2118,41 @@ function applyRealtimeState(state) {
         latency: 0,
     };
 
-    gameState.board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-    gameState.pieces = [];
-    state.pieces.forEach(serverPiece => {
-        const position = serverToLocalCoord(serverPiece.col, serverPiece.row);
-        const piece = {
-            id: serverPiece.id,
-            serverId: serverPiece.id,
-            side: serverSideToLocal(serverPiece.side),
-            col: position.col,
-            row: position.row,
-            alive: !!serverPiece.alive,
-        };
-        gameState.pieces.push(piece);
-        if (piece.alive) gameState.board[piece.row][piece.col] = piece;
-    });
+    const nextMoveCount = Number(state.moveCount) || 0;
+    const nextState = buildRealtimePieces(state);
+    const moveAnimation = findRealtimeMoveAnimation(nextState.pieces, nextMoveCount);
+    gameState.board = nextState.board;
+    gameState.pieces = nextState.pieces;
     gameState.currentTurn = state.winner ? null : serverTurnToLocal(state.currentTurn);
     gameState.selectedPiece = null;
     gameState.validMoves = [];
     gameState.gameOver = !!state.winner;
     gameState.winner = state.winner ? serverSideToLocal(state.winner) : null;
     gameState.forfeit = false;
-    gameState.moveCount = Number(state.moveCount) || 0;
-    gameState.inputLocked = false;
+    gameState.moveCount = nextMoveCount;
+    gameState.inputLocked = !!moveAnimation;
     animation.active = false;
+
+    const finalizeState = () => {
+        gameState.inputLocked = false;
+        updateOnlinePanel();
+        updateDifficultyButtons();
+        updateModeSpecificUI();
+        updateTurnIndicator();
+        render();
+        if (gameState.gameOver) {
+            showGameOver(gameState.winner === 'player' ? '你赢了！' : `${opponent.name} 赢了！`);
+        }
+    };
 
     updateOnlinePanel();
     updateDifficultyButtons();
     updateModeSpecificUI();
     updateTurnIndicator();
-    render();
-    if (gameState.gameOver) {
-        showGameOver(gameState.winner === 'player' ? '你赢了！' : `${opponent.name} 赢了！`);
+    if (moveAnimation) {
+        animateMove(moveAnimation.piece, moveAnimation.fromCol, moveAnimation.fromRow, moveAnimation.toCol, moveAnimation.toRow, moveAnimation.capturedPiece, finalizeState);
+    } else {
+        finalizeState();
     }
 }
 
