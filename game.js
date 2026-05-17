@@ -52,6 +52,7 @@ const MATCH_HISTORY_KEY = 'maziqi-match-history-v1';
 const DAILY_MISSIONS_KEY = 'maziqi-daily-missions-v1';
 const REALTIME_SERVER_KEY = 'maziqi-realtime-server-url-v1';
 const MAX_MATCH_HISTORY = 18;
+const REALTIME_QUEUE_AI_FALLBACK_MS = 3500;
 const DAILY_MISSION_DEFS = [
     { id: 'complete-online', title: '完成 2 局在线对局', target: 2, reward: 12 },
     { id: 'win-online', title: '赢下 1 局在线对局', target: 1, reward: 18 },
@@ -2238,9 +2239,10 @@ function connectRealtimeQueue() {
     const serverUrl = localStorage.getItem(REALTIME_SERVER_KEY) || '';
     if (!serverUrl) return false;
     closeRealtimeConnection();
-    document.getElementById('matchmaking-subtitle').textContent = `正在连接实时服务器 ${serverUrl}...`;
+    document.getElementById('matchmaking-subtitle').textContent = `正在连接实时服务器 ${serverUrl}；若暂无真人会快速补位...`;
     const ws = new WebSocket(serverUrl);
     realtimeClient = { ws, playerId: '', side: '', roomId: '' };
+    scheduleRealtimeQueueFallback();
 
     ws.onopen = () => {
         ws.send(JSON.stringify({
@@ -2259,7 +2261,7 @@ function connectRealtimeQueue() {
             if (message.type === 'hello.ok') ws.send(JSON.stringify({ type: 'queue.join' }));
         } else if (message.type === 'queue.waiting') {
             document.getElementById('matchmaking-title').textContent = '等待真实玩家';
-            document.getElementById('matchmaking-subtitle').textContent = '已进入实时匹配队列；如果等待太久，会自动为你匹配在线练习对手。';
+            document.getElementById('matchmaking-subtitle').textContent = '已进入实时匹配队列；暂无真人时会立刻用在线对手补位。';
             scheduleRealtimeQueueFallback();
         } else if (message.type === 'game.start' || message.type === 'game.state') {
             showGameScreen();
@@ -2271,7 +2273,7 @@ function connectRealtimeQueue() {
         }
     };
     ws.onerror = () => {
-        document.getElementById('matchmaking-subtitle').textContent = '实时服务器连接失败，已停止匹配。';
+        startRealtimeAiSubstitute('实时服务器暂时不可用，已为你匹配在线对手。');
     };
     ws.onclose = () => {
         if (isRealtimeMatch() && !gameState.gameOver) {
@@ -2282,22 +2284,30 @@ function connectRealtimeQueue() {
     return true;
 }
 
+function startRealtimeAiSubstitute(message) {
+    if (realtimeQueueFallbackTimer) {
+        clearTimeout(realtimeQueueFallbackTimer);
+        realtimeQueueFallbackTimer = null;
+    }
+    if (!onlineMatch.searching || gameState.gameOver) return;
+    if (realtimeClient.ws && realtimeClient.ws.readyState === WebSocket.OPEN) {
+        realtimeClient.ws.send(JSON.stringify({ type: 'queue.cancel' }));
+    }
+    closeRealtimeConnection();
+    document.getElementById('matchmaking-title').textContent = '为你找到在线对手';
+    document.getElementById('matchmaking-subtitle').textContent = message;
+    matchSearchTimer = setTimeout(() => {
+        matchSearchTimer = null;
+        showMatchFound(pickOnlineOpponent());
+    }, 450 + Math.random() * 650);
+}
+
 function scheduleRealtimeQueueFallback() {
     if (realtimeQueueFallbackTimer) clearTimeout(realtimeQueueFallbackTimer);
     realtimeQueueFallbackTimer = setTimeout(() => {
         realtimeQueueFallbackTimer = null;
-        if (!onlineMatch.searching || !realtimeClient.ws || gameState.gameOver) return;
-        if (realtimeClient.ws.readyState === WebSocket.OPEN) {
-            realtimeClient.ws.send(JSON.stringify({ type: 'queue.cancel' }));
-        }
-        closeRealtimeConnection();
-        document.getElementById('matchmaking-title').textContent = '为你找到在线对手';
-        document.getElementById('matchmaking-subtitle').textContent = '等待时间较长，已为你匹配一位在线练习对手。';
-        matchSearchTimer = setTimeout(() => {
-            matchSearchTimer = null;
-            showMatchFound(pickOnlineOpponent());
-        }, 650 + Math.random() * 850);
-    }, 12000);
+        startRealtimeAiSubstitute('暂无真人在线，已为你匹配一位在线对手。');
+    }, REALTIME_QUEUE_AI_FALLBACK_MS);
 }
 
 function sendRealtimeMove(piece, moveTarget) {
