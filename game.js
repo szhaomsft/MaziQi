@@ -167,6 +167,7 @@ const TUTORIAL_CHALLENGES = [
             { side: 'ai', col: 5, row: 0 },
         ],
         target: { col: 4, row: 0 },
+        waypoints: [{ col: 3, row: 2 }, { col: 4, row: 0 }],
         goal: 'win',
         maxMoves: 2,
         success: '漂亮！你在蓝方反应前完成了两步冲线。',
@@ -216,6 +217,7 @@ const TUTORIAL_CHALLENGES = [
             { side: 'ai', col: 5, row: 4 },
         ],
         target: { col: 4, row: 0 },
+        waypoints: [{ col: 2, row: 4 }, { col: 3, row: 2 }, { col: 4, row: 0 }],
         goal: 'win',
         maxMoves: 3,
         success: '完成！这就是实战残局里的最快冲线思路。',
@@ -1212,6 +1214,18 @@ let gameState = {};
 
 function isTutorialMode() {
     return activeTutorialIndex !== null;
+}
+
+function getCurrentTutorialTarget() {
+    const challenge = TUTORIAL_CHALLENGES[activeTutorialIndex];
+    if (!challenge) return null;
+
+    if (Array.isArray(challenge.waypoints) && challenge.waypoints.length > 0) {
+        const currentStep = Math.min(gameState.moveCount || 0, challenge.waypoints.length - 1);
+        return challenge.waypoints[currentStep];
+    }
+
+    return challenge.target || null;
 }
 
 function clearPendingAITurn() {
@@ -3531,7 +3545,7 @@ function drawLabels() {
 
 function drawHighlights() {
     if (isTutorialMode()) {
-        const target = TUTORIAL_CHALLENGES[activeTutorialIndex]?.target;
+        const target = getCurrentTutorialTarget();
         if (target) {
             const { x, y } = cellCenter(target.col, target.row);
             ctx.fillStyle = 'rgba(255, 182, 213, 0.28)';
