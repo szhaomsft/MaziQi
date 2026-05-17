@@ -882,12 +882,17 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    max-height: 168px;
+    overflow: auto;
+    padding-right: 2px;
 }
 
 .tutorial-btn {
-    padding: 9px 8px;
+    min-height: 36px;
+    padding: 8px;
     color: #f4f7ff;
     font-family: inherit;
+    font-size: 12px;
     font-weight: 900;
     background: rgba(255, 255, 255, 0.075);
     border: 1px solid rgba(255, 255, 255, 0.12);

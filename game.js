@@ -94,6 +94,7 @@ const PROFILE_ACCENT_OPTIONS = [
 const TUTORIAL_CHALLENGES = [
     {
         title: '马步训练',
+        shortTitle: '马步',
         desc: '先点红马，再点发光目标格。马每次走“日”字：横两格竖一格，或竖两格横一格。',
         hint: '从当前位置到目标格是“竖两格、横一格”。如果看不到高亮目标，先点一下红马。',
         pieces: [{ side: 'player', col: 2, row: 6 }],
@@ -103,6 +104,7 @@ const TUTORIAL_CHALLENGES = [
     },
     {
         title: '卡马腿',
+        shortTitle: '卡腿',
         desc: '马不能跳过被堵住的“马腿”。先观察红马旁边的阻挡子，再选择没有被堵住的一侧到目标。',
         hint: '目标在右上方向；如果正上方马腿被挡，就要找横向出腿的那条日字路线。',
         pieces: [
@@ -115,6 +117,7 @@ const TUTORIAL_CHALLENGES = [
     },
     {
         title: '吃子技巧',
+        shortTitle: '吃子',
         desc: '敌方棋子如果正好在你的合法落点上，就可以直接点它完成吃子。',
         hint: '点红马后，蓝子所在格会是可走位置；第二下直接点蓝子。',
         pieces: [
@@ -127,12 +130,77 @@ const TUTORIAL_CHALLENGES = [
     },
     {
         title: '冲线获胜',
+        shortTitle: '冲线',
         desc: '把任意红马送到最上方底线即可获胜。练习时只需要完成最后一步冲线。',
         hint: '目标格在最上方，点红马后选择发光格，红方到第 1 行就赢。',
         pieces: [{ side: 'player', col: 2, row: 2 }],
         target: { col: 3, row: 0 },
         goal: 'finish',
         success: '完成！红方到达最上方底线即可获胜。',
+    },
+    {
+        title: '两步转位',
+        shortTitle: '两步',
+        desc: '目标不一定一步能到。先走到中转格，再用第二个“日”字抵达发光目标。',
+        hint: '建议路线：先从左下角跳到中路，再跳向目标。不要只盯着一步能到的格子。',
+        pieces: [{ side: 'player', col: 0, row: 7 }],
+        target: { col: 3, row: 4 },
+        goal: 'target',
+        success: '很好！连续转位可以让马快速进入关键区域。',
+    },
+    {
+        title: '绕开卡腿',
+        shortTitle: '绕腿',
+        desc: '有时最短路线被马腿挡住，要先绕一步，让下一跳的马腿变通畅。',
+        hint: '正前方被堵住，先跳到右侧中转点，再回到发光目标。',
+        pieces: [
+            { side: 'player', col: 1, row: 7 },
+            { side: 'player', col: 1, row: 6 },
+        ],
+        target: { col: 4, row: 4 },
+        goal: 'target',
+        success: '对！复杂局面里先解开马腿，比硬冲更重要。',
+    },
+    {
+        title: '连续吃子',
+        shortTitle: '连吃',
+        desc: '练习连续攻击：吃掉第一枚蓝子后，继续寻找下一枚蓝子的合法落点。',
+        hint: '先吃近处蓝子，再从新位置继续跳吃远处蓝子；目标是清空所有蓝子。',
+        pieces: [
+            { side: 'player', col: 2, row: 6 },
+            { side: 'ai', col: 3, row: 4 },
+            { side: 'ai', col: 5, row: 3 },
+        ],
+        target: { col: 5, row: 3 },
+        goal: 'captureAll',
+        success: '漂亮！连续吃子能快速扩大优势。',
+    },
+    {
+        title: '拦截冲线',
+        shortTitle: '拦截',
+        desc: '蓝方快到你的底线时，优先找能吃掉它的马步，避免只顾自己前进。',
+        hint: '蓝子离底线很近，红马有一个“日”字可以直接拦截并吃掉它。',
+        pieces: [
+            { side: 'player', col: 1, row: 2 },
+            { side: 'ai', col: 2, row: 0 },
+        ],
+        target: { col: 2, row: 0 },
+        goal: 'capture',
+        success: '拦得好！防守关键威胁，常常比随便进攻更强。',
+    },
+    {
+        title: '选择冲线马',
+        shortTitle: '选马',
+        desc: '有多匹红马时，选择能最快冲线的一匹，而不是随便移动最近的棋子。',
+        hint: '左边红马只是干扰；右侧红马能一步跳到最上方底线。',
+        pieces: [
+            { side: 'player', col: 0, row: 5 },
+            { side: 'player', col: 4, row: 2 },
+            { side: 'ai', col: 1, row: 3 },
+        ],
+        target: { col: 5, row: 0 },
+        goal: 'finish',
+        success: '完成！复杂局面要先找最快获胜的棋子。',
     },
 ];
 const DEFAULT_PLAYER_PROFILE = {
@@ -1201,17 +1269,31 @@ function addTutorialPiece(side, col, row, id) {
     gameState.board[row][col] = piece;
 }
 
+function renderTutorialSelector() {
+    const selector = document.getElementById('tutorial-selector');
+    if (!selector) return;
+    selector.innerHTML = '';
+    TUTORIAL_CHALLENGES.forEach((challenge, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'tutorial-btn';
+        button.dataset.tutorial = String(index);
+        button.textContent = `${index + 1}. ${challenge.shortTitle || challenge.title}`;
+        button.classList.toggle('active', index === activeTutorialIndex);
+        button.addEventListener('click', () => initTutorialChallenge(index));
+        selector.appendChild(button);
+    });
+}
+
 function updateTutorialUI(message = '') {
     const challenge = TUTORIAL_CHALLENGES[activeTutorialIndex] || TUTORIAL_CHALLENGES[0];
     const title = document.getElementById('tutorial-title');
     const desc = document.getElementById('tutorial-desc');
     const status = document.getElementById('tutorial-status');
-    if (title) title.textContent = challenge.title;
+    renderTutorialSelector();
+    if (title) title.textContent = `第 ${activeTutorialIndex + 1}/${TUTORIAL_CHALLENGES.length} 关：${challenge.title}`;
     if (desc) desc.textContent = challenge.desc;
     if (status) status.textContent = message || `提示：${challenge.hint} 完成目标后自动进入下一关。`;
-    document.querySelectorAll('.tutorial-btn').forEach(button => {
-        button.classList.toggle('active', Number(button.dataset.tutorial) === activeTutorialIndex);
-    });
     document.getElementById('game-tip').textContent = `${challenge.desc} ${challenge.hint}`;
 }
 
@@ -1262,6 +1344,7 @@ function isTutorialComplete(capturedPiece) {
     const challenge = TUTORIAL_CHALLENGES[activeTutorialIndex];
     if (!challenge) return false;
     if (challenge.goal === 'capture') return !!capturedPiece && capturedPiece.side === 'ai';
+    if (challenge.goal === 'captureAll') return !gameState.pieces.some(piece => piece.side === 'ai' && piece.alive);
     if (challenge.goal === 'finish') return gameState.pieces.some(piece => piece.side === 'player' && piece.alive && piece.row === 0);
     if (challenge.goal === 'target') {
         return gameState.pieces.some(piece => piece.side === 'player' && piece.alive && piece.col === challenge.target.col && piece.row === challenge.target.row);
