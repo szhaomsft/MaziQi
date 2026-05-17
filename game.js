@@ -164,7 +164,7 @@ const TUTORIAL_CHALLENGES = [
             { side: 'player', col: 2, row: 4 },
             { side: 'player', col: 5, row: 6 },
             { side: 'ai', col: 0, row: 0 },
-            { side: 'ai', col: 5, row: 0 },
+            { side: 'ai', col: 0, row: 1 },
         ],
         target: { col: 4, row: 0 },
         waypoints: [{ col: 3, row: 2 }, { col: 4, row: 0 }],
