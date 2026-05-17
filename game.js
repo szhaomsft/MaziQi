@@ -208,13 +208,13 @@ const TUTORIAL_CHALLENGES = [
         title: '残局三步取胜',
         shortTitle: '残局胜',
         desc: '目标：赢。蓝方会反击，红方必须三步内找到最快到底线的路线。',
-        hint: '不要先吃边上的蓝子。用右侧红马连续向上转位，第三步跳到最上方底线。',
+        hint: '蓝方会吃掉你的诱饵马，真正的胜负在左侧红马能不能连续冲到顶线。',
         pieces: [
-            { side: 'player', col: 3, row: 6 },
-            { side: 'player', col: 0, row: 5 },
-            { side: 'ai', col: 1, row: 3 },
-            { side: 'ai', col: 4, row: 2 },
-            { side: 'ai', col: 5, row: 4 },
+            { side: 'player', col: 1, row: 6 },
+            { side: 'player', col: 5, row: 5 },
+            { side: 'ai', col: 0, row: 0 },
+            { side: 'ai', col: 5, row: 0 },
+            { side: 'ai', col: 5, row: 1 },
         ],
         target: { col: 4, row: 0 },
         waypoints: [{ col: 2, row: 4 }, { col: 3, row: 2 }, { col: 4, row: 0 }],
@@ -237,6 +237,63 @@ const TUTORIAL_CHALLENGES = [
         goal: 'stopBlueWin',
         maxMoves: 1,
         success: '守住了！你找到了真正会赢棋的蓝马。',
+    },
+    {
+        title: '隐藏路线：中路破围',
+        shortTitle: '中路破围',
+        desc: '目标：赢。高级残局不标出答案格，蓝方会连续抢先手，红方必须三步冲线。',
+        hint: '别被边角蓝马吓住。找一匹离顶线三步的红马，连续走中路再转向顶线。',
+        pieces: [
+            { side: 'player', col: 2, row: 5 },
+            { side: 'player', col: 5, row: 6 },
+            { side: 'ai', col: 0, row: 0 },
+            { side: 'ai', col: 5, row: 0 },
+            { side: 'ai', col: 0, row: 1 },
+        ],
+        target: { col: 2, row: 0 },
+        waypoints: [{ col: 3, row: 3 }, { col: 4, row: 1 }, { col: 2, row: 0 }],
+        hideTarget: true,
+        goal: 'win',
+        maxMoves: 3,
+        success: '破解成功！没有答案格也能读出三步冲线。',
+    },
+    {
+        title: '隐藏路线：反向穿插',
+        shortTitle: '反向穿插',
+        desc: '目标：赢。蓝方会沿边路推进，红方要从另一侧穿插到顶线。',
+        hint: '正确路线不是直冲最近的格子，而是先向左转位，再用马步折回顶线。',
+        pieces: [
+            { side: 'player', col: 3, row: 5 },
+            { side: 'player', col: 0, row: 6 },
+            { side: 'ai', col: 0, row: 0 },
+            { side: 'ai', col: 5, row: 0 },
+            { side: 'ai', col: 5, row: 1 },
+        ],
+        target: { col: 3, row: 0 },
+        waypoints: [{ col: 2, row: 3 }, { col: 1, row: 1 }, { col: 3, row: 0 }],
+        hideTarget: true,
+        goal: 'win',
+        maxMoves: 3,
+        success: '好棋！你避开了直线诱惑，用反向穿插完成冲线。',
+    },
+    {
+        title: '隐藏路线：弃子抢先',
+        shortTitle: '弃子抢先',
+        desc: '目标：赢。蓝方会吃掉诱饵红马，红方不能回头救子，必须抢最后一拍。',
+        hint: '被吃的不是主攻马。继续用主攻马向上跳，第三步直接到底线。',
+        pieces: [
+            { side: 'player', col: 4, row: 6 },
+            { side: 'player', col: 0, row: 5 },
+            { side: 'ai', col: 0, row: 0 },
+            { side: 'ai', col: 5, row: 0 },
+            { side: 'ai', col: 0, row: 1 },
+        ],
+        target: { col: 1, row: 0 },
+        waypoints: [{ col: 3, row: 4 }, { col: 2, row: 2 }, { col: 1, row: 0 }],
+        hideTarget: true,
+        goal: 'win',
+        maxMoves: 3,
+        success: '果断！残局里弃掉诱饵也要抢到先手。',
     },
 ];
 const DEFAULT_PLAYER_PROFILE = {
@@ -1219,6 +1276,7 @@ function isTutorialMode() {
 function getCurrentTutorialTarget() {
     const challenge = TUTORIAL_CHALLENGES[activeTutorialIndex];
     if (!challenge) return null;
+    if (challenge.hideTarget) return null;
 
     if (Array.isArray(challenge.waypoints) && challenge.waypoints.length > 0) {
         const currentStep = Math.min(gameState.moveCount || 0, challenge.waypoints.length - 1);
@@ -1226,6 +1284,13 @@ function getCurrentTutorialTarget() {
     }
 
     return challenge.target || null;
+}
+
+function getTutorialMovePrompt() {
+    if (getCurrentTutorialTarget()) {
+        return '现在点发光目标，或点任意高亮可走格。';
+    }
+    return '本关不标出答案格，请从高亮可走格里找最优手。';
 }
 
 function clearPendingAITurn() {
@@ -3394,7 +3459,7 @@ function handleCellClick(col, row) {
             gameState.selectedPiece = clickedPiece;
             gameState.validMoves = getValidMoves(clickedPiece);
             if (isTutorialMode()) {
-                updateTutorialUI(`已选中红马。现在点发光目标，或点任意高亮可走格。${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
+                updateTutorialUI(`已选中红马。${getTutorialMovePrompt()}${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
             }
             render();
         }
@@ -3438,7 +3503,7 @@ function handleCellClick(col, row) {
             gameState.selectedPiece = clickedPiece;
             gameState.validMoves = getValidMoves(clickedPiece);
             if (isTutorialMode()) {
-                updateTutorialUI(`已切换到这匹红马。看高亮格，选择能完成目标的位置。${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
+                updateTutorialUI(`已切换到这匹红马。${getTutorialMovePrompt()}${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
             }
             render();
         } else {
