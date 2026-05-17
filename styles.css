@@ -319,17 +319,18 @@ body {
     width: min(1120px, 100%);
     min-height: calc(100vh - 48px);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
 }
 
 #menu-card {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     width: 100%;
-    height: min(680px, calc(100vh - 48px));
+    min-height: min(680px, calc(100vh - 48px));
     display: grid;
     grid-template-columns: minmax(300px, 0.92fr) minmax(360px, 1.08fr);
+    align-items: stretch;
     gap: 24px;
     padding: 30px;
     background:
@@ -418,15 +419,16 @@ body {
 
 #menu-actions {
     position: relative;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     gap: 12px;
-    justify-content: center;
+    align-content: start;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #lobby-profile-card {
+    order: 1;
     padding: 16px;
     color: #f4f7ff;
     background:
@@ -576,7 +578,9 @@ body {
 }
 
 #lobby-compact-card {
-    min-height: 176px;
+    order: 3;
+    min-height: 150px;
+    overflow: auto;
 }
 
 #daily-missions-panel,
@@ -719,6 +723,7 @@ body {
 }
 
 #menu-action-grid {
+    order: 2;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -776,6 +781,7 @@ body {
 }
 
 .menu-note {
+    order: 4;
     padding: 14px 16px;
     color: #aeb6d4;
     font-size: 13px;
