@@ -46,6 +46,8 @@ let realtimeClient = {
     playerId: '',
     side: '',
     roomId: '',
+    gameId: '',
+    stateVersion: -1,
 };
 const PLAYER_PROFILE_KEY = 'maziqi-player-profile-v1';
 const OPPONENT_PROFILE_KEY = 'maziqi-opponent-profiles-v1';
@@ -2615,7 +2617,7 @@ function closeRealtimeConnection() {
         realtimeClient.ws.onclose = null;
         realtimeClient.ws.close();
     }
-    realtimeClient = { ws: null, playerId: '', side: '', roomId: '' };
+    realtimeClient = { ws: null, playerId: '', side: '', roomId: '', gameId: '', stateVersion: -1 };
 }
 
 function serverToLocalCoord(col, row) {
@@ -2716,11 +2718,24 @@ function applyRealtimeSnapshot(state, nextState, nextMoveCount) {
 function applyRealtimeState(state) {
     const me = state.players.find(player => player.id === realtimeClient.playerId);
     if (!me) return;
+    const incomingGameId = state.gameId || '';
+    const incomingVersion = Number(state.stateVersion ?? state.moveCount) || 0;
+    const sameRealtimeRoom = onlineMatch.realtime && onlineMatch.roomId === state.roomId;
+    if (sameRealtimeRoom) {
+        if (realtimeClient.gameId && incomingGameId && realtimeClient.gameId !== incomingGameId && !gameState.gameOver) {
+            onlineMatch.opponentLeft = true;
+            setOpponentStatus('连接已过期');
+            document.getElementById('game-tip').textContent = '服务器返回了另一局棋的状态，已阻止棋盘被重置。请重新进入房间开始新局。';
+            return;
+        }
+        if (incomingGameId && incomingGameId === realtimeClient.gameId && incomingVersion < realtimeClient.stateVersion) {
+            return;
+        }
+    }
     if (realtimeQueueFallbackTimer) {
         clearTimeout(realtimeQueueFallbackTimer);
         realtimeQueueFallbackTimer = null;
     }
-    const sameRealtimeRoom = onlineMatch.realtime && onlineMatch.roomId === state.roomId;
     const previousResult = sameRealtimeRoom ? {
         profileApplied: onlineMatch.profileApplied,
         ratingDelta: onlineMatch.ratingDelta,
@@ -2729,6 +2744,8 @@ function applyRealtimeState(state) {
     } : {};
     realtimeClient.side = me.side;
     realtimeClient.roomId = state.roomId;
+    realtimeClient.gameId = incomingGameId || realtimeClient.gameId || state.roomId;
+    realtimeClient.stateVersion = incomingVersion;
 
     const opponent = realtimeOpponentFromState(state);
     onlineMatch = {
@@ -2745,6 +2762,8 @@ function applyRealtimeState(state) {
         beginnerProtection: !!previousResult.beginnerProtection,
         firstTurn: serverTurnToLocal(state.currentTurn),
         latency: 0,
+        gameId: realtimeClient.gameId,
+        stateVersion: incomingVersion,
     };
 
     const nextMoveCount = Number(state.moveCount) || 0;
@@ -2756,6 +2775,9 @@ function applyRealtimeState(state) {
     animation.active = false;
 
     const finalizeState = () => {
+        if (incomingGameId && incomingGameId === realtimeClient.gameId && incomingVersion < realtimeClient.stateVersion) {
+            return;
+        }
         applyRealtimeSnapshot(state, nextState, nextMoveCount);
         updateOnlinePanel();
         updateDifficultyButtons();
@@ -2784,7 +2806,7 @@ function connectRealtimeRoom(roomCode) {
     closeRealtimeConnection();
     document.getElementById('room-code-status').textContent = `正在连接 ${serverUrl}...`;
     const ws = new WebSocket(serverUrl);
-    realtimeClient = { ws, playerId: '', side: '', roomId: roomCode };
+    realtimeClient = { ws, playerId: '', side: '', roomId: roomCode, gameId: '', stateVersion: -1 };
 
     ws.onopen = () => {
         ws.send(JSON.stringify({
@@ -2812,7 +2834,13 @@ function connectRealtimeRoom(roomCode) {
             if (message.from !== realtimeClient.playerId) addChatMessage('opponent', message.text);
         } else if (message.type === 'error') {
             if (message.message === 'ROOM_NOT_FOUND') {
-                ws.send(JSON.stringify({ type: 'room.create', roomId: roomCode }));
+                if (onlineMatch.realtime && onlineMatch.roomId === roomCode && !gameState.gameOver) {
+                    onlineMatch.opponentLeft = true;
+                    setOpponentStatus('房间已失效');
+                    document.getElementById('matchmaking-subtitle').textContent = '原房间已不存在，已阻止自动重建导致棋局重置。请重新创建房间。';
+                } else {
+                    ws.send(JSON.stringify({ type: 'room.create', roomId: roomCode }));
+                }
             } else {
                 document.getElementById('matchmaking-subtitle').textContent = `服务器错误：${message.message}`;
             }
@@ -2836,7 +2864,7 @@ function connectRealtimeQueue() {
     closeRealtimeConnection();
     document.getElementById('matchmaking-subtitle').textContent = `正在连接实时服务器 ${serverUrl}；若暂无真人会快速补位...`;
     const ws = new WebSocket(serverUrl);
-    realtimeClient = { ws, playerId: '', side: '', roomId: '' };
+    realtimeClient = { ws, playerId: '', side: '', roomId: '', gameId: '', stateVersion: -1 };
     scheduleRealtimeQueueFallback();
 
     ws.onopen = () => {

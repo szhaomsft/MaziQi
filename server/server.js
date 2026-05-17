@@ -52,6 +52,9 @@ function makeBoard() {
 function publicRoom(room) {
   return {
     roomId: room.id,
+    gameId: room.gameId,
+    stateVersion: room.stateVersion || 0,
+    started: !!room.started,
     currentTurn: room.currentTurn,
     winner: room.winner,
     moveCount: room.moveCount || 0,
@@ -81,11 +84,14 @@ function createRoom(ownerWs, requestedCode = '') {
   const state = makeBoard();
   const room = {
     id: code,
+    gameId: randomUUID(),
     ...state,
     players: [{ ws: ownerWs, id: ownerWs.playerId, side: 'red', ...ownerWs.profile }],
     currentTurn: 'red',
     winner: null,
     moveCount: 0,
+    stateVersion: 0,
+    started: false,
     createdAt: Date.now(),
     lastMoveAt: Date.now(),
   };
@@ -103,6 +109,17 @@ function joinRoom(ws, code) {
   }
   ws.roomId = room.id;
   return room;
+}
+
+function startRoomIfReady(room) {
+  if (room.players.length < 2) return 'room.joined';
+  if (!room.started) {
+    room.started = true;
+    room.stateVersion += 1;
+    room.lastMoveAt = Date.now();
+    return 'game.start';
+  }
+  return 'game.state';
 }
 
 function pieceById(room, id) {
@@ -159,7 +176,8 @@ function handleQueueJoin(ws) {
     const opponent = queue.splice(opponentIndex, 1)[0];
     const room = createRoom(opponent);
     joinRoom(ws, room.id);
-    broadcast(room, 'game.start', publicRoom(room));
+    const eventType = startRoomIfReady(room);
+    broadcast(room, eventType, publicRoom(room));
     return;
   }
   queue.push(ws);
@@ -189,7 +207,9 @@ function handleMessage(ws, data) {
       send(ws, 'room.created', publicRoom(room));
     } else if (msg.type === 'room.join') {
       const room = joinRoom(ws, String(msg.roomId || '').trim().toUpperCase());
-      broadcast(room, room.players.length === 2 ? 'game.start' : 'room.joined', publicRoom(room));
+      const eventType = startRoomIfReady(room);
+      if (eventType === 'game.start') broadcast(room, eventType, publicRoom(room));
+      else send(ws, eventType, publicRoom(room));
     } else if (msg.type === 'game.move') {
       const room = rooms.get(ws.roomId);
       const player = room?.players.find(item => item.id === ws.playerId);
@@ -201,6 +221,7 @@ function handleMessage(ws, data) {
       room.moveCount += 1;
       room.winner = checkWinner(room);
       if (!room.winner) room.currentTurn = room.currentTurn === 'red' ? 'blue' : 'red';
+      room.stateVersion += 1;
       broadcast(room, 'game.state', publicRoom(room));
     } else if (msg.type === 'chat.send') {
       const room = rooms.get(ws.roomId);
@@ -211,6 +232,8 @@ function handleMessage(ws, data) {
       const player = room?.players.find(item => item.id === ws.playerId);
       if (!room || !player || room.winner) throw new Error('NO_ACTIVE_GAME');
       room.winner = player.side === 'red' ? 'blue' : 'red';
+      room.stateVersion += 1;
+      room.lastMoveAt = Date.now();
       broadcast(room, 'game.state', publicRoom(room));
     }
   } catch (error) {
@@ -229,6 +252,8 @@ wss.on('connection', ws => {
     const player = room.players.find(item => item.id === ws.playerId);
     if (!player) return;
     room.winner = player.side === 'red' ? 'blue' : 'red';
+    room.stateVersion += 1;
+    room.lastMoveAt = Date.now();
     broadcast(room, 'game.state', publicRoom(room));
     setTimeout(() => rooms.delete(room.id), 60_000);
   });
