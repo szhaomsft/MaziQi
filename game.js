@@ -202,7 +202,7 @@ function mergeProfileOptions(baseOptions, opponentField, labelPrefix = '') {
 }
 
 function profileOptionsForField(field) {
-    if (field === 'avatar') return mergeProfileOptions(PROFILE_AVATAR_OPTIONS, 'avatar', '在线对手');
+    if (field === 'avatar') return mergeProfileOptions(PROFILE_AVATAR_OPTIONS, 'avatar', '头像');
     if (field === 'title') return mergeProfileOptions(PROFILE_TITLE_OPTIONS, 'title');
     return PROFILE_ACCENT_OPTIONS;
 }
@@ -577,7 +577,7 @@ function updateUnlockSummary(message = '') {
     if (!summary) return;
     const allOptions = [...profileOptionsForField('avatar'), ...profileOptionsForField('title'), ...PROFILE_ACCENT_OPTIONS];
     const unlocked = allOptions.filter(isProfileOptionUnlocked).length;
-    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 头像库和称号已加入在线对手同款，积分、胜场、连胜和每日活跃点还能解锁稀有外观。`;
+    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 头像库和称号已加入更多可选外观，积分、胜场、连胜和每日活跃点还能解锁稀有外观。`;
 }
 
 function loadOpponentProfiles() {
