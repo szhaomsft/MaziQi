@@ -1387,6 +1387,63 @@ function isTutorialComplete(capturedPiece) {
     return false;
 }
 
+function chooseTutorialAIMove() {
+    const moves = getOrderedMoves('ai', 0);
+    if (!moves.length) return null;
+    const winningMove = moves.find(({ piece, move }) => isGoalMove(piece, move));
+    if (winningMove) return winningMove;
+    const captureMove = moves.find(({ move }) => move.isCapture);
+    return captureMove || moves[0];
+}
+
+function finishFailedTutorial(message) {
+    gameState.gameOver = true;
+    gameState.winner = 'ai';
+    gameState.inputLocked = false;
+    updateTutorialUI(message);
+    updateTurnIndicator();
+    render();
+    setTimeout(() => {
+        if (isTutorialMode()) initTutorialChallenge(activeTutorialIndex);
+    }, 1300);
+}
+
+function doTutorialAITurn() {
+    if (!isTutorialMode() || gameState.gameOver || gameState.currentTurn !== 'ai') return;
+    const choice = chooseTutorialAIMove();
+    if (!choice) {
+        gameState.currentTurn = 'player';
+        gameState.inputLocked = false;
+        updateTutorialUI('蓝方暂无可走位置，继续完成目标。');
+        updateTurnIndicator();
+        render();
+        return;
+    }
+
+    const piece = choice.piece;
+    const move = choice.move;
+    const fromCol = piece.col;
+    const fromRow = piece.row;
+    const capturedPiece = move.isCapture ? gameState.board[move.row][move.col] : null;
+    gameState.lastAIMove = { pieceId: piece.id, fromCol, fromRow, toCol: move.col, toRow: move.row };
+    executeMove(piece, move);
+
+    animateMove(piece, fromCol, fromRow, move.col, move.row, capturedPiece, () => {
+        if (!isTutorialMode()) return;
+        gameState.inputLocked = false;
+        if (checkWin() && gameState.winner === 'ai') {
+            finishFailedTutorial('蓝方已经完成冲线或吃光红子。真实对局中慢一步就会输，重新挑战。');
+            return;
+        }
+        gameState.currentTurn = 'player';
+        updateTutorialUI(capturedPiece
+            ? '蓝方刚刚吃掉了一枚红子。现在从变化后的局面继续找最佳手。'
+            : '蓝方已经回应了一步。观察黄色标记的位置，再继续完成目标。');
+        updateTurnIndicator();
+        render();
+    });
+}
+
 function handleTutorialAfterMove(capturedPiece) {
     const challenge = TUTORIAL_CHALLENGES[activeTutorialIndex];
     if (isTutorialComplete(capturedPiece)) {
@@ -1415,10 +1472,16 @@ function handleTutorialAfterMove(capturedPiece) {
         }, 1100);
         return;
     }
-    gameState.currentTurn = 'player';
-    updateTutorialUI(`还没完成目标。${challenge.maxMoves ? `还剩 ${challenge.maxMoves - (gameState.moveCount || 0)} 步。` : ''}${challenge.hint}`);
+    gameState.currentTurn = 'ai';
+    gameState.inputLocked = true;
+    updateTutorialUI(`还没完成目标。蓝方现在会走一步。${challenge.maxMoves ? `你还剩 ${challenge.maxMoves - (gameState.moveCount || 0)} 步。` : ''}`);
     updateTurnIndicator();
     render();
+    clearPendingAITurn();
+    aiTurnTimer = setTimeout(() => {
+        aiTurnTimer = null;
+        doTutorialAITurn();
+    }, 650);
 }
 
 // ========================================
