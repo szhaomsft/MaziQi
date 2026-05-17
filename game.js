@@ -117,7 +117,7 @@ const TUTORIAL_CHALLENGES = [
             { side: 'player', col: 1, row: 4 },
             { side: 'player', col: 4, row: 5 },
             { side: 'ai', col: 2, row: 6 },
-            { side: 'ai', col: 5, row: 5 },
+            { side: 'ai', col: 5, row: 2 },
         ],
         target: { col: 2, row: 6 },
         goal: 'stopBlueWin',
@@ -1383,12 +1383,6 @@ function isTutorialComplete(capturedPiece) {
             || !gameState.pieces.some(piece => piece.side === 'ai' && piece.alive);
     }
     if (challenge.goal === 'stopBlueWin') return getImmediateGoalMoves('ai').length === 0;
-    if (challenge.goal === 'capture') return !!capturedPiece && capturedPiece.side === 'ai';
-    if (challenge.goal === 'captureAll') return !gameState.pieces.some(piece => piece.side === 'ai' && piece.alive);
-    if (challenge.goal === 'finish') return gameState.pieces.some(piece => piece.side === 'player' && piece.alive && piece.row === 0);
-    if (challenge.goal === 'target') {
-        return gameState.pieces.some(piece => piece.side === 'player' && piece.alive && piece.col === challenge.target.col && piece.row === challenge.target.row);
-    }
     return false;
 }
 
@@ -1468,6 +1462,19 @@ function handleTutorialAfterMove(capturedPiece) {
         return;
     }
     if (challenge.maxMoves && (gameState.moveCount || 0) >= challenge.maxMoves) {
+        if (challenge.goal === 'stopBlueWin' && getImmediateGoalMoves('ai').length > 0) {
+            gameState.currentTurn = 'ai';
+            gameState.inputLocked = true;
+            updateTutorialUI('蓝方的获胜威胁还在。现在蓝方会走出冲线获胜手。');
+            updateTurnIndicator();
+            render();
+            clearPendingAITurn();
+            aiTurnTimer = setTimeout(() => {
+                aiTurnTimer = null;
+                doTutorialAITurn();
+            }, 650);
+            return;
+        }
         gameState.gameOver = true;
         updateTutorialUI(`这条路线超过了 ${challenge.maxMoves} 步限制，实战里会慢一拍。重新摆局再试。`);
         updateTurnIndicator();
