@@ -93,79 +93,106 @@ const PROFILE_ACCENT_OPTIONS = [
 ];
 const TUTORIAL_CHALLENGES = [
     {
-        title: '马步训练',
-        shortTitle: '马步',
-        desc: '先点红马，再点发光目标格。马每次走“日”字：横两格竖一格，或竖两格横一格。',
-        hint: '从当前位置到目标格是“竖两格、横一格”。如果看不到高亮目标，先点一下红马。',
-        pieces: [{ side: 'player', col: 2, row: 6 }],
-        target: { col: 3, row: 4 },
+        title: '开局抢中',
+        shortTitle: '抢中',
+        desc: '真实对局开局要抢中心据点。红方有两匹马，只有一匹能立刻占到安全中路。',
+        hint: '不要走边线马；选择左侧红马跳到中路发光格，下一回合能同时威胁两侧。',
+        pieces: [
+            { side: 'player', col: 1, row: 6 },
+            { side: 'player', col: 4, row: 7 },
+            { side: 'ai', col: 0, row: 2 },
+            { side: 'ai', col: 5, row: 2 },
+        ],
+        target: { col: 2, row: 4 },
         goal: 'target',
-        success: '很好！马走日字，不是直走，也不是斜走。',
+        maxMoves: 1,
+        success: '好开局！中心马比边线马更容易制造后续威胁。',
     },
     {
-        title: '卡马腿',
-        shortTitle: '卡腿',
-        desc: '马不能跳过被堵住的“马腿”。先观察红马旁边的阻挡子，再选择没有被堵住的一侧到目标。',
-        hint: '目标在右上方向；如果正上方马腿被挡，就要找横向出腿的那条日字路线。',
+        title: '底线拦截',
+        shortTitle: '拦截',
+        desc: '蓝方已经贴近你的底线。真实对局里，这种威胁必须马上处理。',
+        hint: '先别冲线，红马可以一步跳吃最上方蓝子，解除立即威胁。',
+        pieces: [
+            { side: 'player', col: 1, row: 2 },
+            { side: 'player', col: 4, row: 5 },
+            { side: 'ai', col: 2, row: 0 },
+            { side: 'ai', col: 5, row: 1 },
+        ],
+        target: { col: 2, row: 0 },
+        goal: 'capture',
+        maxMoves: 1,
+        success: '拦得好！先防住必胜威胁，才有机会反击。',
+    },
+    {
+        title: '解开马腿',
+        shortTitle: '解腿',
+        desc: '自己的棋子也会卡住马腿。先移动挡路红马，再让主力马进入关键格。',
+        hint: '直接跳目标会被正前方红马卡腿；第一步先把挡路马挪开，第二步主力马进发光格。',
         pieces: [
             { side: 'player', col: 2, row: 6 },
             { side: 'player', col: 2, row: 5 },
+            { side: 'ai', col: 0, row: 2 },
+            { side: 'ai', col: 5, row: 3 },
         ],
-        target: { col: 4, row: 5 },
-        goal: 'target',
-        success: '对了！马腿被挡时，那一侧的日字走法不能用。',
-    },
-    {
-        title: '吃子技巧',
-        shortTitle: '吃子',
-        desc: '敌方棋子如果正好在你的合法落点上，就可以直接点它完成吃子。',
-        hint: '点红马后，蓝子所在格会是可走位置；第二下直接点蓝子。',
-        pieces: [
-            { side: 'player', col: 1, row: 6 },
-            { side: 'ai', col: 2, row: 4 },
-        ],
-        target: { col: 2, row: 4 },
-        goal: 'capture',
-        success: '漂亮！落点上有敌方棋子时，移动和吃子会同时完成。',
-    },
-    {
-        title: '冲线获胜',
-        shortTitle: '冲线',
-        desc: '把任意红马送到最上方底线即可获胜。练习时只需要完成最后一步冲线。',
-        hint: '目标格在最上方，点红马后选择发光格，红方到第 1 行就赢。',
-        pieces: [{ side: 'player', col: 2, row: 2 }],
-        target: { col: 3, row: 0 },
-        goal: 'finish',
-        success: '完成！红方到达最上方底线即可获胜。',
-    },
-    {
-        title: '两步转位',
-        shortTitle: '两步',
-        desc: '目标不一定一步能到。先走到中转格，再用第二个“日”字抵达发光目标。',
-        hint: '建议路线：先从左下角跳到中路，再跳向目标。不要只盯着一步能到的格子。',
-        pieces: [{ side: 'player', col: 0, row: 7 }],
         target: { col: 3, row: 4 },
         goal: 'target',
-        success: '很好！连续转位可以让马快速进入关键区域。',
+        maxMoves: 2,
+        success: '对！高手会先处理马腿，再走关键跳点。',
     },
     {
-        title: '绕开卡腿',
+        title: '立即取胜',
+        shortTitle: '取胜',
+        desc: '真实残局里，如果有一步获胜，就不要贪吃子或做防守。',
+        hint: '左侧红马可以一步跳到最上方底线；其它棋子和蓝子都是干扰。',
+        pieces: [
+            { side: 'player', col: 1, row: 2 },
+            { side: 'player', col: 5, row: 5 },
+            { side: 'ai', col: 3, row: 1 },
+            { side: 'ai', col: 4, row: 3 },
+        ],
+        target: { col: 0, row: 0 },
+        goal: 'finish',
+        maxMoves: 1,
+        success: '果断！看到一步胜时，直接结束比赛。',
+    },
+    {
+        title: '两步抢攻',
+        shortTitle: '抢攻',
+        desc: '中盘常常要提前两步布局。红马要在两步内转到能攻击双翼的位置。',
+        hint: '先从左下角跳到中路，再跳到发光格；边路看似安全，但会慢一拍。',
+        pieces: [
+            { side: 'player', col: 0, row: 7 },
+            { side: 'player', col: 5, row: 6 },
+            { side: 'ai', col: 1, row: 3 },
+            { side: 'ai', col: 4, row: 2 },
+        ],
+        target: { col: 3, row: 4 },
+        goal: 'target',
+        maxMoves: 2,
+        success: '漂亮！两步转位能把边线马变成进攻核心。',
+    },
+    {
+        title: '弃边绕腿',
         shortTitle: '绕腿',
-        desc: '有时最短路线被马腿挡住，要先绕一步，让下一跳的马腿变通畅。',
+        desc: '被卡马腿时，强行走直线会浪费回合。用两步绕开封锁，切入中路。',
         hint: '正前方被堵住，先跳到右侧中转点，再回到发光目标。',
         pieces: [
             { side: 'player', col: 1, row: 7 },
             { side: 'player', col: 1, row: 6 },
+            { side: 'ai', col: 3, row: 6 },
+            { side: 'ai', col: 5, row: 5 },
         ],
         target: { col: 4, row: 4 },
         goal: 'target',
-        success: '对！复杂局面里先解开马腿，比硬冲更重要。',
+        maxMoves: 2,
+        success: '对！绕开封锁后，马才能重新进入主战场。',
     },
     {
-        title: '连续吃子',
+        title: '连续战术吃子',
         shortTitle: '连吃',
-        desc: '练习连续攻击：吃掉第一枚蓝子后，继续寻找下一枚蓝子的合法落点。',
-        hint: '先吃近处蓝子，再从新位置继续跳吃远处蓝子；目标是清空所有蓝子。',
+        desc: '真实对局里，连续吃子要算清下一跳。两步内清掉所有蓝方关键子。',
+        hint: '先吃近处蓝子，再从新位置继续跳吃远处蓝子；如果先走错方向，第二枚就吃不到。',
         pieces: [
             { side: 'player', col: 2, row: 6 },
             { side: 'ai', col: 3, row: 4 },
@@ -173,34 +200,41 @@ const TUTORIAL_CHALLENGES = [
         ],
         target: { col: 5, row: 3 },
         goal: 'captureAll',
-        success: '漂亮！连续吃子能快速扩大优势。',
+        maxMoves: 2,
+        success: '漂亮！连续吃子能快速清除对方反击点。',
     },
     {
-        title: '拦截冲线',
-        shortTitle: '拦截',
-        desc: '蓝方快到你的底线时，优先找能吃掉它的马步，避免只顾自己前进。',
-        hint: '蓝子离底线很近，红马有一个“日”字可以直接拦截并吃掉它。',
-        pieces: [
-            { side: 'player', col: 1, row: 2 },
-            { side: 'ai', col: 2, row: 0 },
-        ],
-        target: { col: 2, row: 0 },
-        goal: 'capture',
-        success: '拦得好！防守关键威胁，常常比随便进攻更强。',
-    },
-    {
-        title: '选择冲线马',
-        shortTitle: '选马',
-        desc: '有多匹红马时，选择能最快冲线的一匹，而不是随便移动最近的棋子。',
-        hint: '左边红马只是干扰；右侧红马能一步跳到最上方底线。',
+        title: '攻防选择',
+        shortTitle: '攻防',
+        desc: '你能吃子，也能冲线。判断哪一步真正改变胜负，而不是只看眼前收益。',
+        hint: '吃右侧蓝子只是赚子；左侧红马能两步冲线，第一步必须先占发光中转格。',
         pieces: [
             { side: 'player', col: 0, row: 5 },
-            { side: 'player', col: 4, row: 2 },
-            { side: 'ai', col: 1, row: 3 },
+            { side: 'player', col: 4, row: 5 },
+            { side: 'ai', col: 5, row: 3 },
+            { side: 'ai', col: 2, row: 1 },
         ],
-        target: { col: 5, row: 0 },
+        target: { col: 1, row: 3 },
+        goal: 'target',
+        maxMoves: 1,
+        success: '判断正确！先走中转格，下一手就能制造冲线压力。',
+    },
+    {
+        title: '残局三步冲线',
+        shortTitle: '残局',
+        desc: '模拟真实残局：蓝子挡路且有干扰子，红方必须三步内找到最快冲线路线。',
+        hint: '不要先吃边上的蓝子。用右侧红马连续向上转位，第三步跳到最上方底线。',
+        pieces: [
+            { side: 'player', col: 3, row: 6 },
+            { side: 'player', col: 0, row: 5 },
+            { side: 'ai', col: 1, row: 3 },
+            { side: 'ai', col: 4, row: 2 },
+            { side: 'ai', col: 5, row: 4 },
+        ],
+        target: { col: 4, row: 0 },
         goal: 'finish',
-        success: '完成！复杂局面要先找最快获胜的棋子。',
+        maxMoves: 3,
+        success: '完成！这就是实战残局里的最快冲线思路。',
     },
 ];
 const DEFAULT_PLAYER_PROFILE = {
@@ -1293,7 +1327,8 @@ function updateTutorialUI(message = '') {
     renderTutorialSelector();
     if (title) title.textContent = `第 ${activeTutorialIndex + 1}/${TUTORIAL_CHALLENGES.length} 关：${challenge.title}`;
     if (desc) desc.textContent = challenge.desc;
-    if (status) status.textContent = message || `提示：${challenge.hint} 完成目标后自动进入下一关。`;
+    const limitText = challenge.maxMoves ? `限 ${challenge.maxMoves} 步，已走 ${gameState.moveCount || 0} 步。` : '';
+    if (status) status.textContent = message || `${limitText}提示：${challenge.hint} 完成目标后自动进入下一关。`;
     document.getElementById('game-tip').textContent = `${challenge.desc} ${challenge.hint}`;
 }
 
@@ -1370,8 +1405,18 @@ function handleTutorialAfterMove(capturedPiece) {
         }, 900);
         return;
     }
+    if (challenge.maxMoves && (gameState.moveCount || 0) >= challenge.maxMoves) {
+        gameState.gameOver = true;
+        updateTutorialUI(`这条路线超过了 ${challenge.maxMoves} 步限制，实战里会慢一拍。重新摆局再试。`);
+        updateTurnIndicator();
+        render();
+        setTimeout(() => {
+            if (isTutorialMode()) initTutorialChallenge(activeTutorialIndex);
+        }, 1100);
+        return;
+    }
     gameState.currentTurn = 'player';
-    updateTutorialUI(`还没完成目标。${challenge.hint}`);
+    updateTutorialUI(`还没完成目标。${challenge.maxMoves ? `还剩 ${challenge.maxMoves - (gameState.moveCount || 0)} 步。` : ''}${challenge.hint}`);
     updateTurnIndicator();
     render();
 }
@@ -3598,8 +3643,8 @@ function updateTurnIndicator() {
     const indicator = document.getElementById('turn-indicator');
     if (gameState.gameOver) {
         if (isTutorialMode()) {
-            indicator.textContent = '教程完成！';
-            indicator.className = 'win';
+            indicator.textContent = gameState.winner === 'player' ? '教程完成！' : '重新挑战';
+            indicator.className = gameState.winner === 'player' ? 'win' : 'lose';
         } else if (gameState.winner === 'player') {
             indicator.textContent = onlineMatch.active ? '你赢了对局！' : '你赢了！';
             indicator.className = 'win';
