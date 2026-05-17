@@ -578,6 +578,26 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
     cursor: pointer;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    padding: 5px 4px;
+    position: relative;
+}
+
+.avatar-choice-face {
+    line-height: 1;
+}
+
+.avatar-choice-lock {
+    max-width: 100%;
+    color: #ffe2aa;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.05;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .avatar-choice.active {
@@ -589,8 +609,9 @@ body {
 
 .avatar-choice:disabled {
     cursor: default;
-    filter: grayscale(1);
-    opacity: 0.42;
+    filter: grayscale(0.9);
+    opacity: 0.58;
+    background: rgba(8, 11, 28, 0.42);
 }
 
 #profile-settings-open {

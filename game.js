@@ -350,20 +350,42 @@ const ONLINE_OPPONENTS = [
     { name: 'DeepRiver', avatar: '🌊', title: '大师', accent: '#5aa7ff', rating: 2260, wins: 204, losses: 119, bestRating: 2325, difficulty: 'nightmare', style: '大师', styleKey: 'master', personality: 'focused', chatRate: 0.16, rematchRate: 0.22 },
 ];
 
-function mergeProfileOptions(baseOptions, opponentField, labelPrefix = '') {
+function getOpponentAvatarUnlock(opponent) {
+    const difficulty = opponent.difficulty || 'medium';
+    if (difficulty === 'beginner') {
+        return { type: 'missionPoints', amount: 6, text: '6 活跃点解锁' };
+    }
+    if (difficulty === 'easy') {
+        return { type: 'wins', amount: 2, text: '赢 2 局解锁' };
+    }
+    if (difficulty === 'medium') {
+        return { type: 'rating', amount: 1400, text: '达到白银解锁' };
+    }
+    if (difficulty === 'hard') {
+        return { type: 'rating', amount: 1700, text: '达到铂金解锁' };
+    }
+    return { type: 'rating', amount: 1900, text: '达到大师解锁' };
+}
+
+function mergeProfileOptions(baseOptions, opponentField, labelPrefix = '', optionFactory = null) {
     const merged = [...baseOptions];
     const seen = new Set(merged.map(item => item.value));
     ONLINE_OPPONENTS.forEach(opponent => {
         const value = opponent[opponentField];
         if (!value || seen.has(value)) return;
         seen.add(value);
-        merged.push({ value, label: labelPrefix ? `${value} ${labelPrefix}` : value, source: 'opponent' });
+        const option = optionFactory ? optionFactory(opponent, value) : {};
+        merged.push({ value, label: labelPrefix ? `${value} ${labelPrefix}` : value, source: 'opponent', ...option });
     });
     return merged;
 }
 
 function profileOptionsForField(field) {
-    if (field === 'avatar') return mergeProfileOptions(PROFILE_AVATAR_OPTIONS, 'avatar', '头像');
+    if (field === 'avatar') {
+        return mergeProfileOptions(PROFILE_AVATAR_OPTIONS, 'avatar', '头像', opponent => ({
+            unlock: getOpponentAvatarUnlock(opponent),
+        }));
+    }
     if (field === 'title') return mergeProfileOptions(PROFILE_TITLE_OPTIONS, 'title');
     return PROFILE_ACCENT_OPTIONS;
 }
@@ -724,7 +746,16 @@ function renderAvatarPicker(options, currentValue) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'avatar-choice';
-        button.textContent = item.value;
+        const face = document.createElement('span');
+        face.className = 'avatar-choice-face';
+        face.textContent = item.value;
+        button.appendChild(face);
+        if (!unlocked && item.unlock) {
+            const lock = document.createElement('span');
+            lock.className = 'avatar-choice-lock';
+            lock.textContent = `🔒 ${item.unlock.text}`;
+            button.appendChild(lock);
+        }
         button.title = unlocked ? item.label : `${item.label} · ${item.unlock.text}`;
         button.disabled = !unlocked;
         button.classList.toggle('active', item.value === currentValue);
