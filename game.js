@@ -63,24 +63,26 @@ const BEGINNER_PROTECTION_GAMES = 8;
 const PROFILE_AVATAR_OPTIONS = [
     { value: '🐴', label: '🐴 骑手' },
     { value: '♞', label: '♞ 棋士' },
-    { value: '🔥', label: '🔥 进攻' },
-    { value: '🛡️', label: '🛡️ 防守' },
-    { value: '🌙', label: '🌙 冷静' },
-    { value: '⚡', label: '⚡ 快棋' },
-    { value: '🏆', label: '🏆 连胜奖杯', unlock: { type: 'wins', amount: 3, text: '赢 3 局解锁' } },
+    { value: '🔥', label: '🔥 进攻', unlock: { type: 'wins', amount: 1, text: '赢 1 局解锁' } },
+    { value: '🛡️', label: '🛡️ 防守', unlock: { type: 'games', amount: 3, text: '完成 3 局解锁' } },
+    { value: '🌙', label: '🌙 冷静', unlock: { type: 'missionPoints', amount: 12, text: '12 活跃点解锁' } },
+    { value: '⚡', label: '⚡ 快棋', unlock: { type: 'winRate', amount: 55, minGames: 5, text: '5 局后胜率 55% 解锁' } },
+    { value: '🏆', label: '🏆 连胜奖杯', unlock: { type: 'streak', amount: 3, text: '达成 3 连胜解锁' } },
     { value: '💎', label: '💎 钻石骑士', unlock: { type: 'rating', amount: 1750, text: '达到钻石解锁' } },
-    { value: '👑', label: '👑 大师王冠', unlock: { type: 'rating', amount: 2000, text: '达到大师解锁' } },
+    { value: '👑', label: '👑 大师王冠', unlock: { type: 'bestRating', amount: 2000, text: '最佳评级 2000 解锁' } },
 ];
 const PROFILE_TITLE_OPTIONS = [
     { value: '新锐骑手', label: '新锐骑手' },
-    { value: '稳健棋手', label: '稳健棋手' },
-    { value: '进攻派', label: '进攻派' },
-    { value: '残局猎手', label: '残局猎手' },
-    { value: '快棋玩家', label: '快棋玩家' },
+    { value: '稳健棋手', label: '稳健棋手', unlock: { type: 'games', amount: 3, text: '完成 3 局解锁' } },
+    { value: '进攻派', label: '进攻派', unlock: { type: 'wins', amount: 2, text: '赢 2 局解锁' } },
+    { value: '残局猎手', label: '残局猎手', unlock: { type: 'missionPoints', amount: 18, text: '18 活跃点解锁' } },
+    { value: '快棋玩家', label: '快棋玩家', unlock: { type: 'games', amount: 8, text: '完成 8 局解锁' } },
     { value: '三连胜', label: '三连胜', unlock: { type: 'streak', amount: 3, text: '达成 3 连胜解锁' } },
     { value: '任务达人', label: '任务达人', unlock: { type: 'missionPoints', amount: 30, text: '30 活跃点解锁' } },
     { value: '白银骑士', label: '白银骑士', unlock: { type: 'rating', amount: 1250, text: '达到白银解锁' } },
     { value: '黄金统帅', label: '黄金统帅', unlock: { type: 'rating', amount: 1500, text: '达到黄金解锁' } },
+    { value: '胜率专家', label: '胜率专家', unlock: { type: 'winRate', amount: 60, minGames: 10, text: '10 局后胜率 60% 解锁' } },
+    { value: '传奇骑手', label: '传奇骑手', unlock: { type: 'bestRating', amount: 2000, text: '最佳评级 2000 解锁' } },
 ];
 const PROFILE_ACCENT_OPTIONS = [
     { value: '#5aa7ff', label: '蓝色' },
@@ -353,18 +355,35 @@ const ONLINE_OPPONENTS = [
 function getOpponentAvatarUnlock(opponent) {
     const difficulty = opponent.difficulty || 'medium';
     if (difficulty === 'beginner') {
-        return { type: 'missionPoints', amount: 6, text: '6 活跃点解锁' };
+        return { type: 'missionPoints', amount: 8, text: '8 活跃点解锁' };
     }
     if (difficulty === 'easy') {
-        return { type: 'wins', amount: 2, text: '赢 2 局解锁' };
+        return { type: 'games', amount: 5, text: '完成 5 局解锁' };
     }
     if (difficulty === 'medium') {
-        return { type: 'rating', amount: 1400, text: '达到白银解锁' };
+        return { type: 'wins', amount: 6, text: '赢 6 局解锁' };
     }
     if (difficulty === 'hard') {
-        return { type: 'rating', amount: 1700, text: '达到铂金解锁' };
+        return { type: 'bestRating', amount: 1700, text: '最佳评级 1700 解锁' };
     }
     return { type: 'rating', amount: 1900, text: '达到大师解锁' };
+}
+
+function getOpponentTitleUnlock(opponent) {
+    const difficulty = opponent.difficulty || 'medium';
+    if (difficulty === 'beginner') {
+        return { type: 'games', amount: 4, text: '完成 4 局解锁' };
+    }
+    if (difficulty === 'easy') {
+        return { type: 'missionPoints', amount: 16, text: '16 活跃点解锁' };
+    }
+    if (difficulty === 'medium') {
+        return { type: 'rating', amount: 1450, text: '达到白银高段解锁' };
+    }
+    if (difficulty === 'hard') {
+        return { type: 'winRate', amount: 58, minGames: 12, text: '12 局后胜率 58% 解锁' };
+    }
+    return { type: 'bestRating', amount: 1900, text: '最佳评级 1900 解锁' };
 }
 
 function mergeProfileOptions(baseOptions, opponentField, labelPrefix = '', optionFactory = null) {
@@ -386,7 +405,11 @@ function profileOptionsForField(field) {
             unlock: getOpponentAvatarUnlock(opponent),
         }));
     }
-    if (field === 'title') return mergeProfileOptions(PROFILE_TITLE_OPTIONS, 'title');
+    if (field === 'title') {
+        return mergeProfileOptions(PROFILE_TITLE_OPTIONS, 'title', '', opponent => ({
+            unlock: getOpponentTitleUnlock(opponent),
+        }));
+    }
     return PROFILE_ACCENT_OPTIONS;
 }
 
@@ -712,10 +735,18 @@ function hasBeginnerProtection() {
 function isProfileOptionUnlocked(item) {
     if (!item.unlock) return true;
     const amount = item.unlock.amount;
+    const totalGames = onlineGamesPlayed();
     if (item.unlock.type === 'rating') return playerProfile.rating >= amount;
+    if (item.unlock.type === 'bestRating') return (playerProfile.bestRating || playerProfile.rating) >= amount;
     if (item.unlock.type === 'wins') return (playerProfile.wins || 0) >= amount;
+    if (item.unlock.type === 'games') return totalGames >= amount;
     if (item.unlock.type === 'streak') return Math.max(0, playerProfile.streak || 0) >= amount;
     if (item.unlock.type === 'missionPoints') return (playerProfile.missionPoints || 0) >= amount;
+    if (item.unlock.type === 'winRate') {
+        const minGames = item.unlock.minGames || amount;
+        if (totalGames < minGames) return false;
+        return Math.round((playerProfile.wins || 0) / totalGames * 100) >= amount;
+    }
     return false;
 }
 
@@ -723,10 +754,19 @@ function findProfileOption(field, value) {
     return profileOptionsForField(field).find(item => item.value === value);
 }
 
+function sortProfileOptions(options, currentValue) {
+    return [...options].sort((a, b) => {
+        const aUnlocked = isProfileOptionUnlocked(a) || a.value === currentValue;
+        const bUnlocked = isProfileOptionUnlocked(b) || b.value === currentValue;
+        if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1;
+        return options.indexOf(a) - options.indexOf(b);
+    });
+}
+
 function populateProfileSelect(id, options, currentValue) {
     const select = document.getElementById(id);
     select.innerHTML = '';
-    options.forEach(item => {
+    sortProfileOptions(options, currentValue).forEach(item => {
         const option = document.createElement('option');
         const unlocked = isProfileOptionUnlocked(item) || item.value === currentValue;
         option.value = item.value;
@@ -741,7 +781,7 @@ function renderAvatarPicker(options, currentValue) {
     const grid = document.getElementById('profile-avatar-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    options.forEach(item => {
+    sortProfileOptions(options, currentValue).forEach(item => {
         const unlocked = isProfileOptionUnlocked(item) || item.value === currentValue;
         const button = document.createElement('button');
         button.type = 'button';
@@ -769,7 +809,7 @@ function updateUnlockSummary(message = '') {
     if (!summary) return;
     const allOptions = [...profileOptionsForField('avatar'), ...profileOptionsForField('title'), ...PROFILE_ACCENT_OPTIONS];
     const unlocked = allOptions.filter(isProfileOptionUnlocked).length;
-    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 头像库和称号已加入更多可选外观，积分、胜场、连胜和每日活跃点还能解锁稀有外观。`;
+    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 未解锁项目会排在后面；胜场、总对局、连胜、胜率、评级、最佳评级和活跃点都能解锁头像与称号。`;
 }
 
 function loadOpponentProfiles() {
