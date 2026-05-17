@@ -2289,7 +2289,7 @@ function startRealtimeAiSubstitute(message) {
         clearTimeout(realtimeQueueFallbackTimer);
         realtimeQueueFallbackTimer = null;
     }
-    if (!onlineMatch.searching || gameState.gameOver) return;
+    if (!onlineMatch.searching) return;
     if (realtimeClient.ws && realtimeClient.ws.readyState === WebSocket.OPEN) {
         realtimeClient.ws.send(JSON.stringify({ type: 'queue.cancel' }));
     }
@@ -2789,6 +2789,7 @@ function startOnlineMatch() {
     if (onlineMatch.searching) return;
 
     showMatchmakingScreen();
+    gameState.gameOver = false;
     onlineMatch.active = false;
     onlineMatch.searching = true;
     onlineMatch.opponent = null;
