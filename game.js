@@ -67,7 +67,12 @@ const PROFILE_AVATAR_OPTIONS = [
     { value: '🛡️', label: '🛡️ 防守', unlock: { type: 'games', amount: 3, text: '完成 3 局解锁' } },
     { value: '🌙', label: '🌙 冷静', unlock: { type: 'missionPoints', amount: 12, text: '12 活跃点解锁' } },
     { value: '⚡', label: '⚡ 快棋', unlock: { type: 'winRate', amount: 55, minGames: 5, text: '5 局后胜率 55% 解锁' } },
+    { value: '🎯', label: '🎯 精准', unlock: { type: 'wins', amount: 5, text: '赢 5 局解锁' } },
+    { value: '🧠', label: '🧠 计算', unlock: { type: 'games', amount: 10, text: '完成 10 局解锁' } },
     { value: '🏆', label: '🏆 连胜奖杯', unlock: { type: 'streak', amount: 3, text: '达成 3 连胜解锁' } },
+    { value: '🦄', label: '🦄 稀有骑手', unlock: { type: 'missionPoints', amount: 45, text: '45 活跃点解锁' } },
+    { value: '🐉', label: '🐉 龙骑士', unlock: { type: 'bestRating', amount: 1600, text: '最佳评级 1600 解锁' } },
+    { value: '🦅', label: '🦅 鹰眼', unlock: { type: 'winRate', amount: 65, minGames: 15, text: '15 局后胜率 65% 解锁' } },
     { value: '💎', label: '💎 钻石骑士', unlock: { type: 'rating', amount: 1750, text: '达到钻石解锁' } },
     { value: '👑', label: '👑 大师王冠', unlock: { type: 'bestRating', amount: 2000, text: '最佳评级 2000 解锁' } },
 ];
@@ -80,8 +85,13 @@ const PROFILE_TITLE_OPTIONS = [
     { value: '三连胜', label: '三连胜', unlock: { type: 'streak', amount: 3, text: '达成 3 连胜解锁' } },
     { value: '任务达人', label: '任务达人', unlock: { type: 'missionPoints', amount: 30, text: '30 活跃点解锁' } },
     { value: '白银骑士', label: '白银骑士', unlock: { type: 'rating', amount: 1250, text: '达到白银解锁' } },
+    { value: '百战新人', label: '百战新人', unlock: { type: 'games', amount: 12, text: '完成 12 局解锁' } },
+    { value: '精准猎手', label: '精准猎手', unlock: { type: 'wins', amount: 8, text: '赢 8 局解锁' } },
     { value: '黄金统帅', label: '黄金统帅', unlock: { type: 'rating', amount: 1500, text: '达到黄金解锁' } },
+    { value: '冷静大师', label: '冷静大师', unlock: { type: 'missionPoints', amount: 50, text: '50 活跃点解锁' } },
     { value: '胜率专家', label: '胜率专家', unlock: { type: 'winRate', amount: 60, minGames: 10, text: '10 局后胜率 60% 解锁' } },
+    { value: '长胜将军', label: '长胜将军', unlock: { type: 'streak', amount: 5, text: '达成 5 连胜解锁' } },
+    { value: '钻石统帅', label: '钻石统帅', unlock: { type: 'rating', amount: 1750, text: '达到钻石解锁' } },
     { value: '传奇骑手', label: '传奇骑手', unlock: { type: 'bestRating', amount: 2000, text: '最佳评级 2000 解锁' } },
 ];
 const PROFILE_ACCENT_OPTIONS = [
@@ -806,10 +816,38 @@ function renderAvatarPicker(options, currentValue) {
 
 function updateUnlockSummary(message = '') {
     const summary = document.getElementById('profile-unlock-summary');
-    if (!summary) return;
     const allOptions = [...profileOptionsForField('avatar'), ...profileOptionsForField('title'), ...PROFILE_ACCENT_OPTIONS];
     const unlocked = allOptions.filter(isProfileOptionUnlocked).length;
-    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 未解锁项目会排在后面；胜场、总对局、连胜、胜率、评级、最佳评级和活跃点都能解锁头像与称号。`;
+    const total = allOptions.length || 1;
+    const totalGames = onlineGamesPlayed();
+    const winRate = totalGames ? Math.round((playerProfile.wins || 0) / totalGames * 100) : 0;
+    const count = document.getElementById('profile-unlock-count');
+    const fill = document.getElementById('profile-unlock-fill');
+    const chips = document.getElementById('profile-unlock-chips');
+
+    if (count) count.textContent = `${unlocked}/${allOptions.length}`;
+    if (fill) fill.style.width = `${Math.round(unlocked / total * 100)}%`;
+    if (chips) {
+        const chipData = [
+            `胜场 ${playerProfile.wins || 0}`,
+            `对局 ${totalGames}`,
+            `连胜 ${Math.max(0, playerProfile.streak || 0)}`,
+            `胜率 ${totalGames ? `${winRate}%` : '--'}`,
+            `评级 ${playerProfile.rating || DEFAULT_PLAYER_PROFILE.rating}`,
+            `最佳 ${playerProfile.bestRating || playerProfile.rating || DEFAULT_PLAYER_PROFILE.bestRating}`,
+            `活跃点 ${playerProfile.missionPoints || 0}`,
+        ];
+        chips.innerHTML = '';
+        chipData.forEach(text => {
+            const chip = document.createElement('span');
+            chip.textContent = text;
+            chips.appendChild(chip);
+        });
+    }
+
+    if (summary) {
+        summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 头像、称号和主题都会按解锁状态排序；继续对局、提升胜率或完成每日任务可以打开更多外观。`;
+    }
 }
 
 function loadOpponentProfiles() {

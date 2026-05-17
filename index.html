@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>骑马棋</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a1a2e'/%3E%3Ccircle cx='32' cy='32' r='24' fill='%23aa0000'/%3E%3Ctext x='32' y='42' font-size='30' text-anchor='middle' fill='white' font-family='sans-serif'%3EM%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20260517-profile-unlock-sort">
+    <link rel="stylesheet" href="styles.css?v=20260517-profile-panel-unlocks">
 </head>
 <body>
     <section id="main-menu">
@@ -279,24 +279,38 @@
                 </div>
                 <button id="profile-settings-close">关闭</button>
             </div>
-            <div id="profile-options">
-                <label>名字<input id="profile-name-input" maxlength="16" value="Player"></label>
-                <label>头像
-                    <select id="profile-avatar-select">
-                    </select>
-                </label>
-                <div id="profile-avatar-picker" class="profile-picker">
-                    <span>头像库</span>
-                    <div id="profile-avatar-grid"></div>
+            <div id="profile-unlock-panel">
+                <div class="profile-unlock-head">
+                    <span>外观解锁进度</span>
+                    <strong id="profile-unlock-count">0/0</strong>
                 </div>
-                <label>称号
-                    <select id="profile-title-select">
-                    </select>
-                </label>
-                <label>主题
-                    <select id="profile-accent-select">
-                    </select>
-                </label>
+                <div id="profile-unlock-track"><span id="profile-unlock-fill"></span></div>
+                <div id="profile-unlock-chips"></div>
+            </div>
+            <div id="profile-options">
+                <div class="profile-section profile-section-basic">
+                    <div class="profile-section-title">资料</div>
+                    <label>名字<input id="profile-name-input" maxlength="16" value="Player"></label>
+                    <label>称号
+                        <select id="profile-title-select">
+                        </select>
+                    </label>
+                    <label>主题
+                        <select id="profile-accent-select">
+                        </select>
+                    </label>
+                </div>
+                <div class="profile-section">
+                    <div class="profile-section-title">头像库</div>
+                    <label>当前头像
+                        <select id="profile-avatar-select">
+                        </select>
+                    </label>
+                    <div id="profile-avatar-picker" class="profile-picker">
+                        <span>已解锁头像排在前面，锁定头像会显示解锁条件。</span>
+                        <div id="profile-avatar-grid"></div>
+                    </div>
+                </div>
             </div>
             <div id="profile-unlock-summary"></div>
         </div>
@@ -335,6 +349,6 @@
         </div>
     </div>
 
-    <script src="game.js?v=20260517-profile-unlock-sort"></script>
+    <script src="game.js?v=20260517-profile-panel-unlocks"></script>
 </body>
 </html>

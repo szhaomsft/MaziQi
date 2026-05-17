@@ -541,28 +541,102 @@ body {
     font-size: 17px;
 }
 
-#profile-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+#profile-unlock-panel {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(90, 167, 255, 0.15), rgba(255, 226, 170, 0.09));
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 16px;
 }
 
+.profile-unlock-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 9px;
+    color: #aeb6d4;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.profile-unlock-head strong {
+    color: #ffe2aa;
+    font-size: 16px;
+}
+
+#profile-unlock-track {
+    height: 8px;
+    overflow: hidden;
+    background: rgba(8, 11, 28, 0.48);
+    border-radius: 999px;
+}
+
+#profile-unlock-fill {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #8ef3c5, #5aa7ff, #ffe2aa);
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+
+#profile-unlock-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+#profile-unlock-chips span {
+    padding: 5px 8px;
+    color: #dbe6ff;
+    font-size: 11px;
+    font-weight: 800;
+    background: rgba(8, 11, 28, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+}
+
+#profile-options,
+.profile-section,
 .profile-picker {
-    grid-column: 1 / -1;
     display: grid;
-    gap: 8px;
+    gap: 10px;
+}
+
+.profile-section {
+    padding: 12px;
+    background: rgba(8, 11, 28, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+}
+
+.profile-section-basic {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-section-title,
+.profile-picker > span {
+    color: #ffe2aa;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.profile-section-title {
+    grid-column: 1 / -1;
 }
 
 .profile-picker > span {
     color: #aeb6d4;
-    font-size: 12px;
+    font-weight: 700;
 }
 
 #profile-avatar-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
     gap: 8px;
-    max-height: 168px;
+    max-height: 214px;
     overflow: auto;
     padding: 8px;
     background: rgba(8, 11, 28, 0.24);
@@ -571,7 +645,7 @@ body {
 }
 
 .avatar-choice {
-    min-height: 42px;
+    min-height: 58px;
     color: #f4f7ff;
     font-size: 20px;
     background: rgba(255, 255, 255, 0.075);
@@ -586,13 +660,14 @@ body {
 }
 
 .avatar-choice-face {
+    font-size: 24px;
     line-height: 1;
 }
 
 .avatar-choice-lock {
     max-width: 100%;
     color: #ffe2aa;
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: 800;
     line-height: 1.05;
     overflow: hidden;
@@ -1608,7 +1683,8 @@ canvas {
 }
 
 #profile-settings-box {
-    width: min(480px, 100%);
+    width: min(640px, 100%);
+    overflow: auto;
 }
 
 #lobby-detail-header,
@@ -1855,6 +1931,7 @@ canvas {
     #difficulty-selector,
     #stats-grid,
     #profile-options,
+    .profile-section-basic,
     #lobby-profile-stats,
     #menu-action-grid,
     #room-code-actions,
