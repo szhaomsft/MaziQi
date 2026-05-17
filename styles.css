@@ -14,6 +14,31 @@ body {
     color: #e0e0e0;
 }
 
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 226, 170, 0.72) rgba(8, 11, 28, 0.58);
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: rgba(8, 11, 28, 0.58);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffe2aa, #5aa7ff);
+    border: 2px solid rgba(8, 11, 28, 0.82);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #fff0c8, #8ef3c5);
+}
+
 #game-container {
     display: flex;
     flex-direction: column;
