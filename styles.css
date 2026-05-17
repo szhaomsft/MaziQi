@@ -547,6 +547,52 @@ body {
     gap: 8px;
 }
 
+.profile-picker {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 8px;
+}
+
+.profile-picker > span {
+    color: #aeb6d4;
+    font-size: 12px;
+}
+
+#profile-avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+    gap: 8px;
+    max-height: 168px;
+    overflow: auto;
+    padding: 8px;
+    background: rgba(8, 11, 28, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+}
+
+.avatar-choice {
+    min-height: 42px;
+    color: #f4f7ff;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.075);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.avatar-choice.active {
+    color: #11162b;
+    background: linear-gradient(135deg, #ffe2aa, #5aa7ff);
+    border-color: transparent;
+    box-shadow: 0 0 0 2px rgba(255, 226, 170, 0.22);
+}
+
+.avatar-choice:disabled {
+    cursor: default;
+    filter: grayscale(1);
+    opacity: 0.42;
+}
+
 #profile-settings-open {
     width: 100%;
     margin-top: 2px;

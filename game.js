@@ -94,37 +94,41 @@ const PROFILE_ACCENT_OPTIONS = [
 const TUTORIAL_CHALLENGES = [
     {
         title: '马步训练',
-        desc: '选择红马，走到发光目标格，熟悉“日”字移动。',
+        desc: '先点红马，再点发光目标格。马每次走“日”字：横两格竖一格，或竖两格横一格。',
+        hint: '从当前位置到目标格是“竖两格、横一格”。如果看不到高亮目标，先点一下红马。',
         pieces: [{ side: 'player', col: 2, row: 6 }],
         target: { col: 3, row: 4 },
         goal: 'target',
-        success: '很好！马走日字，可以斜跨两格。',
+        success: '很好！马走日字，不是直走，也不是斜走。',
     },
     {
         title: '卡马腿',
-        desc: '中间的棋子挡住马腿，找另一条能走到目标的路。',
+        desc: '马不能跳过被堵住的“马腿”。先观察红马旁边的阻挡子，再选择没有被堵住的一侧到目标。',
+        hint: '目标在右上方向；如果正上方马腿被挡，就要找横向出腿的那条日字路线。',
         pieces: [
             { side: 'player', col: 2, row: 6 },
             { side: 'player', col: 2, row: 5 },
         ],
         target: { col: 4, row: 5 },
         goal: 'target',
-        success: '对了！马腿被挡时，不能跳过那一侧。',
+        success: '对了！马腿被挡时，那一侧的日字走法不能用。',
     },
     {
         title: '吃子技巧',
-        desc: '用红马吃掉蓝方棋子，练习攻击落点。',
+        desc: '敌方棋子如果正好在你的合法落点上，就可以直接点它完成吃子。',
+        hint: '点红马后，蓝子所在格会是可走位置；第二下直接点蓝子。',
         pieces: [
             { side: 'player', col: 1, row: 6 },
             { side: 'ai', col: 2, row: 4 },
         ],
         target: { col: 2, row: 4 },
         goal: 'capture',
-        success: '漂亮！能落到敌方棋子所在格就可以吃子。',
+        success: '漂亮！落点上有敌方棋子时，移动和吃子会同时完成。',
     },
     {
         title: '冲线获胜',
-        desc: '把红马送到底线，理解在线对局的主要胜利条件。',
+        desc: '把任意红马送到最上方底线即可获胜。练习时只需要完成最后一步冲线。',
+        hint: '目标格在最上方，点红马后选择发光格，红方到第 1 行就赢。',
         pieces: [{ side: 'player', col: 2, row: 2 }],
         target: { col: 3, row: 0 },
         goal: 'finish',
@@ -184,6 +188,24 @@ const ONLINE_OPPONENTS = [
     { name: 'StarCourier', avatar: '⚡', title: '快棋玩家', accent: '#ffe066', rating: 2140, wins: 171, losses: 108, bestRating: 2205, difficulty: 'nightmare', style: '快棋高手', styleKey: 'speed', personality: 'expressive', chatRate: 0.40, rematchRate: 0.36 },
     { name: 'DeepRiver', avatar: '🌊', title: '大师', accent: '#5aa7ff', rating: 2260, wins: 204, losses: 119, bestRating: 2325, difficulty: 'nightmare', style: '大师', styleKey: 'master', personality: 'focused', chatRate: 0.16, rematchRate: 0.22 },
 ];
+
+function mergeProfileOptions(baseOptions, opponentField, labelPrefix = '') {
+    const merged = [...baseOptions];
+    const seen = new Set(merged.map(item => item.value));
+    ONLINE_OPPONENTS.forEach(opponent => {
+        const value = opponent[opponentField];
+        if (!value || seen.has(value)) return;
+        seen.add(value);
+        merged.push({ value, label: labelPrefix ? `${value} ${labelPrefix}` : value, source: 'opponent' });
+    });
+    return merged;
+}
+
+function profileOptionsForField(field) {
+    if (field === 'avatar') return mergeProfileOptions(PROFILE_AVATAR_OPTIONS, 'avatar', '在线对手');
+    if (field === 'title') return mergeProfileOptions(PROFILE_TITLE_OPTIONS, 'title');
+    return PROFILE_ACCENT_OPTIONS;
+}
 
 const PLAYER_CHAT_MESSAGES = ['👍', '👏', '😮', '🤔', '漂亮！', '好棋', '有点难', '我想想', '再来一局？', '差一点', '稳住', '运气不错', '别急', '这步危险', '守住了', '机会来了', '厉害', '差点中招', '😭', '😢', '😓', '😅'];
 const OPPONENT_CHAT_MESSAGES = {
@@ -515,8 +537,7 @@ function isProfileOptionUnlocked(item) {
 }
 
 function findProfileOption(field, value) {
-    const options = field === 'avatar' ? PROFILE_AVATAR_OPTIONS : (field === 'title' ? PROFILE_TITLE_OPTIONS : PROFILE_ACCENT_OPTIONS);
-    return options.find(item => item.value === value);
+    return profileOptionsForField(field).find(item => item.value === value);
 }
 
 function populateProfileSelect(id, options, currentValue) {
@@ -533,12 +554,30 @@ function populateProfileSelect(id, options, currentValue) {
     select.value = options.some(item => item.value === currentValue) ? currentValue : options[0].value;
 }
 
+function renderAvatarPicker(options, currentValue) {
+    const grid = document.getElementById('profile-avatar-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    options.forEach(item => {
+        const unlocked = isProfileOptionUnlocked(item) || item.value === currentValue;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'avatar-choice';
+        button.textContent = item.value;
+        button.title = unlocked ? item.label : `${item.label} · ${item.unlock.text}`;
+        button.disabled = !unlocked;
+        button.classList.toggle('active', item.value === currentValue);
+        button.addEventListener('click', () => updateProfileOption('avatar', item.value));
+        grid.appendChild(button);
+    });
+}
+
 function updateUnlockSummary(message = '') {
     const summary = document.getElementById('profile-unlock-summary');
     if (!summary) return;
-    const allOptions = [...PROFILE_AVATAR_OPTIONS, ...PROFILE_TITLE_OPTIONS, ...PROFILE_ACCENT_OPTIONS];
+    const allOptions = [...profileOptionsForField('avatar'), ...profileOptionsForField('title'), ...PROFILE_ACCENT_OPTIONS];
     const unlocked = allOptions.filter(isProfileOptionUnlocked).length;
-    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 积分、胜场、连胜和每日活跃点可以解锁更多。`;
+    summary.textContent = message || `已解锁外观 ${unlocked}/${allOptions.length} · 头像库和称号已加入在线对手同款，积分、胜场、连胜和每日活跃点还能解锁稀有外观。`;
 }
 
 function loadOpponentProfiles() {
@@ -717,9 +756,11 @@ function updatePlayerProfileUI() {
     const totalGames = playerProfile.wins + playerProfile.losses;
     document.getElementById('lobby-winrate').textContent = totalGames ? `${Math.round(playerProfile.wins / totalGames * 100)}%` : '--';
     document.getElementById('lobby-best-streak').textContent = `${playerProfile.bestRating || playerProfile.rating} · ${playerProfile.streak > 0 ? '+' : ''}${playerProfile.streak || 0}`;
-    populateProfileSelect('profile-avatar-select', PROFILE_AVATAR_OPTIONS, playerProfile.avatar || DEFAULT_PLAYER_PROFILE.avatar);
-    populateProfileSelect('profile-title-select', PROFILE_TITLE_OPTIONS, playerProfile.title || DEFAULT_PLAYER_PROFILE.title);
-    populateProfileSelect('profile-accent-select', PROFILE_ACCENT_OPTIONS, playerProfile.accent || DEFAULT_PLAYER_PROFILE.accent);
+    const avatarOptions = profileOptionsForField('avatar');
+    populateProfileSelect('profile-avatar-select', avatarOptions, playerProfile.avatar || DEFAULT_PLAYER_PROFILE.avatar);
+    populateProfileSelect('profile-title-select', profileOptionsForField('title'), playerProfile.title || DEFAULT_PLAYER_PROFILE.title);
+    populateProfileSelect('profile-accent-select', profileOptionsForField('accent'), playerProfile.accent || DEFAULT_PLAYER_PROFILE.accent);
+    renderAvatarPicker(avatarOptions, playerProfile.avatar || DEFAULT_PLAYER_PROFILE.avatar);
     document.getElementById('profile-name-input').value = playerProfile.name || DEFAULT_PLAYER_PROFILE.name;
     document.getElementById('profile-avatar-select').value = playerProfile.avatar || DEFAULT_PLAYER_PROFILE.avatar;
     document.getElementById('profile-title-select').value = playerProfile.title || DEFAULT_PLAYER_PROFILE.title;
@@ -1167,11 +1208,11 @@ function updateTutorialUI(message = '') {
     const status = document.getElementById('tutorial-status');
     if (title) title.textContent = challenge.title;
     if (desc) desc.textContent = challenge.desc;
-    if (status) status.textContent = message || '完成目标后自动进入下一关。';
+    if (status) status.textContent = message || `提示：${challenge.hint} 完成目标后自动进入下一关。`;
     document.querySelectorAll('.tutorial-btn').forEach(button => {
         button.classList.toggle('active', Number(button.dataset.tutorial) === activeTutorialIndex);
     });
-    document.getElementById('game-tip').textContent = challenge.desc;
+    document.getElementById('game-tip').textContent = `${challenge.desc} ${challenge.hint}`;
 }
 
 function initTutorialChallenge(index = activeTutorialIndex || 0) {
@@ -1247,7 +1288,7 @@ function handleTutorialAfterMove(capturedPiece) {
         return;
     }
     gameState.currentTurn = 'player';
-    updateTutorialUI('还没完成目标，再试一次。');
+    updateTutorialUI(`还没完成目标。${challenge.hint}`);
     updateTurnIndicator();
     render();
 }
@@ -3135,6 +3176,9 @@ function handleCellClick(col, row) {
         if (clickedPiece && clickedPiece.side === 'player') {
             gameState.selectedPiece = clickedPiece;
             gameState.validMoves = getValidMoves(clickedPiece);
+            if (isTutorialMode()) {
+                updateTutorialUI(`已选中红马。现在点发光目标，或点任意高亮可走格。${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
+            }
             render();
         }
     } else {
@@ -3176,10 +3220,16 @@ function handleCellClick(col, row) {
         } else if (clickedPiece && clickedPiece.side === 'player') {
             gameState.selectedPiece = clickedPiece;
             gameState.validMoves = getValidMoves(clickedPiece);
+            if (isTutorialMode()) {
+                updateTutorialUI(`已切换到这匹红马。看高亮格，选择能完成目标的位置。${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
+            }
             render();
         } else {
             gameState.selectedPiece = null;
             gameState.validMoves = [];
+            if (isTutorialMode()) {
+                updateTutorialUI(`这格不是当前红马的合法落点。${TUTORIAL_CHALLENGES[activeTutorialIndex]?.hint || ''}`);
+            }
             render();
         }
     }
