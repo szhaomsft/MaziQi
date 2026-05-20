@@ -1356,7 +1356,7 @@ function animateMove(piece, fromCol, fromRow, toCol, toRow, capturedPiece, onCom
 
 function animationLoop(timestamp) {
     const elapsed = timestamp - animation.startTime;
-    const progress = Math.min(elapsed / animation.duration, 1);
+    const progress = clamp01(elapsed / animation.duration);
 
     // Update particles
     const dt = 1 / 60;
@@ -1424,6 +1424,11 @@ function scheduleAITurn(delay) {
         aiTurnTimer = null;
         doAITurn();
     }, delay);
+}
+
+function clamp01(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(1, value));
 }
 
 function pieceType(piece) {
@@ -3990,7 +3995,7 @@ function drawPieces(timestamp) {
     // Draw the animating piece on top
     if (animation.active && animation.piece) {
         const elapsed = timestamp - animation.startTime;
-        const progress = Math.min(elapsed / animation.duration, 1);
+        const progress = clamp01(elapsed / animation.duration);
         const easedProgress = easeOutBack(progress);
 
         const ax = animation.fromX + (animation.toX - animation.fromX) * easedProgress;
@@ -4007,7 +4012,7 @@ function drawCaptureEffect(timestamp) {
     if (animation.captureEffect) {
         const ce = animation.captureEffect;
         const elapsed = timestamp - ce.startTime;
-        const progress = Math.min(elapsed / ce.duration, 1);
+        const progress = clamp01(elapsed / ce.duration);
 
         // Expanding ring
         const radius = PIECE_RADIUS + progress * 40;
@@ -4032,17 +4037,19 @@ function drawCaptureEffect(timestamp) {
 
     // Draw particles
     for (const p of animation.particles) {
-        ctx.globalAlpha = Math.max(0, p.life);
+        const particleLife = Math.max(0, p.life);
+        if (particleLife <= 0) continue;
+        ctx.globalAlpha = particleLife;
         ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, Math.max(0, p.radius * particleLife), 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.globalAlpha = 1;
 }
 
 function render(timestamp) {
-    const ts = timestamp || performance.now();
+    const ts = Number.isFinite(timestamp) ? timestamp : performance.now();
     drawBackground();
     drawGrid();
     drawLabels();
