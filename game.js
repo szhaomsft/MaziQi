@@ -54,6 +54,7 @@ const OPPONENT_PROFILE_KEY = 'maziqi-opponent-profiles-v1';
 const MATCH_HISTORY_KEY = 'maziqi-match-history-v1';
 const DAILY_MISSIONS_KEY = 'maziqi-daily-missions-v1';
 const REALTIME_SERVER_KEY = 'maziqi-realtime-server-url-v1';
+const DEFAULT_REALTIME_SERVER_URL = 'wss://maziqi.onrender.com';
 const MAX_MATCH_HISTORY = 18;
 const REALTIME_QUEUE_AI_FALLBACK_MS = 3500;
 const DAILY_MISSION_DEFS = [
@@ -2859,7 +2860,7 @@ function connectRealtimeRoom(roomCode) {
 }
 
 function connectRealtimeQueue() {
-    const serverUrl = localStorage.getItem(REALTIME_SERVER_KEY) || '';
+    const serverUrl = getRealtimeServerUrl();
     if (!serverUrl) return false;
     closeRealtimeConnection();
     document.getElementById('matchmaking-subtitle').textContent = `正在连接实时服务器 ${serverUrl}；若暂无真人会快速补位...`;
@@ -3447,10 +3448,10 @@ function generateRoomCode() {
 
 function showRoomCodeOverlay() {
     const serverInput = document.getElementById('server-url-input');
-    serverInput.value = localStorage.getItem(REALTIME_SERVER_KEY) || '';
+    serverInput.value = getRealtimeServerUrl();
     document.getElementById('room-code-status').textContent = serverInput.value
         ? '已填写实时服务器地址。创建/加入房间会优先连接服务器；连接失败会提示。'
-        : '创建房间码后可以分享给朋友；未填写服务器地址时会先进入同房间模拟对局。';
+        : '创建房间码后可以分享给朋友。';
     document.getElementById('room-code-overlay').classList.remove('hidden');
 }
 
@@ -3504,12 +3505,16 @@ function normalizeRealtimeServerUrl(value) {
     return `wss://${raw.replace(/\/+$/, '')}`;
 }
 
+function getRealtimeServerUrl() {
+    return normalizeRealtimeServerUrl(localStorage.getItem(REALTIME_SERVER_KEY) || DEFAULT_REALTIME_SERVER_URL);
+}
+
 function saveRealtimeServerUrl() {
     const serverInput = document.getElementById('server-url-input');
-    const url = normalizeRealtimeServerUrl(serverInput.value);
+    const url = normalizeRealtimeServerUrl(serverInput.value || DEFAULT_REALTIME_SERVER_URL);
     serverInput.value = url;
-    if (url) localStorage.setItem(REALTIME_SERVER_KEY, url);
-    else localStorage.removeItem(REALTIME_SERVER_KEY);
+    if (url === DEFAULT_REALTIME_SERVER_URL) localStorage.removeItem(REALTIME_SERVER_KEY);
+    else localStorage.setItem(REALTIME_SERVER_KEY, url);
     return url;
 }
 
@@ -4318,7 +4323,7 @@ document.getElementById('room-code-create').addEventListener('click', () => {
     saveRealtimeServerUrl();
     const code = generateRoomCode();
     document.getElementById('room-code-input').value = code;
-    const serverUrl = localStorage.getItem(REALTIME_SERVER_KEY);
+    const serverUrl = saveRealtimeServerUrl();
     document.getElementById('room-code-status').textContent = serverUrl
         ? `房间 ${code} 已创建。服务器：${serverUrl}。朋友使用同一个服务器地址和房间码加入。`
         : `房间 ${code} 已创建。未填写服务器地址时，点击“进入房间”会开始模拟。`;
