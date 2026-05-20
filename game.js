@@ -32,6 +32,7 @@ let onlineMatch = {
     searching: false,
     opponent: null,
 };
+let gameVariant = 'classic';
 let matchSearchTimer = null;
 let matchCountdownTimer = null;
 let rematchResponseTimer = null;
@@ -55,6 +56,11 @@ const MATCH_HISTORY_KEY = 'maziqi-match-history-v1';
 const DAILY_MISSIONS_KEY = 'maziqi-daily-missions-v1';
 const REALTIME_SERVER_KEY = 'maziqi-realtime-server-url-v1';
 const DEFAULT_REALTIME_SERVER_URL = 'wss://maziqi.onrender.com';
+const PIECE_TYPES = {
+    HORSE: 'horse',
+    PILLAR: 'pillar',
+    SOLDIER: 'soldier',
+};
 const MAX_MATCH_HISTORY = 18;
 const REALTIME_QUEUE_AI_FALLBACK_MS = 3500;
 const DAILY_MISSION_DEFS = [
@@ -1420,6 +1426,52 @@ function scheduleAITurn(delay) {
     }, delay);
 }
 
+function pieceType(piece) {
+    return piece?.type || PIECE_TYPES.HORSE;
+}
+
+function isHorse(piece) {
+    return pieceType(piece) === PIECE_TYPES.HORSE;
+}
+
+function hasGoalPiece(side) {
+    return gameState.pieces.some(piece => piece.side === side && piece.alive && isHorse(piece));
+}
+
+function createPiece(id, side, col, row, type = PIECE_TYPES.HORSE) {
+    return { id, side, col, row, alive: true, type };
+}
+
+function placePiece(piece) {
+    gameState.pieces.push(piece);
+    gameState.board[piece.row][piece.col] = piece;
+}
+
+function setupClassicPieces() {
+    for (let col = 0; col < COLS; col++) {
+        placePiece(createPiece(col + COLS, 'ai', col, 0));
+    }
+    for (let col = 0; col < COLS; col++) {
+        placePiece(createPiece(col, 'player', col, 7));
+    }
+}
+
+function setupFormationPieces() {
+    const frontRow = [
+        PIECE_TYPES.PILLAR,
+        PIECE_TYPES.PILLAR,
+        PIECE_TYPES.SOLDIER,
+        PIECE_TYPES.SOLDIER,
+        PIECE_TYPES.PILLAR,
+        PIECE_TYPES.PILLAR,
+    ];
+    let id = 0;
+    for (let col = 0; col < COLS; col++) placePiece(createPiece(id++, 'ai', col, 0));
+    for (let col = 0; col < COLS; col++) placePiece(createPiece(id++, 'ai', col, 1, frontRow[col]));
+    for (let col = 0; col < COLS; col++) placePiece(createPiece(id++, 'player', col, 6, frontRow[col]));
+    for (let col = 0; col < COLS; col++) placePiece(createPiece(id++, 'player', col, 7));
+}
+
 function initGame() {
     clearPendingAITurn();
     if (rematchResponseTimer) {
@@ -1435,16 +1487,8 @@ function initGame() {
     gameState.board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     gameState.pieces = [];
 
-    for (let col = 0; col < COLS; col++) {
-        const piece = { id: col + COLS, side: 'ai', col, row: 0, alive: true };
-        gameState.pieces.push(piece);
-        gameState.board[0][col] = piece;
-    }
-    for (let col = 0; col < COLS; col++) {
-        const piece = { id: col, side: 'player', col, row: 7, alive: true };
-        gameState.pieces.push(piece);
-        gameState.board[7][col] = piece;
-    }
+    if (gameVariant === 'formation' && !onlineMatch.active && !isTutorialMode()) setupFormationPieces();
+    else setupClassicPieces();
 
     gameState.currentTurn = onlineMatch.active ? onlineMatch.firstTurn : (gameOptions.aiFirst ? 'ai' : 'player');
     gameState.selectedPiece = null;
@@ -1471,7 +1515,9 @@ function initGame() {
     document.getElementById('return-lobby-btn').disabled = false;
     document.getElementById('play-again-btn').disabled = false;
     if (!isTutorialMode()) {
-        document.getElementById('game-tip').textContent = '目标：率先到达对方底线，或吃掉所有对方棋子。';
+        document.getElementById('game-tip').textContent = gameVariant === 'formation'
+            ? '阵地战：只有马冲到底线才算胜；柱只能前/左/右走且不能吃子，兵可前/左/右走并吃马或兵，柱兵都会撇马腿。'
+            : '目标：率先到达对方底线，或吃掉所有对方棋子。';
     }
     resetOnlineChat();
     updateTurnIndicator();
@@ -1489,9 +1535,7 @@ function initGame() {
 }
 
 function addTutorialPiece(side, col, row, id) {
-    const piece = { id, side, col, row, alive: true };
-    gameState.pieces.push(piece);
-    gameState.board[row][col] = piece;
+    placePiece(createPiece(id, side, col, row));
 }
 
 function renderTutorialSelector() {
@@ -1556,6 +1600,7 @@ function initTutorialChallenge(index = activeTutorialIndex || 0) {
 function startTutorialMode(index = 0) {
     cancelMatchmaking(false);
     closeRealtimeConnection();
+    gameVariant = 'classic';
     onlineMatch = { active: false, searching: false, opponent: null };
     activeTutorialIndex = Number(index) || 0;
     resetOnlineChat();
@@ -1690,7 +1735,20 @@ function handleTutorialAfterMove(capturedPiece) {
 // ========================================
 // Movement Logic (with 别马腿)
 // ========================================
-function getValidMoves(piece) {
+function pushStepMove(moves, piece, col, row) {
+    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
+    const target = gameState.board[row][col];
+    if (target === null) {
+        moves.push({ col, row, isCapture: false });
+        return;
+    }
+    if (target.side === piece.side) return;
+    if (pieceType(piece) === PIECE_TYPES.SOLDIER && pieceType(target) !== PIECE_TYPES.PILLAR) {
+        moves.push({ col, row, isCapture: true });
+    }
+}
+
+function getHorseMoves(piece) {
     const moves = [];
     for (const move of HORSE_MOVES) {
         const legCol = piece.col + move.leg[0];
@@ -1714,6 +1772,29 @@ function getValidMoves(piece) {
     return moves;
 }
 
+function getStepPieceMoves(piece) {
+    const moves = [];
+    const forward = piece.side === 'player' ? -1 : 1;
+    const directions = [[0, forward], [-1, 0], [1, 0]];
+    for (const [dc, dr] of directions) {
+        const col = piece.col + dc;
+        const row = piece.row + dr;
+        if (pieceType(piece) === PIECE_TYPES.PILLAR) {
+            if (col < 0 || col >= COLS || row < 0 || row >= ROWS) continue;
+            if (gameState.board[row][col] === null) moves.push({ col, row, isCapture: false });
+        } else {
+            pushStepMove(moves, piece, col, row);
+        }
+    }
+    return moves;
+}
+
+function getValidMoves(piece) {
+    if (!piece || !piece.alive) return [];
+    if (pieceType(piece) === PIECE_TYPES.HORSE) return getHorseMoves(piece);
+    return getStepPieceMoves(piece);
+}
+
 function executeMove(piece, move) {
     if (move.isCapture) {
         const captured = gameState.board[move.row][move.col];
@@ -1731,32 +1812,31 @@ function executeMove(piece, move) {
 function checkWin() {
     for (const piece of gameState.pieces) {
         if (!piece.alive) continue;
-        if (piece.side === 'player' && piece.row === 0) {
+        if (piece.side === 'player' && isHorse(piece) && piece.row === 0) {
             gameState.gameOver = true;
             gameState.winner = 'player';
             return true;
         }
-        if (piece.side === 'ai' && piece.row === 7) {
+        if (piece.side === 'ai' && isHorse(piece) && piece.row === 7) {
             gameState.gameOver = true;
             gameState.winner = 'ai';
             return true;
         }
     }
-    const playerAlive = gameState.pieces.some(p => p.side === 'player' && p.alive);
-    const aiAlive = gameState.pieces.some(p => p.side === 'ai' && p.alive);
-    if (!playerAlive) { gameState.gameOver = true; gameState.winner = 'ai'; return true; }
-    if (!aiAlive) { gameState.gameOver = true; gameState.winner = 'player'; return true; }
+    const playerHasGoalPiece = hasGoalPiece('player');
+    const aiHasGoalPiece = hasGoalPiece('ai');
+    if (!playerHasGoalPiece) { gameState.gameOver = true; gameState.winner = 'ai'; return true; }
+    if (!aiHasGoalPiece) { gameState.gameOver = true; gameState.winner = 'player'; return true; }
     return false;
 }
 
 function isGameOver() {
     for (const piece of gameState.pieces) {
         if (!piece.alive) continue;
-        if (piece.side === 'player' && piece.row === 0) return true;
-        if (piece.side === 'ai' && piece.row === 7) return true;
+        if (piece.side === 'player' && isHorse(piece) && piece.row === 0) return true;
+        if (piece.side === 'ai' && isHorse(piece) && piece.row === 7) return true;
     }
-    return !gameState.pieces.some(p => p.side === 'player' && p.alive)
-        || !gameState.pieces.some(p => p.side === 'ai' && p.alive);
+    return !hasGoalPiece('player') || !hasGoalPiece('ai');
 }
 
 // ========================================
@@ -1771,10 +1851,21 @@ let rootMoveScores = [];
 function boardHash() {
     let hash = '';
     for (const p of gameState.pieces) {
-        hash += p.alive ? `${p.col},${p.row}` : 'X';
+        hash += p.alive ? `${pieceType(p)}:${p.col},${p.row}` : 'X';
         hash += '|';
     }
     return hash;
+}
+
+function pieceValue(piece) {
+    switch (pieceType(piece)) {
+        case PIECE_TYPES.SOLDIER:
+            return 190;
+        case PIECE_TYPES.PILLAR:
+            return 120;
+        default:
+            return 360;
+    }
 }
 
 const distanceCache = new Map();
@@ -1814,27 +1905,29 @@ function evaluateBoard() {
     }
 
     // Terminal
-    for (const p of aiPieces) { if (p.row === 7) return 200000; }
-    for (const p of playerPieces) { if (p.row === 0) return -200000; }
-    if (playerPieces.length === 0) return 200000;
-    if (aiPieces.length === 0) return -200000;
+    for (const p of aiPieces) { if (isHorse(p) && p.row === 7) return 200000; }
+    for (const p of playerPieces) { if (isHorse(p) && p.row === 0) return -200000; }
+    if (!hasGoalPiece('player')) return 200000;
+    if (!hasGoalPiece('ai')) return -200000;
 
     // Material
-    score += (aiPieces.length - playerPieces.length) * 300;
+    score += aiPieces.reduce((sum, p) => sum + pieceValue(p), 0);
+    score -= playerPieces.reduce((sum, p) => sum + pieceValue(p), 0);
 
     let aiMinDist = 99, playerMinDist = 99;
     let aiThreats = 0, playerThreats = 0;
 
     for (const p of aiPieces) {
-        const dist = minHorseDistance(p.col, p.row, 7);
-        if (dist < aiMinDist) aiMinDist = dist;
-        score += p.row * p.row * 5;
-        score += (7 - dist) * 35;
+        const isRunner = isHorse(p);
+        const dist = isRunner ? minHorseDistance(p.col, p.row, 7) : 99;
+        if (isRunner && dist < aiMinDist) aiMinDist = dist;
+        score += isRunner ? p.row * p.row * 5 : p.row * 8;
+        if (isRunner) score += (7 - dist) * 35;
         const moves = getValidMoves(p);
         score += moves.length * 7;
         for (const m of moves) {
             if (m.row > p.row) score += 8;
-            if (m.row === 7) { score += 1200; aiThreats++; }
+            if (isGoalMove(p, m)) { score += 1200; aiThreats++; }
             if (m.isCapture) score += 90;
         }
         if (p.col >= 1 && p.col <= 4) score += 10;
@@ -1846,15 +1939,16 @@ function evaluateBoard() {
     }
 
     for (const p of playerPieces) {
-        const dist = minHorseDistance(p.col, p.row, 0);
-        if (dist < playerMinDist) playerMinDist = dist;
-        score -= (7 - p.row) * (7 - p.row) * 5;
-        score -= (7 - dist) * 35;
+        const isRunner = isHorse(p);
+        const dist = isRunner ? minHorseDistance(p.col, p.row, 0) : 99;
+        if (isRunner && dist < playerMinDist) playerMinDist = dist;
+        score -= isRunner ? (7 - p.row) * (7 - p.row) * 5 : (ROWS - 1 - p.row) * 8;
+        if (isRunner) score -= (7 - dist) * 35;
         const moves = getValidMoves(p);
         score -= moves.length * 7;
         for (const m of moves) {
             if (m.row < p.row) score -= 8;
-            if (m.row === 0) { score -= 1200; playerThreats++; }
+            if (isGoalMove(p, m)) { score -= 1200; playerThreats++; }
             if (m.isCapture) score -= 90;
         }
         if (p.col >= 1 && p.col <= 4) score -= 10;
@@ -1879,7 +1973,7 @@ function evaluateBoard() {
     if (playerMinDist <= 1) {
         score -= 3000;
         for (const pp of playerPieces) {
-            if (minHorseDistance(pp.col, pp.row, 0) <= 1) {
+            if (isHorse(pp) && minHorseDistance(pp.col, pp.row, 0) <= 1) {
                 for (const ap of aiPieces) {
                     const moves = getValidMoves(ap);
                     for (const m of moves) {
@@ -1911,6 +2005,7 @@ function evaluateBoard() {
 
     // Blocking strategy
     for (const pp of playerPieces) {
+        if (!isHorse(pp)) continue;
         for (const move of HORSE_MOVES) {
             const legCol = pp.col + move.leg[0];
             const legRow = pp.row + move.leg[1];
@@ -1942,22 +2037,22 @@ function evaluateBoard() {
         for (const p of aiPieces) {
             const moves = getValidMoves(p);
             for (const m of moves) {
-                if (m.row === 7) aiThreats++;
+                if (isGoalMove(p, m)) aiThreats++;
                 if (m.isCapture) aiThreats += 0.5;
             }
         }
         for (const p of playerPieces) {
             const moves = getValidMoves(p);
             for (const m of moves) {
-                if (m.row === 0) playerThreats++;
+                if (isGoalMove(p, m)) playerThreats++;
                 if (m.isCapture) playerThreats += 0.5;
             }
         }
         score += (aiThreats - playerThreats) * 40;
 
         // Multi-piece coordination for creating unstoppable dual threats
-        let aiPiecesNearGoal = aiPieces.filter(p => p.row >= 4).length;
-        let playerPiecesNearGoal = playerPieces.filter(p => p.row <= 3).length;
+        let aiPiecesNearGoal = aiPieces.filter(p => isHorse(p) && p.row >= 4).length;
+        let playerPiecesNearGoal = playerPieces.filter(p => isHorse(p) && p.row <= 3).length;
         score += (aiPiecesNearGoal - playerPiecesNearGoal) * 30;
 
         // Punish having pieces stuck on edges
@@ -2013,6 +2108,7 @@ function opponentOf(side) {
 }
 
 function isGoalMove(piece, move) {
+    if (!isHorse(piece)) return false;
     return piece.side === 'ai' ? move.row === ROWS - 1 : move.row === 0;
 }
 
@@ -2061,10 +2157,11 @@ function scoreOpponentMoveMemory(piece, move) {
 
 function countThreatsToSquare(side, col, row) {
     let threats = 0;
+    const target = gameState.board[row]?.[col] || null;
     const pieces = gameState.pieces.filter(p => p.alive && p.side === side);
     for (const piece of pieces) {
         const moves = getValidMoves(piece);
-        if (moves.some(m => m.col === col && m.row === row)) threats++;
+        if (moves.some(m => m.col === col && m.row === row && (!target || m.isCapture))) threats++;
     }
     return threats;
 }
@@ -2073,6 +2170,7 @@ function countControlsToSquare(side, col, row, ignoredPiece = null) {
     let controls = 0;
     const pieces = gameState.pieces.filter(p => p.alive && p.side === side && p !== ignoredPiece);
     for (const piece of pieces) {
+        if (!isHorse(piece)) continue;
         for (const move of HORSE_MOVES) {
             const legCol = piece.col + move.leg[0];
             const legRow = piece.row + move.leg[1];
@@ -2165,6 +2263,7 @@ function scoreBoardForPlayStyle(aiPieces, playerPieces) {
         score -= playerForward * 10 * style.defense;
         score -= playerCaptures * 28 * style.defense;
 
+        if (!isHorse(piece)) continue;
         for (const move of HORSE_MOVES) {
             const legCol = piece.col + move.leg[0];
             const legRow = piece.row + move.leg[1];
@@ -2225,10 +2324,10 @@ function scoreMoveForOrdering(piece, move, isAI, depth) {
     if (move.isCapture) s += 10000;
     if (isAI) {
         s += move.row * 100;
-        if (move.row === 7) s += 50000;
+        if (isGoalMove(piece, move)) s += 50000;
     } else {
         s += (7 - move.row) * 100;
-        if (move.row === 0) s += 50000;
+        if (isGoalMove(piece, move)) s += 50000;
     }
     if (move.col >= 2 && move.col <= 3) s += 20;
     s += scoreImmediateConsequences(piece, move);
@@ -2670,6 +2769,7 @@ function buildRealtimePieces(state) {
             col: position.col,
             row: position.row,
             alive: !!serverPiece.alive,
+            type: PIECE_TYPES.HORSE,
         };
         if (piece.alive) board[piece.row][piece.col] = piece;
         return piece;
@@ -2829,6 +2929,7 @@ function connectRealtimeRoom(roomCode) {
             document.getElementById('matchmaking-subtitle').textContent = `房间 ${roomCode} 已连接，等待另一位玩家...`;
             document.getElementById('matched-ready').textContent = '等待中';
         } else if (message.type === 'game.start' || message.type === 'game.state') {
+            gameVariant = 'classic';
             showGameScreen();
             applyRealtimeState(message);
         } else if (message.type === 'chat.message') {
@@ -2888,6 +2989,7 @@ function connectRealtimeQueue() {
             document.getElementById('matchmaking-subtitle').textContent = '已进入实时匹配队列；暂无真人时会立刻用在线对手补位。';
             scheduleRealtimeQueueFallback();
         } else if (message.type === 'game.start' || message.type === 'game.state') {
+            gameVariant = 'classic';
             showGameScreen();
             applyRealtimeState(message);
         } else if (message.type === 'chat.message') {
@@ -3393,6 +3495,7 @@ function showMatchFound(opponent, roomCode = '') {
                 onlineMatch.roomId = roomCode;
                 onlineMatch.privateRoom = true;
             }
+            gameVariant = 'classic';
             currentDifficulty = opponent.difficulty;
             updateOnlinePanel();
             updateDifficultyButtons();
@@ -3405,6 +3508,21 @@ function showMatchFound(opponent, roomCode = '') {
 
 function startTrainingMode() {
     cancelMatchmaking(false);
+    gameVariant = 'classic';
+    activeTutorialIndex = null;
+    onlineMatch = { active: false, searching: false, opponent: null };
+    resetOnlineChat();
+    updateOnlinePanel();
+    updateDifficultyButtons();
+    updateModeSpecificUI();
+    showGameScreen();
+    initGame();
+}
+
+function startFormationMode() {
+    cancelMatchmaking(false);
+    closeRealtimeConnection();
+    gameVariant = 'formation';
     activeTutorialIndex = null;
     onlineMatch = { active: false, searching: false, opponent: null };
     resetOnlineChat();
@@ -3419,6 +3537,7 @@ function startOnlineMatch() {
     if (onlineMatch.searching) return;
 
     showMatchmakingScreen();
+    gameVariant = 'classic';
     activeTutorialIndex = null;
     gameState.gameOver = false;
     onlineMatch.active = false;
@@ -3850,10 +3969,11 @@ function drawSinglePiece(x, y, piece, isSelected) {
 
     // Text
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "Microsoft YaHei", "SimHei", sans-serif';
+    const label = pieceType(piece) === PIECE_TYPES.PILLAR ? '柱' : (pieceType(piece) === PIECE_TYPES.SOLDIER ? '兵' : '马');
+    ctx.font = `bold ${label === '马' ? 22 : 20}px "Microsoft YaHei", "SimHei", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('马', x, y + 1);
+    ctx.fillText(label, x, y + 1);
 }
 
 function drawPieces(timestamp) {
@@ -4295,6 +4415,7 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 });
 
 document.getElementById('menu-training-btn').addEventListener('click', () => requestForfeitConfirmation('切换训练', startTrainingMode));
+document.getElementById('menu-formation-btn').addEventListener('click', () => requestForfeitConfirmation('进入阵地战', startFormationMode));
 document.getElementById('menu-online-btn').addEventListener('click', () => requestForfeitConfirmation('重新匹配', startOnlineMatch));
 document.getElementById('menu-room-btn').addEventListener('click', showRoomCodeOverlay);
 document.getElementById('menu-tutorial-btn').addEventListener('click', () => requestForfeitConfirmation('进入教程', () => startTutorialMode(0)));
