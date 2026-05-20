@@ -1434,8 +1434,8 @@ function isHorse(piece) {
     return pieceType(piece) === PIECE_TYPES.HORSE;
 }
 
-function hasGoalPiece(side) {
-    return gameState.pieces.some(piece => piece.side === side && piece.alive && isHorse(piece));
+function hasAlivePiece(side) {
+    return gameState.pieces.some(piece => piece.side === side && piece.alive);
 }
 
 function createPiece(id, side, col, row, type = PIECE_TYPES.HORSE) {
@@ -1516,7 +1516,7 @@ function initGame() {
     document.getElementById('play-again-btn').disabled = false;
     if (!isTutorialMode()) {
         document.getElementById('game-tip').textContent = gameVariant === 'formation'
-            ? '阵地战：只有马冲到底线才算胜；柱只能前/左/右走且不能吃子，兵可前/左/右走并吃马或兵，柱兵都会撇马腿。'
+            ? '阵地战：任意棋子冲到底线都算胜；柱只能前/左/右走且不能吃子，兵可前/左/右走并吃马或兵，柱兵都会撇马腿。'
             : '目标：率先到达对方底线，或吃掉所有对方棋子。';
     }
     resetOnlineChat();
@@ -1812,31 +1812,31 @@ function executeMove(piece, move) {
 function checkWin() {
     for (const piece of gameState.pieces) {
         if (!piece.alive) continue;
-        if (piece.side === 'player' && isHorse(piece) && piece.row === 0) {
+        if (piece.side === 'player' && piece.row === 0) {
             gameState.gameOver = true;
             gameState.winner = 'player';
             return true;
         }
-        if (piece.side === 'ai' && isHorse(piece) && piece.row === 7) {
+        if (piece.side === 'ai' && piece.row === 7) {
             gameState.gameOver = true;
             gameState.winner = 'ai';
             return true;
         }
     }
-    const playerHasGoalPiece = hasGoalPiece('player');
-    const aiHasGoalPiece = hasGoalPiece('ai');
-    if (!playerHasGoalPiece) { gameState.gameOver = true; gameState.winner = 'ai'; return true; }
-    if (!aiHasGoalPiece) { gameState.gameOver = true; gameState.winner = 'player'; return true; }
+    const playerAlive = hasAlivePiece('player');
+    const aiAlive = hasAlivePiece('ai');
+    if (!playerAlive) { gameState.gameOver = true; gameState.winner = 'ai'; return true; }
+    if (!aiAlive) { gameState.gameOver = true; gameState.winner = 'player'; return true; }
     return false;
 }
 
 function isGameOver() {
     for (const piece of gameState.pieces) {
         if (!piece.alive) continue;
-        if (piece.side === 'player' && isHorse(piece) && piece.row === 0) return true;
-        if (piece.side === 'ai' && isHorse(piece) && piece.row === 7) return true;
+        if (piece.side === 'player' && piece.row === 0) return true;
+        if (piece.side === 'ai' && piece.row === 7) return true;
     }
-    return !hasGoalPiece('player') || !hasGoalPiece('ai');
+    return !hasAlivePiece('player') || !hasAlivePiece('ai');
 }
 
 // ========================================
@@ -1905,10 +1905,10 @@ function evaluateBoard() {
     }
 
     // Terminal
-    for (const p of aiPieces) { if (isHorse(p) && p.row === 7) return 200000; }
-    for (const p of playerPieces) { if (isHorse(p) && p.row === 0) return -200000; }
-    if (!hasGoalPiece('player')) return 200000;
-    if (!hasGoalPiece('ai')) return -200000;
+    for (const p of aiPieces) { if (p.row === 7) return 200000; }
+    for (const p of playerPieces) { if (p.row === 0) return -200000; }
+    if (!hasAlivePiece('player')) return 200000;
+    if (!hasAlivePiece('ai')) return -200000;
 
     // Material
     score += aiPieces.reduce((sum, p) => sum + pieceValue(p), 0);
@@ -2108,7 +2108,6 @@ function opponentOf(side) {
 }
 
 function isGoalMove(piece, move) {
-    if (!isHorse(piece)) return false;
     return piece.side === 'ai' ? move.row === ROWS - 1 : move.row === 0;
 }
 
