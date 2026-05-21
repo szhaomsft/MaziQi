@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>骑马棋项目说明</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 16mm 14mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: #172033;
+            background: #f4f6fb;
+            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+            line-height: 1.62;
+        }
+
+        main {
+            width: 210mm;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 18mm 16mm;
+            background: #ffffff;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 6px;
+            font-size: 30px;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            margin: 22px 0 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #dce5f5;
+            color: #173d7a;
+            font-size: 18px;
+        }
+
+        h3 {
+            margin: 12px 0 4px;
+            color: #22304a;
+            font-size: 14px;
+        }
+
+        p,
+        li,
+        td,
+        th {
+            font-size: 12.5px;
+        }
+
+        ul {
+            margin: 6px 0 0 18px;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            page-break-inside: avoid;
+        }
+
+        th,
+        td {
+            padding: 7px 8px;
+            border: 1px solid #d8e0ee;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            width: 24%;
+            background: #eef4ff;
+            color: #173d7a;
+        }
+
+        .hero {
+            padding: 18px 20px;
+            border-radius: 18px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #183b75, #b9232f);
+            page-break-inside: avoid;
+        }
+
+        .hero p {
+            margin-bottom: 0;
+            font-size: 14px;
+        }
+
+        .tagline {
+            margin-bottom: 14px;
+            color: #e8f0ff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .card {
+            padding: 12px 14px;
+            border: 1px solid #d8e0ee;
+            border-radius: 12px;
+            background: #fbfdff;
+            page-break-inside: avoid;
+        }
+
+        .card p {
+            margin-bottom: 0;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .pill {
+            padding: 3px 8px;
+            border: 1px solid #cfd9ea;
+            border-radius: 999px;
+            background: #f6f8fc;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .rule-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 3px;
+            max-width: 260px;
+            margin-top: 8px;
+        }
+
+        .cell {
+            min-height: 22px;
+            border: 1px solid #cfd9ea;
+            border-radius: 4px;
+            background: #ffffff;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 22px;
+        }
+
+        .blue {
+            color: #173d7a;
+            background: #edf4ff;
+        }
+
+        .red {
+            color: #9d1e28;
+            background: #fff0f1;
+        }
+
+        .footer-note {
+            margin-top: 22px;
+            padding-top: 10px;
+            border-top: 1px solid #d8e0ee;
+            color: #5d6a7f;
+            font-size: 11px;
+        }
+
+        @media print {
+            body {
+                background: #ffffff;
+            }
+
+            main {
+                width: auto;
+                padding: 0;
+            }
+
+            .hero {
+                color: #000000;
+                background: #ffffff;
+                border: 2px solid #000000;
+            }
+
+            .tagline,
+            h2,
+            th {
+                color: #000000;
+            }
+
+            .card,
+            th,
+            td,
+            .cell,
+            .pill {
+                border-color: #777777;
+                background: #ffffff;
+            }
+
+            a {
+                color: #000000;
+                text-decoration: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="hero">
+        <h1>骑马棋 MaziQi</h1>
+        <div class="tagline">一款以中国象棋“马”的跳跃和“撇马腿”为核心的网页策略棋类游戏</div>
+        <p>
+            骑马棋把传统马步规则提炼成快速、直观、适合展示的 6×8 棋盘对战。玩家需要在有限空间里计算路线、封锁对手、创造冲线机会，在短时间内体验“战术计算 + 路线规划”的策略乐趣。
+        </p>
+    </section>
+
+    <h2>项目概览</h2>
+    <table>
+        <tr>
+            <th>项目类型</th>
+            <td>浏览器网页游戏，支持桌面和移动端访问。</td>
+        </tr>
+        <tr>
+            <th>核心目标</th>
+            <td>率先让己方棋子到达对方底线，或通过吃子取得决定性优势。</td>
+        </tr>
+        <tr>
+            <th>主要体验</th>
+            <td>单机 AI 对战、在线匹配、好友房间、教程挑战、阵地战变种、头像与称号解锁。</td>
+        </tr>
+        <tr>
+            <th>展示亮点</th>
+            <td>规则简单但变化丰富，AI 会评估冲线、封锁、吃子和路线威胁；玩家成长系统能持续激励游玩。</td>
+        </tr>
+    </table>
+
+    <h2>基础规则</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>棋盘与棋子</h3>
+            <p>棋盘为 6 列 × 8 行。经典模式中红蓝双方各有 6 枚“马”，分别从两端底线出发。</p>
+        </div>
+        <div class="card">
+            <h3>马的移动</h3>
+            <p>马按中国象棋马步移动：先直走一格再斜走一格。如果直走方向的相邻格被占据，则该方向被“撇马腿”，不能跳过去。</p>
+        </div>
+        <div class="card">
+            <h3>胜利方式</h3>
+            <p>任意己方棋子到达对方底线即可获胜。经典模式也可以通过吃光对方棋子获胜。</p>
+        </div>
+        <div class="card">
+            <h3>战术重点</h3>
+            <p>玩家需要同时考虑冲线速度、关键马腿封锁、己方棋子保护和对手下一步威胁。</p>
+        </div>
+    </div>
+
+    <h2>阵地战变种</h2>
+    <p>
+        阵地战在每方马阵前增加一排辅助棋子，让局面更像攻防阵地：柱子负责封锁和占位，士兵负责推进和近距离搏杀，马仍然承担快速突破。
+    </p>
+    <div class="grid">
+        <div class="card">
+            <h3>初始阵型</h3>
+            <p>每方马前方一排依次为：柱、柱、兵、兵、柱、柱。</p>
+            <div class="rule-board" aria-label="阵地战初始阵型示意">
+                <div class="cell blue">马</div><div class="cell blue">马</div><div class="cell blue">马</div><div class="cell blue">马</div><div class="cell blue">马</div><div class="cell blue">马</div>
+                <div class="cell blue">柱</div><div class="cell blue">柱</div><div class="cell blue">兵</div><div class="cell blue">兵</div><div class="cell blue">柱</div><div class="cell blue">柱</div>
+                <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                <div class="cell red">柱</div><div class="cell red">柱</div><div class="cell red">兵</div><div class="cell red">兵</div><div class="cell red">柱</div><div class="cell red">柱</div>
+                <div class="cell red">马</div><div class="cell red">马</div><div class="cell red">马</div><div class="cell red">马</div><div class="cell red">马</div><div class="cell red">马</div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>变种棋子能力</h3>
+            <ul>
+                <li>马：按马步移动，可以吃马、兵、柱。</li>
+                <li>柱：向前、左、右移动一格，不能吃子。</li>
+                <li>兵：向前、左、右移动一格，可以吃马和兵，不能吃柱。</li>
+                <li>柱和兵都会占格，因此也能撇马腿。</li>
+                <li>马、兵、柱任意棋子到达对方底线都获胜。</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>游戏模式</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>单机训练</h3>
+            <p>与本地 AI 对战，可选择不同难度，适合练习路线、吃子和封锁。</p>
+        </div>
+        <div class="card">
+            <h3>在线匹配与好友房间</h3>
+            <p>支持实时服务器和房间码对局，便于现场两人演示或远程挑战。</p>
+        </div>
+        <div class="card">
+            <h3>教程挑战</h3>
+            <p>通过预设残局学习关键技巧，目标围绕“赢棋”或“阻止蓝方获胜”。</p>
+        </div>
+        <div class="card">
+            <h3>阵地战</h3>
+            <p>加入柱与兵的新变种，增强中盘阻挡、推进和交换策略。</p>
+        </div>
+    </div>
+
+    <h2>成长与个性化</h2>
+    <p>
+        项目加入了玩家资料、头像库、称号和解锁条件。头像与称号会根据胜场、总局数、连胜、胜率、评级、最佳评级和活跃点逐步开放，让游戏从一次性体验扩展为可持续成长。
+    </p>
+    <div class="pill-row">
+        <span class="pill">头像解锁</span>
+        <span class="pill">称号解锁</span>
+        <span class="pill">积分评级</span>
+        <span class="pill">每日任务</span>
+        <span class="pill">对战记录</span>
+        <span class="pill">难度选择</span>
+    </div>
+
+    <h2>技术实现</h2>
+    <table>
+        <tr>
+            <th>前端</th>
+            <td>原生 HTML、CSS、JavaScript 和 Canvas 绘制棋盘、棋子、动画与交互。</td>
+        </tr>
+        <tr>
+            <th>AI</th>
+            <td>使用 Minimax、Alpha-Beta 剪枝、局面评估、走法排序和战术检测，让 AI 能识别冲线、拦截、吃子和威胁。</td>
+        </tr>
+        <tr>
+            <th>在线对战</th>
+            <td>通过 WebSocket 连接实时服务器，默认地址为 wss://maziqi.onrender.com，并加入状态版本保护以减少棋局重置问题。</td>
+        </tr>
+        <tr>
+            <th>部署</th>
+            <td>静态页面可托管在 GitHub Pages，实时服务器可部署在 Render。</td>
+        </tr>
+    </table>
+
+    <h2>展示讲解建议</h2>
+    <ul>
+        <li>先用经典模式演示“马步”和“撇马腿”，让观众快速理解核心规则。</li>
+        <li>再展示教程挑战，说明游戏不仅是随机走子，而是强调可验证的战术目标。</li>
+        <li>随后切换阵地战，展示柱和兵如何改变空间控制与冲线节奏。</li>
+        <li>最后展示头像、称号和在线房间，体现项目从规则原型扩展到完整产品体验。</li>
+    </ul>
+
+    <p class="footer-note">
+        打印建议：使用浏览器打开本文件，选择 A4 纸张，缩放 100%，关闭页眉页脚即可获得更整洁的项目展示说明。
+    </p>
+</main>
+</body>
+</html>
