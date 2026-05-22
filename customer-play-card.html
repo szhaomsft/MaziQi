@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>骑马棋试玩卡</title>
+    <style>
+        @page { size: A5; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: #152034;
+            background: #f5f7fb;
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            line-height: 1.55;
+        }
+        main {
+            max-width: 148mm;
+            margin: 0 auto;
+            padding: 16mm 14mm;
+            background: #fff;
+        }
+        .hero {
+            padding: 18px;
+            border-radius: 18px;
+            color: #fff;
+            background: linear-gradient(135deg, #1d4f9a, #c22635);
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+            letter-spacing: 0.08em;
+        }
+        .tagline {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        h2 {
+            margin: 18px 0 8px;
+            color: #183d77;
+            font-size: 17px;
+        }
+        p, li {
+            font-size: 13px;
+        }
+        ul {
+            margin: 0 0 0 18px;
+            padding: 0;
+        }
+        .box {
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid #d8e0ee;
+            border-radius: 12px;
+            background: #fbfdff;
+        }
+        .challenge {
+            color: #9e1d2a;
+            font-weight: 800;
+        }
+        .footer {
+            margin-top: 18px;
+            padding-top: 10px;
+            border-top: 1px solid #d8e0ee;
+            color: #59677c;
+            font-size: 12px;
+        }
+        @media print {
+            body, main { background: #fff; }
+            main { padding: 0; }
+            .hero { color: #000; background: #fff; border: 2px solid #000; }
+            h2 { color: #000; }
+            .box { border-color: #777; background: #fff; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="hero">
+        <h1>骑马棋</h1>
+        <p class="tagline">一分钟学会，越玩越烧脑的冲线策略棋！</p>
+    </section>
+
+    <h2>怎么玩？</h2>
+    <ul>
+        <li>你控制红方，点击棋子，再点击高亮格移动。</li>
+        <li>目标很简单：让任意棋子冲到对方底线。</li>
+        <li>马走“日”字，但会被棋子挡住马腿。</li>
+    </ul>
+
+    <div class="box">
+        <h2>阵地战更刺激</h2>
+        <ul>
+            <li>马：跳跃突袭，可以吃马、兵、柱。</li>
+            <li>兵：向前、左、右走，可吃马和兵。</li>
+            <li>柱：向前、左、右走，负责堵路和挡马腿。</li>
+        </ul>
+    </div>
+
+    <div class="box">
+        <h2>今日挑战</h2>
+        <p class="challenge">免费试玩，完成挑战可获得现场奖励！</p>
+        <ul>
+            <li>完成一局：参与记录</li>
+            <li>赢下 AI：挑战成功</li>
+            <li>连胜或快速获胜：冲击排行榜</li>
+        </ul>
+    </div>
+
+    <p class="footer">提示：看似只是跳马，真正比的是计算、封锁和最后一步冲线。</p>
+</main>
+</body>
+</html>
