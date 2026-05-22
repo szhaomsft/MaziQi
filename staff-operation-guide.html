@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>骑马棋工作人员操作指南</title>
+    <style>
+        @page { size: A4; margin: 15mm; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: #172033;
+            background: #f4f6fb;
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            line-height: 1.6;
+        }
+        main {
+            width: 210mm;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 16mm;
+            background: #fff;
+        }
+        h1 { margin: 0 0 6px; font-size: 28px; }
+        h2 {
+            margin: 20px 0 8px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #dce5f5;
+            color: #173d7a;
+            font-size: 18px;
+        }
+        h3 { margin: 10px 0 4px; font-size: 14px; }
+        p, li, td, th { font-size: 12.5px; }
+        ul { margin: 5px 0 0 18px; padding: 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            page-break-inside: avoid;
+        }
+        th, td {
+            padding: 7px 8px;
+            border: 1px solid #d8e0ee;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { width: 22%; background: #eef4ff; color: #173d7a; }
+        .hero {
+            padding: 16px 18px;
+            border-radius: 16px;
+            color: #fff;
+            background: linear-gradient(135deg, #173d7a, #a8202c);
+        }
+        .hero p { margin: 0; font-size: 14px; font-weight: 700; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .card {
+            padding: 11px 13px;
+            border: 1px solid #d8e0ee;
+            border-radius: 12px;
+            background: #fbfdff;
+            page-break-inside: avoid;
+        }
+        .script {
+            padding: 10px 12px;
+            border-left: 4px solid #c22635;
+            background: #fff7f8;
+            font-weight: 700;
+        }
+        @media print {
+            body, main { background: #fff; }
+            main { width: auto; padding: 0; }
+            .hero { color: #000; background: #fff; border: 2px solid #000; }
+            h2, th { color: #000; }
+            th, td, .card, .script { border-color: #777; background: #fff; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="hero">
+        <h1>骑马棋展区工作人员操作指南</h1>
+        <p>推荐形式：免费试玩 + 分层挑战奖励。降低参与门槛，用挑战和排行榜制造现场气氛。</p>
+    </section>
+
+    <h2>门票与奖品建议</h2>
+    <table>
+        <tr>
+            <th>门票</th>
+            <td>不建议强制收费。免费试玩更容易吸引路人，也方便快速讲解规则。</td>
+        </tr>
+        <tr>
+            <th>参与奖</th>
+            <td>完成一局即可获得，如贴纸、糖果、纪念卡或盖章一次。</td>
+        </tr>
+        <tr>
+            <th>通关奖</th>
+            <td>完成指定教程关卡，奖励徽章、小文具或额外抽奖机会。</td>
+        </tr>
+        <tr>
+            <th>胜利奖</th>
+            <td>战胜 AI 或阵地战获胜，奖励稍好的小礼品。</td>
+        </tr>
+        <tr>
+            <th>高手奖</th>
+            <td>连胜、最快获胜或排行榜第一，建议定时发放，控制数量。</td>
+        </tr>
+    </table>
+
+    <h2>现场开场话术</h2>
+    <p class="script">“这是一个一分钟能学会、但很考验策略的跳马棋。你只要把棋子冲到底线就能赢，要不要试一局？”</p>
+
+    <h2>快速讲规则</h2>
+    <ul>
+        <li>红方是玩家，点击棋子，再点击高亮格移动。</li>
+        <li>马走“日”字，但旁边被挡住就会撇马腿。</li>
+        <li>任意棋子到达对方底线即可获胜。</li>
+        <li>阵地战里：马可吃马兵柱；兵可吃马和兵；柱不能吃子但能堵路。</li>
+    </ul>
+
+    <h2>推荐接待流程</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>1. 吸引</h3>
+            <p>邀请顾客免费试玩，不要先讲太多规则。</p>
+        </div>
+        <div class="card">
+            <h3>2. 上手</h3>
+            <p>优先开“单机训练”，新手用较低难度。</p>
+        </div>
+        <div class="card">
+            <h3>3. 展示亮点</h3>
+            <p>会玩后再切“教程挑战”或“阵地战”。</p>
+        </div>
+        <div class="card">
+            <h3>4. 发放奖励</h3>
+            <p>按参与、通关、胜利、连胜或排行榜记录奖励。</p>
+        </div>
+    </div>
+
+    <h2>模式使用建议</h2>
+    <table>
+        <tr>
+            <th>单机训练</th>
+            <td>最快开始，适合新顾客和排队较长时。</td>
+        </tr>
+        <tr>
+            <th>教程挑战</th>
+            <td>适合讲解战术，展示“赢棋/阻止对手赢”的目标。</td>
+        </tr>
+        <tr>
+            <th>阵地战</th>
+            <td>展示创新点，强调柱和兵能挡马腿，也能冲线获胜。</td>
+        </tr>
+        <tr>
+            <th>好友房间</th>
+            <td>适合两位顾客对战。网络不稳时立即切回单机训练。</td>
+        </tr>
+    </table>
+
+    <h2>常见问题处理</h2>
+    <ul>
+        <li>不会走：提醒“点红棋，看高亮格”。</li>
+        <li>不懂撇马腿：解释“马想跳过去，旁边这格有棋子就迈不开腿”。</li>
+        <li>输太快：降低难度或改玩教程挑战。</li>
+        <li>顾客很强：引导挑战阵地战、连胜奖或排行榜。</li>
+        <li>网络卡住：刷新页面；仍异常就改用单机训练。</li>
+    </ul>
+
+    <h2>物料清单</h2>
+    <ul>
+        <li>电脑或平板、鼠标、充电器、稳定网络或热点。</li>
+        <li>顾客试玩卡、项目说明页、挑战卡或盖章卡。</li>
+        <li>小奖品、排行榜纸张或白板。</li>
+        <li>游戏网页二维码和项目说明二维码。</li>
+    </ul>
+
+    <h2>结束话术</h2>
+    <p class="script">“你刚才这局的关键点是冲线和挡马腿。后面还有阵地战和教程挑战，也可以扫码回去继续玩。”</p>
+</main>
+</body>
+</html>
