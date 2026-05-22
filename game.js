@@ -33,6 +33,7 @@ let onlineMatch = {
     opponent: null,
 };
 let gameVariant = 'classic';
+let playMode = 'ai';
 let matchSearchTimer = null;
 let matchCountdownTimer = null;
 let rematchResponseTimer = null;
@@ -1443,6 +1444,18 @@ function hasAlivePiece(side) {
     return gameState.pieces.some(piece => piece.side === side && piece.alive);
 }
 
+function isLocalTwoPlayerMode() {
+    return playMode === 'local';
+}
+
+function sideDisplayName(side) {
+    return side === 'player' ? '红方' : '蓝方';
+}
+
+function hasAnyLegalMove(side) {
+    return gameState.pieces.some(piece => piece.side === side && piece.alive && getValidMoves(piece).length > 0);
+}
+
 function createPiece(id, side, col, row, type = PIECE_TYPES.HORSE) {
     return { id, side, col, row, alive: true, type };
 }
@@ -1495,7 +1508,7 @@ function initGame() {
     if (gameVariant === 'formation' && !onlineMatch.active && !isTutorialMode()) setupFormationPieces();
     else setupClassicPieces();
 
-    gameState.currentTurn = onlineMatch.active ? onlineMatch.firstTurn : (gameOptions.aiFirst ? 'ai' : 'player');
+    gameState.currentTurn = onlineMatch.active ? onlineMatch.firstTurn : (isLocalTwoPlayerMode() ? 'player' : (gameOptions.aiFirst ? 'ai' : 'player'));
     gameState.selectedPiece = null;
     gameState.validMoves = [];
     gameState.gameOver = false;
@@ -1533,7 +1546,7 @@ function initGame() {
         scheduleOpponentChat('greeting', 0.55, 900, 2600);
         scheduleAmbientOpponentChat(true);
     }
-    if (gameState.currentTurn === 'ai') {
+    if (gameState.currentTurn === 'ai' && !isLocalTwoPlayerMode()) {
         gameState.inputLocked = true;
         scheduleAITurn(getOpponentThinkDelay());
     }
@@ -1606,6 +1619,7 @@ function startTutorialMode(index = 0) {
     cancelMatchmaking(false);
     closeRealtimeConnection();
     gameVariant = 'classic';
+    playMode = 'ai';
     onlineMatch = { active: false, searching: false, opponent: null };
     activeTutorialIndex = Number(index) || 0;
     resetOnlineChat();
@@ -2934,6 +2948,7 @@ function connectRealtimeRoom(roomCode) {
             document.getElementById('matched-ready').textContent = '等待中';
         } else if (message.type === 'game.start' || message.type === 'game.state') {
             gameVariant = 'classic';
+            playMode = 'ai';
             showGameScreen();
             applyRealtimeState(message);
         } else if (message.type === 'chat.message') {
@@ -2994,6 +3009,7 @@ function connectRealtimeQueue() {
             scheduleRealtimeQueueFallback();
         } else if (message.type === 'game.start' || message.type === 'game.state') {
             gameVariant = 'classic';
+            playMode = 'ai';
             showGameScreen();
             applyRealtimeState(message);
         } else if (message.type === 'chat.message') {
@@ -3363,6 +3379,9 @@ function updateModeSpecificUI() {
     document.querySelectorAll('.training-only').forEach(el => {
         el.classList.toggle('hidden', onlineMatch.active || onlineMatch.searching || isTutorialMode());
     });
+    document.querySelectorAll('.ai-only').forEach(el => {
+        el.classList.toggle('hidden', onlineMatch.active || onlineMatch.searching || isTutorialMode() || isLocalTwoPlayerMode());
+    });
     document.querySelectorAll('.online-only').forEach(el => {
         el.classList.toggle('hidden', !onlineMatch.active);
     });
@@ -3500,6 +3519,7 @@ function showMatchFound(opponent, roomCode = '') {
                 onlineMatch.privateRoom = true;
             }
             gameVariant = 'classic';
+            playMode = 'ai';
             currentDifficulty = opponent.difficulty;
             updateOnlinePanel();
             updateDifficultyButtons();
@@ -3513,6 +3533,7 @@ function showMatchFound(opponent, roomCode = '') {
 function startTrainingMode() {
     cancelMatchmaking(false);
     gameVariant = 'classic';
+    playMode = 'ai';
     activeTutorialIndex = null;
     onlineMatch = { active: false, searching: false, opponent: null };
     resetOnlineChat();
@@ -3527,6 +3548,37 @@ function startFormationMode() {
     cancelMatchmaking(false);
     closeRealtimeConnection();
     gameVariant = 'formation';
+    playMode = 'ai';
+    activeTutorialIndex = null;
+    onlineMatch = { active: false, searching: false, opponent: null };
+    resetOnlineChat();
+    updateOnlinePanel();
+    updateDifficultyButtons();
+    updateModeSpecificUI();
+    showGameScreen();
+    initGame();
+}
+
+function startLocalClassicMode() {
+    cancelMatchmaking(false);
+    closeRealtimeConnection();
+    gameVariant = 'classic';
+    playMode = 'local';
+    activeTutorialIndex = null;
+    onlineMatch = { active: false, searching: false, opponent: null };
+    resetOnlineChat();
+    updateOnlinePanel();
+    updateDifficultyButtons();
+    updateModeSpecificUI();
+    showGameScreen();
+    initGame();
+}
+
+function startLocalFormationMode() {
+    cancelMatchmaking(false);
+    closeRealtimeConnection();
+    gameVariant = 'formation';
+    playMode = 'local';
     activeTutorialIndex = null;
     onlineMatch = { active: false, searching: false, opponent: null };
     resetOnlineChat();
@@ -3542,6 +3594,7 @@ function startOnlineMatch() {
 
     showMatchmakingScreen();
     gameVariant = 'classic';
+    playMode = 'ai';
     activeTutorialIndex = null;
     gameState.gameOver = false;
     onlineMatch.active = false;
@@ -3650,7 +3703,7 @@ function rememberOpponentMovePattern(piece, move) {
 }
 
 function doAITurn() {
-    if (gameState.gameOver || gameState.currentTurn !== 'ai' || isTutorialMode()) return;
+    if (gameState.gameOver || gameState.currentTurn !== 'ai' || isTutorialMode() || isLocalTwoPlayerMode()) return;
 
     const result = iterativeDeepening();
 
@@ -3703,7 +3756,8 @@ function pixelToBoard(pixelX, pixelY) {
 }
 
 function handleClick(event) {
-    if (gameState.gameOver || gameState.currentTurn !== 'player' || gameState.inputLocked || animation.active) return;
+    if (gameState.gameOver || gameState.inputLocked || animation.active) return;
+    if (!isLocalTwoPlayerMode() && gameState.currentTurn !== 'player') return;
 
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -3718,9 +3772,10 @@ function handleClick(event) {
 
 function handleCellClick(col, row) {
     const clickedPiece = gameState.board[row][col];
+    const activeSide = isLocalTwoPlayerMode() ? gameState.currentTurn : 'player';
 
     if (gameState.selectedPiece === null) {
-        if (clickedPiece && clickedPiece.side === 'player') {
+        if (clickedPiece && clickedPiece.side === activeSide) {
             gameState.selectedPiece = clickedPiece;
             gameState.validMoves = getValidMoves(clickedPiece);
             if (isTutorialMode()) {
@@ -3755,7 +3810,22 @@ function handleCellClick(col, row) {
                 if (checkWin()) {
                     render();
                     updateTurnIndicator();
-                    showGameOver(gameState.winner === 'player' ? '你赢了！' : opponentWinMessage());
+                    showGameOver(isLocalTwoPlayerMode() ? `${sideDisplayName(gameState.winner)}赢了！` : (gameState.winner === 'player' ? '你赢了！' : opponentWinMessage()));
+                    return;
+                }
+                if (isLocalTwoPlayerMode()) {
+                    const nextSide = opponentOf(piece.side);
+                    if (!hasAnyLegalMove(nextSide)) {
+                        gameState.gameOver = true;
+                        gameState.winner = piece.side;
+                        render();
+                        updateTurnIndicator();
+                        showGameOver(`${sideDisplayName(piece.side)}赢了！${sideDisplayName(nextSide)}无路可走。`);
+                        return;
+                    }
+                    gameState.currentTurn = nextSide;
+                    updateTurnIndicator();
+                    render();
                     return;
                 }
                 gameState.currentTurn = 'ai';
@@ -3764,7 +3834,7 @@ function handleCellClick(col, row) {
                 scheduleOpponentChat(choosePlayerMoveChatGroup(moveTarget.isCapture), moveTarget.isCapture ? 0.38 : 0.16, 600, 1900);
                 scheduleAITurn(getOpponentThinkDelay() + 1200);
             });
-        } else if (clickedPiece && clickedPiece.side === 'player') {
+        } else if (clickedPiece && clickedPiece.side === activeSide) {
             gameState.selectedPiece = clickedPiece;
             gameState.validMoves = getValidMoves(clickedPiece);
             if (isTutorialMode()) {
@@ -3785,7 +3855,7 @@ function handleCellClick(col, row) {
 canvas.addEventListener('click', handleClick);
 
 canvas.addEventListener('mousemove', (event) => {
-    if (gameState.gameOver || gameState.currentTurn !== 'player' || gameState.inputLocked || animation.active) {
+    if (gameState.gameOver || gameState.inputLocked || animation.active || (!isLocalTwoPlayerMode() && gameState.currentTurn !== 'player')) {
         canvas.style.cursor = 'default';
         return;
     }
@@ -3798,7 +3868,8 @@ canvas.addEventListener('mousemove', (event) => {
 
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const piece = gameState.board[row][col];
-        if (piece && piece.side === 'player') {
+        const activeSide = isLocalTwoPlayerMode() ? gameState.currentTurn : 'player';
+        if (piece && piece.side === activeSide) {
             canvas.style.cursor = 'pointer';
         } else if (gameState.selectedPiece && gameState.validMoves.some(m => m.col === col && m.row === row)) {
             canvas.style.cursor = 'pointer';
@@ -4067,6 +4138,9 @@ function updateTurnIndicator() {
         if (isTutorialMode()) {
             indicator.textContent = gameState.winner === 'player' ? '教程完成！' : '重新挑战';
             indicator.className = gameState.winner === 'player' ? 'win' : 'lose';
+        } else if (isLocalTwoPlayerMode()) {
+            indicator.textContent = `${sideDisplayName(gameState.winner)}获胜！`;
+            indicator.className = gameState.winner === 'player' ? 'win' : 'lose';
         } else if (gameState.winner === 'player') {
             indicator.textContent = onlineMatch.active ? '你赢了对局！' : '你赢了！';
             indicator.className = 'win';
@@ -4075,10 +4149,10 @@ function updateTurnIndicator() {
             indicator.className = 'lose';
         }
     } else if (gameState.currentTurn === 'player') {
-        indicator.textContent = '你的回合';
+        indicator.textContent = isLocalTwoPlayerMode() ? '红方回合' : '你的回合';
         indicator.className = 'player-turn';
     } else {
-        indicator.textContent = onlineMatch.active ? `${onlineMatch.opponent.name} 思考中...` : 'AI思考中...';
+        indicator.textContent = isLocalTwoPlayerMode() ? '蓝方回合' : (onlineMatch.active ? `${onlineMatch.opponent.name} 思考中...` : 'AI思考中...');
         indicator.className = 'ai-turn';
     }
     updateGameInfo();
@@ -4097,8 +4171,13 @@ function updateGameInfo() {
         document.getElementById('opponent-side-label').textContent = '目标';
         return;
     }
-    document.getElementById('current-difficulty-label').textContent = onlineMatch.active ? '在线匹配' : diff.label;
-    document.getElementById('ai-depth-label').textContent = `${diff.depth}层`;
+    if (isLocalTwoPlayerMode()) {
+        document.getElementById('current-difficulty-label').textContent = gameVariant === 'formation' ? '双人阵地战' : '双人经典';
+        document.getElementById('ai-depth-label').textContent = '--';
+    } else {
+        document.getElementById('current-difficulty-label').textContent = onlineMatch.active ? '在线匹配' : diff.label;
+        document.getElementById('ai-depth-label').textContent = `${diff.depth}层`;
+    }
     document.getElementById('opponent-side-label').textContent = onlineMatch.active && onlineMatch.opponent
         ? onlineMatch.opponent.name
         : '蓝方';
@@ -4410,6 +4489,7 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
         requestForfeitConfirmation('切换难度', () => {
             onlineMatch = { active: false, searching: false, opponent: null };
             activeTutorialIndex = null;
+            playMode = 'ai';
             currentDifficulty = btn.dataset.diff;
             updateOnlinePanel();
             updateDifficultyButtons();
@@ -4422,6 +4502,8 @@ document.querySelectorAll('.diff-btn').forEach(btn => {
 
 document.getElementById('menu-training-btn').addEventListener('click', () => requestForfeitConfirmation('切换训练', startTrainingMode));
 document.getElementById('menu-formation-btn').addEventListener('click', () => requestForfeitConfirmation('进入阵地战', startFormationMode));
+document.getElementById('menu-local-classic-btn').addEventListener('click', () => requestForfeitConfirmation('进入双人经典', startLocalClassicMode));
+document.getElementById('menu-local-formation-btn').addEventListener('click', () => requestForfeitConfirmation('进入双人阵地战', startLocalFormationMode));
 document.getElementById('menu-online-btn').addEventListener('click', () => requestForfeitConfirmation('重新匹配', startOnlineMatch));
 document.getElementById('menu-room-btn').addEventListener('click', showRoomCodeOverlay);
 document.getElementById('menu-tutorial-btn').addEventListener('click', () => requestForfeitConfirmation('进入教程', () => startTutorialMode(0)));
