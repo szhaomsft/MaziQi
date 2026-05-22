@@ -60,10 +60,12 @@
                     <button id="menu-online-btn" class="menu-btn primary"><span>在线匹配</span><small>积分对战</small></button>
                     <button id="menu-room-btn" class="menu-btn tertiary"><span>好友房间</span><small>房间码挑战</small></button>
                     <button id="menu-formation-btn" class="menu-btn secondary"><span>阵地战</span><small>兵柱变种</small></button>
+                    <button id="menu-local-classic-btn" class="menu-btn secondary"><span>双人经典</span><small>本地轮流</small></button>
+                    <button id="menu-local-formation-btn" class="menu-btn tertiary"><span>双人阵地战</span><small>同屏对抗</small></button>
                     <button id="menu-tutorial-btn" class="menu-btn tutorial"><span>教程挑战</span><small>学会关键技巧</small></button>
                     <button id="menu-training-btn" class="menu-btn secondary"><span>单机训练</span><small>练习棋力</small></button>
                 </div>
-                <div class="menu-note">提示：在线匹配会自动寻找水平接近的对手；阵地战和单机训练可自由选择难度和选项。</div>
+                <div class="menu-note">提示：在线匹配会自动寻找水平接近的对手；双人模式适合现场同屏对战。</div>
             </div>
         </div>
     </section>
@@ -140,9 +142,10 @@
                     <div id="tutorial-status">完成目标后自动进入下一关。</div>
                 </section>
 
-                <section id="training-difficulty-card" class="panel-card training-only">
+                <section id="training-difficulty-card" class="panel-card training-only ai-only">
                     <div class="panel-title">难度</div>
                     <div id="difficulty-selector">
+                        <button class="diff-btn" data-diff="beginner">入门</button>
                         <button class="diff-btn" data-diff="easy">简单</button>
                         <button class="diff-btn active" data-diff="medium">普通</button>
                         <button class="diff-btn" data-diff="hard">困难</button>
@@ -206,7 +209,7 @@
                         <div class="stat-card red"><span>红方</span><strong id="player-count">6</strong></div>
                         <div class="stat-card blue"><span id="opponent-side-label">蓝方</span><strong id="ai-count">6</strong></div>
                         <div class="stat-card"><span>回合数</span><strong id="move-count">0</strong></div>
-                        <div id="ai-depth-card" class="stat-card training-only"><span>对手强度</span><strong id="ai-depth-label">5层</strong></div>
+                        <div id="ai-depth-card" class="stat-card training-only ai-only"><span>对手强度</span><strong id="ai-depth-label">5层</strong></div>
                     </div>
                 </section>
 
@@ -216,8 +219,8 @@
                         <label class="option-label"><input id="sound-toggle" type="checkbox" checked>声音</label>
                         <label class="option-label"><input id="hints-toggle" type="checkbox" checked>显示可走位置</label>
                         <label class="option-label"><input id="animation-toggle" type="checkbox" checked>动画</label>
-                        <label class="option-label training-only"><input id="ai-first-toggle" type="checkbox">对手先手</label>
-                        <label class="option-label option-select training-only">
+                        <label class="option-label training-only ai-only"><input id="ai-first-toggle" type="checkbox">对手先手</label>
+                        <label class="option-label option-select training-only ai-only">
                             对手速度
                             <select id="ai-delay-select">
                                 <option value="0">立即</option>
@@ -350,6 +353,6 @@
         </div>
     </div>
 
-    <script src="game.js?v=20260520-animation-fix"></script>
+    <script src="game.js?v=20260522-local-two-player"></script>
 </body>
 </html>
