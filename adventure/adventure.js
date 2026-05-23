@@ -323,6 +323,7 @@ function createState() {
             stamina: 100,
             facing: { x: 1, y: 0 },
             attackUntil: 0,
+            attackDir: { x: 1, y: 0 },
             attackCooldown: 0,
             invincibleUntil: 0,
         },
@@ -643,8 +644,9 @@ function harvest(node) {
         return;
     }
     const power = harvestPower(node);
+    node.lastHarvestAt = performance.now();
     node.hp -= power;
-    node.shakeUntil = performance.now() + 140;
+    node.shakeUntil = performance.now() + 220;
     spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 8, 110, node.radius * 0.65);
     if (node.hp <= 0) {
         const amount = ({ wood: 4, stone: 4, fiber: 3, berry: 3, herb: 2, ore: 4 }[node.gives] || 1);
@@ -664,9 +666,11 @@ function harvestBlockReason(node) {
 }
 
 function harvestPower(node) {
-    if (node.gives === 'wood') return node.kind === 'stump' ? Math.max(1, state.equipment.woodPower) : state.equipment.woodPower;
-    if (node.gives === 'stone') return state.equipment.stonePower;
-    if (node.gives === 'ore') return state.equipment.orePower;
+    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb') return 0.5;
+    if (node.kind === 'stump') return 0.75 + state.equipment.woodPower * 0.35;
+    if (node.gives === 'wood') return state.equipment.woodPower * 0.65;
+    if (node.gives === 'stone') return state.equipment.stonePower * 0.65;
+    if (node.gives === 'ore') return state.equipment.orePower * 0.6;
     return 1;
 }
 
@@ -716,21 +720,23 @@ function attack(now = performance.now()) {
     p.attackCooldown = weaponCooldown();
     p.attackUntil = now + 160;
     const aim = normalize(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2);
-    if (Math.hypot(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2) > 18) p.facing = aim;
-    const strike = { x: p.x + p.facing.x * p.radius, y: p.y + p.facing.y * p.radius };
+    const attackDir = Math.hypot(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2) > 18 ? aim : p.facing;
+    p.attackDir = attackDir;
+    p.facing = attackDir;
+    const strike = { x: p.x + attackDir.x * p.radius, y: p.y + attackDir.y * p.radius };
     const hits = [];
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         const toEnemy = normalize(e.x - p.x, e.y - p.y);
-        const facingDot = toEnemy.x * p.facing.x + toEnemy.y * p.facing.y;
+        const facingDot = toEnemy.x * attackDir.x + toEnemy.y * attackDir.y;
         const dist = distance(strike, e);
         if (dist <= state.equipment.range + e.radius && facingDot > weaponArcDot()) {
             hits.push({ enemy: e, dist });
         }
     }
-    spawnArcParticles(p.x, p.y, p.facing);
+    spawnArcParticles(p.x, p.y, attackDir);
     if (!hits.length) {
-        addFloatText('挥空', p.x + p.facing.x * 50, p.y + p.facing.y * 50, '#d8e5f2');
+        addFloatText('挥空', p.x + attackDir.x * 50, p.y + attackDir.y * 50, '#d8e5f2');
         renderHud();
         return;
     }
@@ -749,8 +755,9 @@ function damageEnemy(hit, now) {
     hit.attackCooldown = Math.max(hit.attackCooldown, 0.24);
     hit.windupUntil = 0;
     hit.strikeAt = 0;
-    hit.knockX += state.player.facing.x * (hit.boss ? 130 : 240);
-    hit.knockY += state.player.facing.y * (hit.boss ? 130 : 240);
+    const dir = state.player.attackDir || state.player.facing;
+    hit.knockX += dir.x * (hit.boss ? 130 : 240);
+    hit.knockY += dir.y * (hit.boss ? 130 : 240);
     state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
     spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
     addFloatText(`-${state.equipment.attack}`, hit.x, hit.y - 36, '#fff3b0');
@@ -1118,6 +1125,7 @@ function drawResource(r) {
     const y = worldY(r.y);
     const shake = r.shakeUntil && performance.now() < r.shakeUntil ? Math.sin(performance.now() / 18) * 3 : 0;
     const sprite = r.kind === 'tree' ? 'tree' : (r.kind === 'rock' ? 'rock' : (r.kind === 'ore' ? 'ore' : (SPRITES[r.kind] ? r.kind : null)));
+    const showBar = r.hp < r.maxHp && performance.now() - (r.lastHarvestAt || 0) < 1800;
     if (sprite) {
         const scale = r.kind === 'tree' ? 5.8 : (r.kind === 'ore' ? 3.5 : 3.2);
         const groundY = y + (r.kind === 'tree' ? 6 : 0);
@@ -1127,7 +1135,7 @@ function drawResource(r) {
     } else {
         drawGatherablePatch(r, x + shake, y);
     }
-    if (r.hp < r.maxHp || isSolidResource(r)) drawMiniBar(x, y + 16, r.hp / r.maxHp, '#ffd166');
+    if (showBar) drawMiniBar(x, y + 16, r.hp / r.maxHp, '#ffd166');
 }
 
 function drawGatherablePatch(r, x, y) {
@@ -1192,10 +1200,36 @@ function drawPlayer(now) {
     const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
     drawShadow(x, y + 1, 34, 8);
     if (p.invincibleUntil > now && Math.floor(now / 80) % 2 === 0) ctx.globalAlpha = 0.55;
-    drawSpriteGrounded('player', x, y + step, 4);
+    const lean = keys.size ? Math.sin(now / 110) * 2 : 0;
+    drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4);
     ctx.globalAlpha = 1;
+    drawPlayerHandsAndWeapon(x, y + step, p, now);
     if (p.attackUntil > now) {
-        drawAttackSlash(x, y, p.facing, now);
+        drawAttackSlash(x, y, p.attackDir || p.facing, now);
+    }
+}
+
+function drawPlayerHandsAndWeapon(x, y, p, now) {
+    const dir = p.attackUntil > now ? (p.attackDir || p.facing) : p.facing;
+    const attacking = p.attackUntil > now;
+    const handX = x + dir.x * (attacking ? 22 : 15);
+    const handY = y - 31 + dir.y * 8 + (keys.size ? Math.sin(now / 90) * 1.5 : 0);
+    ctx.fillStyle = COLORS.skin;
+    ctx.fillRect(handX - 4, handY - 4, 8, 8);
+    const weaponLength = state.equipment.weapon === '铁剑' ? 30 : (state.equipment.weapon === '石矛' ? 36 : 20);
+    ctx.strokeStyle = state.equipment.weapon === '铁剑' ? '#d8e5f2' : (state.equipment.weapon === '石矛' ? '#a8b3bd' : COLORS.trunk);
+    ctx.lineWidth = state.equipment.weapon === '石矛' ? 3 : 5;
+    ctx.beginPath();
+    ctx.moveTo(handX, handY);
+    ctx.lineTo(handX + dir.x * weaponLength, handY + dir.y * weaponLength);
+    ctx.stroke();
+    if (state.equipment.weapon === '铁剑') {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(handX + dir.x * 8, handY + dir.y * 8);
+        ctx.lineTo(handX + dir.x * weaponLength, handY + dir.y * weaponLength);
+        ctx.stroke();
     }
 }
 
