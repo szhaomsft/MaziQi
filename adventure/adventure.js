@@ -363,39 +363,57 @@ function resource(kind, x, y, gives, hp, radius) {
 
 function createResources() {
     const resources = [];
-    const add = (kind, x, y, gives, hp, radius) => resources.push(resource(kind, x, y, gives, hp, radius));
-    const candidates = [
-        [360, 230], [430, 290], [520, 230], [610, 330], [700, 250], [790, 345], [880, 270], [960, 390], [1080, 440],
-        [320, 480], [470, 520], [650, 560], [820, 575], [1010, 610], [1160, 585], [1280, 520],
-    ];
-    for (const [x, y] of candidates) {
-        const info = terrainInfoAt(x, y);
-        if (info.kind === 'forest') add('tree', x, y, 'wood', 6, 34);
-        else if (info.kind === 'grass' || info.kind === 'camp') add('grass', x, y, 'fiber', 3, 18);
+    const campPoint = { x: 260, y: 230 };
+    const add = (kind, x, y, gives, hp, radius) => {
+        const point = { x, y };
+        if (terrainInfoAt(x, y).kind === 'water') return;
+        if (distance(point, campPoint) < 95 && kind !== 'grass') return;
+        if (resources.some(item => distance(item, point) < item.radius + radius + (kind === 'grass' ? 8 : 24))) return;
+        resources.push(resource(kind, x, y, gives, hp, radius));
+    };
+
+    for (let y = 180; y <= 1320; y += 72) {
+        for (let x = 250; x <= 2180; x += 76) {
+            const jitterX = (hash2(x * 0.07, y * 0.07) - 0.5) * 46;
+            const jitterY = (hash2(x * 0.05 + 8, y * 0.05 - 2) - 0.5) * 44;
+            const px = x + jitterX;
+            const py = y + jitterY;
+            const info = terrainInfoAt(px, py);
+            const n = valueNoise(px * 0.014, py * 0.014);
+            if (info.kind === 'forest') {
+                if (n > 0.38) add('tree', px, py, 'wood', 6, 34);
+                else if (n > 0.22) add('stump', px, py, 'wood', 3, 20);
+                else add('berry', px, py, 'berry', 3, 22);
+            } else if (info.kind === 'grass' || info.kind === 'camp') {
+                if (n > 0.72) add('berry', px, py, 'berry', 3, 22);
+                else if (n > 0.42) add('grass', px, py, 'fiber', 3, 18);
+                else if (n > 0.32) add('herb', px, py, 'herb', 3, 18);
+            } else if (info.kind === 'shore') {
+                if (n > 0.32) add('reed', px, py, 'fiber', 2, 16);
+            } else if (info.kind === 'mine') {
+                if (n > 0.62) add('ore', px, py, 'ore', 8, 28);
+                else if (n > 0.28) add('rock', px, py, 'stone', 7, 28);
+            } else if (info.kind === 'ruins') {
+                if (n > 0.68) add('ore', px, py, 'ore', 8, 28);
+                else if (n > 0.45) add('rock', px, py, 'stone', 7, 28);
+            }
+        }
     }
 
     [
-        [410, 410], [560, 470], [740, 510], [970, 565], [1120, 665], [1340, 635],
-    ].forEach(([x, y], index) => add(index % 2 ? 'berry' : 'grass', x, y, index % 2 ? 'berry' : 'fiber', 3, index % 2 ? 22 : 18));
-
-    [
-        [500, 690], [1160, 430], [1730, 1330], [870, 430], [1030, 720],
-    ].forEach(([x, y]) => add('stump', x, y, 'wood', 3, 20));
-
-    [
-        [690, 780], [770, 860], [875, 940], [990, 1025], [1085, 1110],
-    ].forEach(([x, y]) => add('reed', x, y, 'fiber', 2, 16));
-
-    [
-        [1180, 310], [1320, 560], [1450, 660],
-    ].forEach(([x, y]) => add('herb', x, y, 'herb', 3, 18));
-
-    [
-        [1420, 880], [1580, 980], [1760, 800], [1870, 1210], [2110, 1320],
-    ].forEach(([x, y], index) => add(index < 3 ? 'rock' : 'ore', x, y, index < 3 ? 'stone' : 'ore', index < 3 ? 7 : 8, 28));
-    [
-        [1780, 1080], [1980, 920], [2110, 1120],
-    ].forEach(([x, y]) => add('ore', x, y, 'ore', 8, 28));
+        [430, 250, 'tree'], [520, 360, 'tree'], [760, 220, 'tree'],
+        [1420, 880, 'rock'], [1780, 1080, 'ore'], [1980, 920, 'ore'],
+        [690, 780, 'reed'], [875, 940, 'reed'], [500, 690, 'stump'],
+    ].forEach(([x, y, kind]) => {
+        const config = {
+            tree: ['wood', 6, 34],
+            rock: ['stone', 7, 28],
+            ore: ['ore', 8, 28],
+            reed: ['fiber', 2, 16],
+            stump: ['wood', 3, 20],
+        }[kind];
+        add(kind, x, y, ...config);
+    });
 
     return resources.filter(item => terrainInfoAt(item.x, item.y).kind !== 'water');
 }
@@ -528,7 +546,7 @@ function updateEnemies(dt, now) {
                 p.hp = Math.max(0, p.hp - damage);
                 p.invincibleUntil = now + 620;
                 state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
-                spawnBurst(p.x, p.y, '#ff6b6b', 10, 170);
+                spawnBurst(p.x, p.y, '#ff6b6b', 10, 170, p.radius * 0.55);
                 addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
                 showToast(`${e.name} 命中你，生命 -${damage}`);
                 if (p.hp <= 0) {
@@ -553,7 +571,7 @@ function updateEnemies(dt, now) {
         if (!e.windupUntil && dist < e.radius + p.radius + e.range * 0.42 && e.attackCooldown <= 0) {
             e.windupUntil = now + (e.boss ? 480 : 360);
             e.strikeAt = now + (e.boss ? 360 : 250);
-            spawnBurst(e.x, e.y - 12, '#ffd166', 5, 80);
+            spawnBurst(e.x, e.y - 12, '#ffd166', 5, 80, e.radius * 0.45);
         }
 
         if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
@@ -623,7 +641,7 @@ function harvest(node) {
         : (node.gives === 'stone' ? state.equipment.stonePower : (node.gives === 'ore' ? state.equipment.orePower : 1));
     node.hp -= power;
     node.shakeUntil = performance.now() + 140;
-    spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 6, 110);
+    spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 8, 110, node.radius * 0.65);
     if (node.hp <= 0) {
         const amount = ({ wood: 4, stone: 4, fiber: 3, berry: 3, herb: 2, ore: 4 }[node.gives] || 1);
         state.inventory[node.gives] += amount;
@@ -698,11 +716,11 @@ function attack(now = performance.now()) {
     hit.knockX += p.facing.x * (hit.boss ? 130 : 240);
     hit.knockY += p.facing.y * (hit.boss ? 130 : 240);
     state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
-    spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220);
+    spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
     addFloatText(`-${state.equipment.attack}`, hit.x, hit.y - 36, '#fff3b0');
     if (hit.hp <= 0) {
         state.inventory[hit.drop] += hit.dropAmount;
-        spawnBurst(hit.x, hit.y, '#ffffff', 24, 260);
+        spawnBurst(hit.x, hit.y, '#ffffff', 24, 260, hit.radius);
         addFloatText(`+${hit.dropAmount} ${RESOURCE_LABELS[hit.drop]}`, hit.x, hit.y - 52, '#9cffb7');
         showToast(`击败 ${hit.name}，获得 ${RESOURCE_LABELS[hit.drop]} x${hit.dropAmount}`);
     } else {
@@ -711,13 +729,14 @@ function attack(now = performance.now()) {
     renderHud();
 }
 
-function spawnBurst(x, y, color, count = 8, speed = 120) {
+function spawnBurst(x, y, color, count = 8, speed = 120, spread = 0) {
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
+        const offset = Math.random() * spread;
         const velocity = speed * (0.35 + Math.random() * 0.65);
         state.particles.push({
-            x,
-            y,
+            x: x + Math.cos(angle) * offset,
+            y: y + Math.sin(angle) * offset * 0.65,
             vx: Math.cos(angle) * velocity,
             vy: Math.sin(angle) * velocity,
             color,
@@ -991,9 +1010,11 @@ function drawWaterHighlights(now) {
 
 function spawnWaterRipple(x, y) {
     if (Math.random() > 0.38) return;
+    const angle = Math.random() * Math.PI * 2;
+    const offset = Math.random() * 14;
     state.particles.push({
-        x,
-        y,
+        x: x + Math.cos(angle) * offset,
+        y: y + Math.sin(angle) * offset * 0.45,
         vx: (Math.random() - 0.5) * 20,
         vy: (Math.random() - 0.5) * 8,
         color: 'rgba(170, 230, 255, 0.75)',
@@ -1018,8 +1039,9 @@ function drawWorldObjects(now) {
 function drawCamp() {
     const x = worldX(state.camp.x);
     const y = worldY(state.camp.y);
-    drawShadow(x, y, 74, 20);
-    drawSpriteGrounded('campfire', x, y + 8, 5);
+    const groundY = y + 8;
+    drawShadow(x, groundY, 76, 18);
+    drawSpriteGrounded('campfire', x, groundY, 5);
     ctx.fillStyle = state.camp.repaired ? '#ffd166' : '#9fb3c8';
     ctx.font = 'bold 14px "Microsoft YaHei"';
     ctx.textAlign = 'center';
@@ -1029,8 +1051,9 @@ function drawCamp() {
 function drawRuins() {
     const x = worldX(state.ruins.x);
     const y = worldY(state.ruins.y);
-    drawShadow(x, y + 16, 142, 28);
-    drawSpriteGrounded('ruins', x, y + 24, 6);
+    const groundY = y + 24;
+    drawShadow(x, groundY, 150, 26);
+    drawSpriteGrounded('ruins', x, groundY, 6);
     if (state.ruins.opened) {
         ctx.fillStyle = 'rgba(183, 125, 255, 0.55)';
         ctx.fillRect(x - 18, y - 6, 36, 58);
@@ -1044,9 +1067,10 @@ function drawResource(r) {
     const sprite = r.kind === 'tree' ? 'tree' : (r.kind === 'rock' ? 'rock' : (r.kind === 'ore' ? 'ore' : (SPRITES[r.kind] ? r.kind : null)));
     if (sprite) {
         const scale = r.kind === 'tree' ? 5.8 : (r.kind === 'ore' ? 3.5 : 3.2);
-        drawShadow(x, y + 2, r.radius * (r.kind === 'tree' ? 1.35 : 1.85), r.radius * 0.46);
+        const groundY = y + (r.kind === 'tree' ? 6 : 0);
+        drawShadow(x, groundY, r.radius * (r.kind === 'tree' ? 1.28 : 1.72), r.radius * (r.kind === 'tree' ? 0.38 : 0.4));
         if (r.kind === 'ore' || r.kind === 'rock') drawGroundContact(x, y, r.kind);
-        drawSpriteGrounded(sprite, x + shake, y + (r.kind === 'tree' ? 6 : 0), scale);
+        drawSpriteGrounded(sprite, x + shake, groundY, scale);
     } else {
         drawGatherablePatch(r, x + shake, y);
     }
@@ -1055,7 +1079,7 @@ function drawResource(r) {
 
 function drawGatherablePatch(r, x, y) {
     if (r.kind === 'stump') {
-        drawShadow(x, y + 3, 32, 10);
+        drawShadow(x, y + 1, 32, 8);
         ctx.fillStyle = COLORS.bark;
         ctx.fillRect(x - 15, y - 13, 30, 17);
         ctx.fillStyle = COLORS.trunk;
@@ -1067,7 +1091,7 @@ function drawGatherablePatch(r, x, y) {
         return;
     }
     if (r.kind === 'reed') {
-        drawShadow(x, y + 3, 26, 7);
+        drawShadow(x, y + 1, 24, 6);
         ctx.fillStyle = '#5d7b3a';
         ctx.fillRect(x - 12, y - 27, 4, 28);
         ctx.fillRect(x - 1, y - 34, 4, 35);
@@ -1076,7 +1100,7 @@ function drawGatherablePatch(r, x, y) {
         ctx.fillRect(x - 2, y - 38, 6, 8);
         return;
     }
-    drawShadow(x, y + 2, 30, 8);
+    drawShadow(x, y + 1, 28, 6);
     ctx.fillStyle = r.kind === 'berry' ? COLORS.grass2 : COLORS.grass1;
     ctx.fillRect(x - 14, y - 17, 5, 18);
     ctx.fillRect(x - 4, y - 24, 5, 25);
@@ -1089,8 +1113,8 @@ function drawGatherablePatch(r, x, y) {
 function drawEnemy(e, now) {
     const x = worldX(e.x);
     const y = worldY(e.y);
-    drawShadow(x, y + 6, e.radius * 1.75, e.radius * 0.52);
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2);
+    drawShadow(x, y + Math.max(2, bounce * 0.25), e.radius * 1.62, e.radius * 0.42);
     if (e.windupUntil) {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.85)' : 'rgba(255, 209, 102, 0.85)';
         ctx.lineWidth = 3;
@@ -1112,8 +1136,8 @@ function drawPlayer(now) {
     const p = state.player;
     const x = worldX(p.x);
     const y = worldY(p.y);
-    drawShadow(x, y + 5, 35, 10);
     const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
+    drawShadow(x, y + Math.max(1, step * 0.18), 34, 8);
     if (p.invincibleUntil > now && Math.floor(now / 80) % 2 === 0) ctx.globalAlpha = 0.55;
     drawSpriteGrounded('player', x, y + step, 4);
     ctx.globalAlpha = 1;
@@ -1277,9 +1301,13 @@ function drawMiniBar(x, y, percent, color) {
 }
 
 function drawShadow(x, y, width, height) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
     ctx.beginPath();
     ctx.ellipse(x, y, width / 2, height / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + height * 0.08, width / 2.8, height / 3.2, 0, 0, Math.PI * 2);
     ctx.fill();
 }
 
