@@ -67,6 +67,8 @@ const RESOURCE_ICONS = {
     key: '🗝',
 };
 
+const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'potion', 'stew', 'salve', 'key'];
+
 const RECIPES = [
     recipe('axe', '石斧', '砍树更快', { wood: 4, stone: 3 }, game => {
         game.inventory.stoneAxe += 1;
@@ -400,6 +402,7 @@ function createState() {
         particles: [],
         floatTexts: [],
         cameraShake: 0,
+        selectedHotbar: 0,
         quest: 'collect-basic',
         win: false,
         lose: false,
@@ -1238,10 +1241,12 @@ function renderHud() {
         button.type = 'button';
         button.className = 'recipe-btn';
         button.disabled = !canCraft(item);
-        const cost = Object.entries(item.cost).map(([key, amount]) => `${RESOURCE_LABELS[key]} ${amount}`).join(' · ');
+        const cost = Object.entries(item.cost)
+            .map(([key, amount]) => `<span class="cost-chip ${state.inventory[key] >= amount ? 'met' : ''}"><span>${RESOURCE_ICONS[key] || '•'}</span><b>${amount}</b></span>`)
+            .join('');
         button.innerHTML = `
             <div class="recipe-title"><span>${item.name}</span><small>${item.desc}</small></div>
-            <div class="recipe-cost"><span>${cost}</span><span>${item.owned(state) ? '已拥有' : (button.disabled ? '材料不足' : '可合成')}</span></div>
+            <div class="recipe-cost"><span class="recipe-cost-list">${cost}</span><span>${item.owned(state) ? '已拥有' : (button.disabled ? '材料不足' : '可合成')}</span></div>
         `;
         button.addEventListener('click', () => craft(item.id));
         recipes.appendChild(button);
@@ -1756,6 +1761,7 @@ function drawUiOverlay() {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 15px "Microsoft YaHei"';
     ctx.fillText(`目标：${questText()}`, 30, 80);
+    drawHotbar();
 
     if (state.win || state.lose) {
         ctx.fillStyle = 'rgba(7, 12, 18, 0.72)';
@@ -1768,6 +1774,47 @@ function drawUiOverlay() {
         ctx.fillText(state.win ? '你完成了荒野营地 Demo。' : '重新开始，先打造装备再深入危险区域。', VIEW.width / 2, VIEW.height / 2 + 34);
         ctx.textAlign = 'left';
     }
+}
+
+function drawHotbar() {
+    const slot = 48;
+    const gap = 6;
+    const total = HOTBAR_ITEMS.length * slot + (HOTBAR_ITEMS.length - 1) * gap;
+    const startX = Math.round((VIEW.width - total) / 2);
+    const y = VIEW.height - slot - 18;
+    ctx.save();
+    ctx.fillStyle = 'rgba(8, 14, 21, 0.82)';
+    ctx.fillRect(startX - 10, y - 10, total + 20, slot + 20);
+    HOTBAR_ITEMS.forEach((key, index) => {
+        const x = startX + index * (slot + gap);
+        const selected = index === state.selectedHotbar;
+        ctx.fillStyle = selected ? 'rgba(255, 209, 102, 0.28)' : 'rgba(255, 255, 255, 0.12)';
+        ctx.fillRect(x, y, slot, slot);
+        ctx.strokeStyle = selected ? '#ffd166' : 'rgba(255,255,255,0.28)';
+        ctx.lineWidth = selected ? 4 : 2;
+        ctx.strokeRect(x, y, slot, slot);
+        ctx.fillStyle = '#9fb3c8';
+        ctx.font = 'bold 10px "Microsoft YaHei"';
+        ctx.textAlign = 'left';
+        ctx.fillText(String(index + 1), x + 4, y + 12);
+        if (state.inventory[key] > 0) {
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(RESOURCE_ICONS[key] || '•', x + slot / 2, y + 31);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px "Microsoft YaHei"';
+            ctx.textAlign = 'right';
+            ctx.fillText(String(state.inventory[key]), x + slot - 5, y + slot - 5);
+        }
+    });
+    const selectedKey = HOTBAR_ITEMS[state.selectedHotbar];
+    if (selectedKey && state.inventory[selectedKey] > 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px "Microsoft YaHei"';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${RESOURCE_LABELS[selectedKey]}：按 ${state.selectedHotbar + 1} 使用/装备`, VIEW.width / 2, y - 16);
+    }
+    ctx.restore();
 }
 
 function drawTopBar(x, y, width, height, percent, color, label) {
@@ -1872,6 +1919,13 @@ function loop(now) {
 window.addEventListener('keydown', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'Shift'].includes(key)) event.preventDefault();
+    if (/^[1-9]$/.test(key)) {
+        const index = Number(key) - 1;
+        state.selectedHotbar = index;
+        const item = HOTBAR_ITEMS[index];
+        if (item && canUseInventoryItem(item)) useInventoryItem(item);
+        return;
+    }
     if (key === 'e') {
         keys.add(key);
         if (!event.repeat) {

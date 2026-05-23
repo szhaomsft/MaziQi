@@ -325,6 +325,29 @@ button.inventory-row:hover {
     font-size: 12px;
 }
 
+.recipe-cost-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.cost-chip {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 107, 107, 0.12);
+    color: #ffd6d6;
+}
+
+.cost-chip.met {
+    background: rgba(94, 224, 137, 0.12);
+    color: #c8ffd8;
+}
+
 ol {
     margin: 0 0 14px 20px;
     padding: 0;
