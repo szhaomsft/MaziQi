@@ -240,10 +240,26 @@ h2 {
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.055);
+    color: inherit;
+    font: inherit;
+    text-align: left;
 }
 
 .inventory-row.empty {
     opacity: 0.42;
+}
+
+button.inventory-row {
+    cursor: pointer;
+}
+
+button.inventory-row:hover {
+    border-color: rgba(255, 209, 102, 0.65);
+    background: rgba(255, 209, 102, 0.12);
+}
+
+.inventory-row.usable .inventory-icon {
+    background: rgba(255, 209, 102, 0.18);
 }
 
 .inventory-icon {

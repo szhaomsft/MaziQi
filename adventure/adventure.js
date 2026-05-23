@@ -26,6 +26,16 @@ const RESOURCE_LABELS = {
     slimeGel: '黏液',
     fang: '兽牙',
     crystal: '魔晶',
+    stoneAxe: '石斧',
+    stonePickaxe: '石镐',
+    stoneSpear: '石矛',
+    ironSword: '铁剑',
+    crystalBlade: '魔晶剑',
+    leatherArmor: '皮甲',
+    ironArmor: '铁甲',
+    potion: '治疗药水',
+    stew: '蘑菇汤',
+    salve: '黏液药膏',
     key: '废墟钥匙',
 };
 
@@ -44,42 +54,50 @@ const RESOURCE_ICONS = {
     slimeGel: '🟢',
     fang: '🦷',
     crystal: '💎',
+    stoneAxe: '🪓',
+    stonePickaxe: '⛏',
+    stoneSpear: '🔱',
+    ironSword: '⚔',
+    crystalBlade: '🗡',
+    leatherArmor: '🥋',
+    ironArmor: '🛡',
+    potion: '🧪',
+    stew: '🍲',
+    salve: '💚',
     key: '🗝',
 };
 
 const RECIPES = [
     recipe('axe', '石斧', '砍树更快', { wood: 4, stone: 3 }, game => {
-        game.equipment.tool = '石斧';
-        game.equipment.woodPower = 2;
-    }, game => game.equipment.tool === '石斧' || game.equipment.tool === '石镐'),
+        game.inventory.stoneAxe += 1;
+    }, game => game.inventory.stoneAxe > 0 || game.equipment.tool === '石斧'),
     recipe('pickaxe', '石镐', '挖石和采矿', { wood: 3, stone: 5, fiber: 2 }, game => {
-        game.equipment.tool = '石镐';
-        game.equipment.stonePower = 2;
-        game.equipment.orePower = 2;
-    }, game => game.equipment.tool === '石镐'),
+        game.inventory.stonePickaxe += 1;
+    }, game => game.inventory.stonePickaxe > 0 || game.equipment.tool === '石镐'),
     recipe('spear', '石矛', '近战伤害 +2', { wood: 3, stone: 3, fiber: 2 }, game => {
-        game.equipment.weapon = '石矛';
-        game.equipment.attack = 3;
-        game.equipment.range = 86;
-    }, game => game.equipment.weapon === '石矛' || game.equipment.weapon === '铁剑'),
+        game.inventory.stoneSpear += 1;
+    }, game => game.inventory.stoneSpear > 0 || game.equipment.weapon === '石矛'),
     recipe('sword', '铁剑', '可以挑战守门石像', { wood: 2, ore: 6, hide: 2 }, game => {
-        game.equipment.weapon = '铁剑';
-        game.equipment.attack = 6;
-        game.equipment.range = 68;
-    }, game => game.equipment.weapon === '铁剑'),
+        game.inventory.ironSword += 1;
+    }, game => game.inventory.ironSword > 0 || game.equipment.weapon === '铁剑'),
     recipe('armor', '皮甲', '受到伤害 -1', { hide: 4, fiber: 4 }, game => {
-        game.equipment.armor = '皮甲';
-        game.equipment.defense = 1;
-    }, game => game.equipment.armor === '皮甲'),
+        game.inventory.leatherArmor += 1;
+    }, game => game.inventory.leatherArmor > 0 || game.equipment.armor === '皮甲'),
     recipe('potion', '治疗药水', '恢复 35 生命', { herb: 2, berry: 2 }, game => {
-        game.player.hp = Math.min(game.player.maxHp, game.player.hp + 35);
+        game.inventory.potion += 1;
     }, () => false),
     recipe('stew', '蘑菇汤', '恢复 25 生命', { mushroom: 3, berry: 1 }, game => {
-        game.player.hp = Math.min(game.player.maxHp, game.player.hp + 25);
+        game.inventory.stew += 1;
     }, () => false),
     recipe('salve', '黏液药膏', '恢复 45 生命', { slimeGel: 2, herb: 2, flower: 1 }, game => {
-        game.player.hp = Math.min(game.player.maxHp, game.player.hp + 45);
+        game.inventory.salve += 1;
     }, () => false),
+    recipe('ironArmor', '铁甲', '防御大幅提升', { ore: 8, coal: 2, hide: 2 }, game => {
+        game.inventory.ironArmor += 1;
+    }, game => game.inventory.ironArmor > 0 || game.equipment.armor === '铁甲'),
+    recipe('crystalBlade', '魔晶剑', '高伤害长剑', { ironSword: 1, crystal: 4, fang: 2 }, game => {
+        game.inventory.crystalBlade += 1;
+    }, game => game.inventory.crystalBlade > 0 || game.equipment.weapon === '魔晶剑'),
     recipe('key', '废墟钥匙', '打开古代废墟', { ore: 8, crystal: 3, fang: 1 }, game => {
         game.inventory.key += 1;
         game.quest = 'open-ruins';
@@ -362,7 +380,7 @@ function createState() {
             harvestTarget: null,
             harvestBlockedAt: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, potion: 0, stew: 0, salve: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -1107,6 +1125,70 @@ function craft(id) {
     renderHud();
 }
 
+function useInventoryItem(key) {
+    if ((state.inventory[key] || 0) <= 0) return;
+    const p = state.player;
+    switch (key) {
+        case 'stoneAxe':
+            state.equipment.tool = '石斧';
+            state.equipment.woodPower = 2;
+            showToast('已装备石斧。');
+            break;
+        case 'stonePickaxe':
+            state.equipment.tool = '石镐';
+            state.equipment.stonePower = 2;
+            state.equipment.orePower = 2;
+            showToast('已装备石镐。');
+            break;
+        case 'stoneSpear':
+            equipWeapon('石矛', 3, 86, '已装备石矛。');
+            break;
+        case 'ironSword':
+            equipWeapon('铁剑', 6, 68, '已装备铁剑。');
+            break;
+        case 'crystalBlade':
+            equipWeapon('魔晶剑', 9, 82, '已装备魔晶剑。');
+            break;
+        case 'leatherArmor':
+            equipArmor('皮甲', 1, '已装备皮甲。');
+            break;
+        case 'ironArmor':
+            equipArmor('铁甲', 2, '已装备铁甲。');
+            break;
+        case 'potion':
+            p.hp = Math.min(p.maxHp, p.hp + 35);
+            state.inventory.potion -= 1;
+            showToast('使用治疗药水，恢复 35 生命。');
+            break;
+        case 'stew':
+            p.hp = Math.min(p.maxHp, p.hp + 25);
+            state.inventory.stew -= 1;
+            showToast('喝下蘑菇汤，恢复 25 生命。');
+            break;
+        case 'salve':
+            p.hp = Math.min(p.maxHp, p.hp + 45);
+            state.inventory.salve -= 1;
+            showToast('使用黏液药膏，恢复 45 生命。');
+            break;
+        default:
+            return;
+    }
+    renderHud();
+}
+
+function equipWeapon(name, attack, range, message) {
+    state.equipment.weapon = name;
+    state.equipment.attack = attack;
+    state.equipment.range = range;
+    showToast(message);
+}
+
+function equipArmor(name, defense, message) {
+    state.equipment.armor = name;
+    state.equipment.defense = defense;
+    showToast(message);
+}
+
 function updateQuest() {
     if (state.win || state.lose) return;
     if (state.quest === 'collect-basic' && state.inventory.wood >= 8 && state.inventory.stone >= 4) state.quest = 'repair-camp';
@@ -1139,10 +1221,13 @@ function renderHud() {
     const inventory = document.getElementById('inventory');
     inventory.innerHTML = '';
     Object.entries(RESOURCE_LABELS).forEach(([key, label]) => {
-        const row = document.createElement('div');
+        const row = document.createElement(canUseInventoryItem(key) ? 'button' : 'div');
         row.className = 'inventory-row';
+        if (row.tagName === 'BUTTON') row.type = 'button';
         row.classList.toggle('empty', !state.inventory[key]);
+        row.classList.toggle('usable', canUseInventoryItem(key));
         row.innerHTML = `<span class="inventory-icon">${RESOURCE_ICONS[key] || '•'}</span><span class="inventory-name">${label}</span><strong>${state.inventory[key] || 0}</strong>`;
+        if (canUseInventoryItem(key)) row.addEventListener('click', () => useInventoryItem(key));
         inventory.appendChild(row);
     });
 
@@ -1164,6 +1249,10 @@ function renderHud() {
 
     const objective = document.getElementById('objective-text');
     if (objective) objective.textContent = questText();
+}
+
+function canUseInventoryItem(key) {
+    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'potion', 'stew', 'salve'].includes(key) && (state.inventory[key] || 0) > 0;
 }
 
 function render(now) {
@@ -1516,7 +1605,7 @@ function drawPlayer(now) {
 }
 
 function drawPlayerHandsAndWeapon(x, y, p, now) {
-    const dir = p.attackUntil > now ? (p.attackDir || p.facing) : p.facing;
+    const dir = p.attackDir || p.facing;
     const attacking = p.attackUntil > now;
     const handX = x + dir.x * (attacking ? 22 : 15);
     const handY = y - 31 + dir.y * 8 + (keys.size ? Math.sin(now / 90) * 1.5 : 0);
