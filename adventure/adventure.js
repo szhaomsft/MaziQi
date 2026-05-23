@@ -1779,6 +1779,9 @@ function drawUiOverlay() {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 15px "Microsoft YaHei"';
     ctx.fillText(`目标：${questText()}`, 30, 80);
+    ctx.fillStyle = 'rgba(255,255,255,0.76)';
+    ctx.font = 'bold 13px "Microsoft YaHei"';
+    ctx.fillText('按 I 打开背包 / 合成栏', 30, 104);
     drawHotbar();
 
     if (state.win || state.lose) {
