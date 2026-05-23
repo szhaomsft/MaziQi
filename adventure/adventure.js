@@ -470,7 +470,7 @@ function createState() {
         cameraShake: 0,
         selectedHotbar: 0,
         inventoryOpen: false,
-        wolfPack: { alertedUntil: 0, nextBiteAt: 0 },
+        wolfPacks: createWolfPackStates(),
         timeOfDay: 0.28,
         dayLength: 180,
         quest: 'collect-basic',
@@ -614,19 +614,39 @@ function createEnemies() {
     if (!enemies.some(item => item.kind === 'boar' && item.x < 800 && item.y > 1050)) {
         add(enemy('boar', '野猪', 560, 1260, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
     }
-    createWolfPack().forEach(add);
+    createWolfPacks().forEach(add);
     return enemies;
 }
 
-function createWolfPack() {
+function createWolfPackStates() {
+    return {
+        north: wolfPackState(4520, 980, 0),
+        south: wolfPackState(950, 3300, 1.7),
+        east: wolfPackState(5380, 2050, 3.4),
+    };
+}
+
+function wolfPackState(x, y, phase) {
+    return { homeX: x, homeY: y, roamX: x, roamY: y, phase, alertedUntil: 0, nextBiteAt: 0 };
+}
+
+function createWolfPacks() {
+    return [
+        ...createWolfPack('north', 4520, 980, '领头荒狼'),
+        ...createWolfPack('south', 950, 3300, '南林头狼'),
+        ...createWolfPack('east', 5380, 2050, '东岭头狼'),
+    ];
+}
+
+function createWolfPack(packId, x, y, leaderName) {
     const pack = [
-        enemy('wolf', '领头荒狼', 4520, 980, 21, 30, 4, 178, 72, { hide: 1, meat: 1, fang: 2 }, 1),
-        enemy('wolf', '荒狼', 4460, 1040, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
-        enemy('wolf', '荒狼', 4610, 1050, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
-        enemy('wolf', '荒狼', 4540, 1130, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', leaderName, x, y, 21, 30, 4, 178, 72, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', x - 60, y + 60, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', x + 90, y + 70, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', x + 20, y + 150, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
     ];
     ['leader', 'left', 'right', 'rear'].forEach((role, index) => {
-        pack[index].packId = 'main';
+        pack[index].packId = packId;
         pack[index].packRole = role;
         pack[index].circleSide = role === 'left' ? -1 : 1;
     });
@@ -770,6 +790,7 @@ function isSolidResource(item) {
 }
 
 function updateEnemies(dt, now) {
+    updateWolfPackRoaming(now);
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
@@ -882,12 +903,15 @@ function updateEnemies(dt, now) {
 
 function updateWolfPackMember(e, dt, now, dist) {
     const p = state.player;
-    if (dist < 420) state.wolfPack.alertedUntil = now + 7000;
-    const alerted = state.wolfPack.alertedUntil > now;
+    const pack = state.wolfPacks[e.packId];
+    if (!pack) return false;
+    if (dist < 420) pack.alertedUntil = now + 7000;
+    const alerted = pack.alertedUntil > now;
     if (!alerted) {
-        if (distance(e, { x: e.spawnX, y: e.spawnY }) > 20) {
-            const home = normalize(e.spawnX - e.x, e.spawnY - e.y);
-            moveEnemy(e, home.x * e.speed * 0.35 * dt, home.y * e.speed * 0.35 * dt);
+        const home = wolfRoamTarget(e, pack);
+        if (distance(e, home) > 18) {
+            const dir = normalize(home.x - e.x, home.y - e.y);
+            moveEnemy(e, dir.x * e.speed * 0.42 * dt, dir.y * e.speed * 0.42 * dt);
         }
         return true;
     }
@@ -905,9 +929,28 @@ function updateWolfPackMember(e, dt, now, dist) {
         const cautious = e.attackCooldown > 0.2 ? 0.85 : 1.05;
         moveEnemy(e, toTarget.x * e.speed * cautious * dt, toTarget.y * e.speed * cautious * dt);
     }
-    const canBite = now >= state.wolfPack.nextBiteAt && e.attackCooldown <= 0 && dist < 78 && (e.packRole === 'leader' || e.packRole === 'left' || e.packRole === 'right');
+    const canBite = now >= pack.nextBiteAt && e.attackCooldown <= 0 && dist < 78 && (e.packRole === 'leader' || e.packRole === 'left' || e.packRole === 'right');
     if (!e.windupUntil && canBite) startEnemyAttack(e, now);
     return true;
+}
+
+function updateWolfPackRoaming(now) {
+    for (const pack of Object.values(state.wolfPacks)) {
+        const t = now * 0.00008 + pack.phase;
+        pack.roamX = clamp(pack.homeX + Math.cos(t) * 260 + Math.sin(t * 1.7) * 90, 120, WORLD.width - 120);
+        pack.roamY = clamp(pack.homeY + Math.sin(t * 0.9) * 210 + Math.cos(t * 1.3) * 70, 120, WORLD.height - 120);
+    }
+}
+
+function wolfRoamTarget(e, pack) {
+    const offsets = {
+        leader: { x: 0, y: 0 },
+        left: { x: -74, y: 58 },
+        right: { x: 82, y: 56 },
+        rear: { x: 10, y: 128 },
+    };
+    const offset = offsets[e.packRole] || offsets.leader;
+    return { x: pack.roamX + offset.x, y: pack.roamY + offset.y };
 }
 
 function wolfRoleTarget(e) {
@@ -972,7 +1015,8 @@ function resolveEnemyAttack(e, now) {
         e.retreatUntil = now + 420;
         e.circleSide *= -1;
         e.attackCooldown = 1.55;
-        state.wolfPack.nextBiteAt = now + 850;
+        const pack = state.wolfPacks[e.packId];
+        if (pack) pack.nextBiteAt = now + 850;
         spawnBurst(e.x, e.y, '#d8e5f2', 8, 130, e.radius * 0.6);
     } else if (e.kind === 'bat') {
         e.swoopStartAt = now;
