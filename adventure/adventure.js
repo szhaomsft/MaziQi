@@ -331,6 +331,7 @@ function createState() {
             attackUntil: 0,
             attackDir: { x: 1, y: 0 },
             attackCooldown: 0,
+            attackQueuedUntil: 0,
             invincibleUntil: 0,
             harvestTarget: null,
             harvestBlockedAt: 0,
@@ -427,6 +428,7 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
         kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss,
         hurtUntil: 0,
         attackCooldown: 0,
+        contactCooldown: 0,
         windupUntil: 0,
         strikeAt: 0,
         attackDir: { x: 0, y: 1 },
@@ -517,7 +519,7 @@ function showToast(message) {
 
 function update(dt, now) {
     if (!state.win && !state.lose) {
-        updatePlayer(dt);
+        updatePlayer(dt, now);
         updateHarvestHold(dt);
         updateEnemies(dt, now);
         updateQuest();
@@ -530,7 +532,7 @@ function update(dt, now) {
     requestAnimationFrame(loop);
 }
 
-function updatePlayer(dt) {
+function updatePlayer(dt, now) {
     const p = state.player;
     if (Math.abs(p.knockX) > 1 || Math.abs(p.knockY) > 1) {
         moveCircle(p, p.knockX * dt, p.knockY * dt);
@@ -568,6 +570,12 @@ function updatePlayer(dt) {
     }
 
     if (p.attackCooldown > 0) p.attackCooldown -= dt;
+    if ((mouse.down || keys.has(' ')) && p.attackCooldown <= 0) {
+        attack(now);
+    } else if (p.attackQueuedUntil > now && p.attackCooldown <= 0) {
+        p.attackQueuedUntil = 0;
+        attack(now);
+    }
 }
 
 function moveCircle(entity, dx, dy) {
@@ -594,6 +602,7 @@ function updateEnemies(dt, now) {
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
+        if (e.contactCooldown > 0) e.contactCooldown -= dt;
         if (e.leapUntil > now) {
             const progress = clamp((now - e.leapStartAt) / Math.max(1, e.leapUntil - e.leapStartAt), 0, 1);
             const arc = Math.sin(progress * Math.PI);
@@ -630,6 +639,10 @@ function updateEnemies(dt, now) {
         }
         const p = state.player;
         const dist = distance(e, p);
+        if (dist < e.radius + p.radius + 4 && e.contactCooldown <= 0) {
+            applyEnemyDamage(e, Math.max(1, e.attack - 1), '碰撞');
+            e.contactCooldown = e.kind === 'boar' ? 0.7 : 0.9;
+        }
         if (e.strikeAt && now >= e.strikeAt) {
             resolveEnemyAttack(e, now);
         }
@@ -907,7 +920,11 @@ function openRuins() {
 
 function attack(now = performance.now()) {
     const p = state.player;
-    if (state.win || state.lose || p.attackCooldown > 0) return;
+    if (state.win || state.lose) return;
+    if (p.attackCooldown > 0) {
+        p.attackQueuedUntil = now + 220;
+        return;
+    }
     const staminaCost = weaponStaminaCost();
     if (p.stamina < staminaCost) {
         showToast('体力不足，稍等恢复后再攻击。');
@@ -1725,7 +1742,10 @@ window.addEventListener('keydown', event => {
             else if (!target) showToast('靠近资源后长按 E 采集。');
         }
     }
-    else if (key === ' ') attack();
+    else if (key === ' ') {
+        keys.add(key);
+        attack();
+    }
     else if (key === 'r') {
         state.player.x = state.camp.x + 80;
         state.player.y = state.camp.y + 40;
