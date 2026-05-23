@@ -307,7 +307,7 @@ button.inventory-row:hover {
 
 #inventory-window {
     width: min(980px, 100%);
-    max-height: min(760px, calc(100vh - 36px));
+    height: min(760px, calc(100vh - 36px));
     overflow: hidden;
     border: 2px solid rgba(255, 209, 102, 0.42);
     border-radius: 18px;
@@ -345,13 +345,16 @@ button.inventory-row:hover {
     display: grid;
     grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     gap: 14px;
-    max-height: calc(min(760px, 100vh - 36px) - 76px);
-    overflow: auto;
+    height: calc(100% - 76px);
+    overflow: hidden;
     padding: 16px;
 }
 
 .inventory-section {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
+    min-height: 0;
     padding: 14px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
@@ -359,8 +362,15 @@ button.inventory-row:hover {
 }
 
 .inventory-section h3 {
+    flex: 0 0 auto;
     margin: 0 0 12px;
     color: var(--accent);
+}
+
+.inventory-section #recipes {
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 4px;
 }
 
 #recipes {
