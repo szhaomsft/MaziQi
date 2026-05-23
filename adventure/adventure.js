@@ -1114,7 +1114,7 @@ function drawEnemy(e, now) {
     const x = worldX(e.x);
     const y = worldY(e.y);
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2);
-    drawShadow(x, y + Math.max(2, bounce * 0.25), e.radius * 1.62, e.radius * 0.42);
+    drawShadow(x, y + 1, e.radius * 1.62, e.radius * 0.42);
     if (e.windupUntil) {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.85)' : 'rgba(255, 209, 102, 0.85)';
         ctx.lineWidth = 3;
@@ -1137,7 +1137,7 @@ function drawPlayer(now) {
     const x = worldX(p.x);
     const y = worldY(p.y);
     const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
-    drawShadow(x, y + Math.max(1, step * 0.18), 34, 8);
+    drawShadow(x, y + 1, 34, 8);
     if (p.invincibleUntil > now && Math.floor(now / 80) % 2 === 0) ctx.globalAlpha = 0.55;
     drawSpriteGrounded('player', x, y + step, 4);
     ctx.globalAlpha = 1;
@@ -1330,9 +1330,36 @@ function drawSprite(name, x, y, scale, options = {}) {
 function drawSpriteGrounded(name, centerX, groundY, scale, options = {}) {
     const sprite = SPRITES[name];
     if (!sprite) return;
-    const width = sprite.w * scale;
-    const height = sprite.rows.length * scale;
-    drawSprite(name, centerX - width / 2, groundY - height, scale, options);
+    const bounds = spriteVisibleBounds(sprite);
+    const visibleWidth = (bounds.maxCol - bounds.minCol + 1) * scale;
+    const offsetX = bounds.minCol * scale;
+    const offsetY = bounds.maxRow * scale;
+    drawSprite(name, centerX - visibleWidth / 2 - offsetX, groundY - offsetY - scale, scale, options);
+}
+
+function spriteVisibleBounds(sprite) {
+    if (sprite.bounds) return sprite.bounds;
+    let minRow = Infinity;
+    let maxRow = -Infinity;
+    let minCol = Infinity;
+    let maxCol = -Infinity;
+    for (let row = 0; row < sprite.rows.length; row++) {
+        const line = sprite.rows[row];
+        for (let col = 0; col < line.length; col++) {
+            if (line[col] === '.') continue;
+            minRow = Math.min(minRow, row);
+            maxRow = Math.max(maxRow, row);
+            minCol = Math.min(minCol, col);
+            maxCol = Math.max(maxCol, col);
+        }
+    }
+    sprite.bounds = {
+        minRow: Number.isFinite(minRow) ? minRow : 0,
+        maxRow: Number.isFinite(maxRow) ? maxRow : 0,
+        minCol: Number.isFinite(minCol) ? minCol : 0,
+        maxCol: Number.isFinite(maxCol) ? maxCol : sprite.w - 1,
+    };
+    return sprite.bounds;
 }
 
 function drawGroundContact(x, y, kind) {
