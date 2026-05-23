@@ -601,7 +601,7 @@ function createEnemies() {
                 add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, { slimeGel: 2, fiber: 1 }, 1));
             } else if (info.kind === 'forest' && n > 0.64) {
                 add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
-            } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.6) {
+            } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.86) {
                 add(enemy('bat', '夜蝠', px, py, 12, 12, 2, 210, 96, { fang: 1, slimeGel: 1 }, 1));
             } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
                 add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, { crystal: 1, stone: 2, coal: 1 }, 1));
@@ -774,6 +774,14 @@ function updateEnemies(dt, now) {
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
         const p = state.player;
         const dist = distance(e, p);
+        if (e.kind === 'bat' && nightAmount() < 0.18) {
+            if (distance(e, { x: e.spawnX, y: e.spawnY }) > 20) {
+                const home = normalize(e.spawnX - e.x, e.spawnY - e.y);
+                moveEnemy(e, home.x * e.speed * 0.55 * dt, home.y * e.speed * 0.55 * dt);
+            }
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
+        }
         if (e.kind === 'wolf' && updateWolfPackMember(e, dt, now, dist)) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
