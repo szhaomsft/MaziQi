@@ -393,8 +393,8 @@ function createDecorations() {
         [1120, 1010], [1300, 910], [1660, 1190], [1910, 1040], [2040, 790],
     ].forEach(([x, y], index) => add(index % 2 ? 'pebbles' : 'crack', x, y, 1));
     [
-        [720, 860], [790, 920], [860, 980], [930, 1040], [1000, 1100],
-    ].forEach(([x, y]) => add('water', x, y, 1));
+        [690, 780], [770, 860], [875, 940], [990, 1025], [1085, 1110],
+    ].forEach(([x, y]) => add('reeds', x, y, 1));
     [
         [500, 690], [1160, 430], [1730, 1330],
     ].forEach(([x, y]) => add('stump', x, y, 1));
@@ -471,8 +471,9 @@ function moveCircle(entity, dx, dy) {
 }
 
 function collides(entity) {
+    if (terrainInfoAt(entity.x, entity.y).kind === 'water') return true;
     for (const r of state.resources) {
-        if (r.hp > 0 && distance(entity, r) < entity.radius + r.radius * 0.72) return true;
+        if (r.hp > 0 && distance(entity, r) < entity.radius + r.radius * (r.kind === 'tree' ? 0.42 : 0.72)) return true;
     }
     if (distance(entity, state.ruins) < entity.radius + state.ruins.radius && !state.ruins.opened) return true;
     return false;
@@ -802,49 +803,171 @@ function worldX(x) { return Math.round(x - camera.x); }
 function worldY(y) { return Math.round(y - camera.y); }
 
 function drawTerrain() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, VIEW.height);
-    gradient.addColorStop(0, '#3f8b4c');
-    gradient.addColorStop(1, '#275a36');
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = '#2d7141';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-    const grid = 80;
+    const grid = 32;
     const startX = Math.floor(camera.x / grid) * grid;
     const startY = Math.floor(camera.y / grid) * grid;
     for (let y = startY; y < camera.y + VIEW.height + grid; y += grid) {
         for (let x = startX; x < camera.x + VIEW.width + grid; x += grid) {
-            const zone = terrainAt(x + grid / 2, y + grid / 2);
-            ctx.fillStyle = zone;
+            const info = terrainInfoAt(x + grid / 2, y + grid / 2);
+            ctx.fillStyle = info.color;
             ctx.fillRect(worldX(x), worldY(y), grid, grid);
-            ctx.fillStyle = 'rgba(255,255,255,0.035)';
-            if (((x / grid) + (y / grid)) % 3 === 0) ctx.fillRect(worldX(x) + 10, worldY(y) + 14, 18, 4);
-            ctx.fillStyle = 'rgba(0,0,0,0.045)';
-            if (((x / grid) + (y / grid)) % 4 === 0) ctx.fillRect(worldX(x) + 50, worldY(y) + 55, 16, 5);
+            drawTerrainDetail(x, y, grid, info);
+        }
+    }
+    drawWaterHighlights(performance.now());
+}
+
+function terrainInfoAt(x, y) {
+    const river = riverDistance(x, y);
+    if (river < 46) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((46 - river) / 46, 0, 1)) };
+    if (river < 82) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', (river - 46) / 36) };
+
+    const mine = regionWeight(x, y, 1760, 1010, 620);
+    const ruins = regionWeight(x, y, 2060, 360, 560);
+    const forest = regionWeight(x, y, 780, 340, 620);
+    const camp = regionWeight(x, y, 250, 230, 360);
+    const noise = valueNoise(x * 0.006, y * 0.006);
+
+    if (ruins > 0.54) return { kind: 'ruins', color: mixMany([['#38414d', ruins], ['#4f5964', 0.32], ['#2f6b3d', Math.max(0, 1 - ruins)]], noise) };
+    if (mine > 0.52) return { kind: 'mine', color: mixMany([['#58636e', mine], ['#6a604f', 0.2], ['#376d3f', Math.max(0, 1 - mine)]], noise) };
+    if (forest > 0.46) return { kind: 'forest', color: mixMany([['#1f5a35', forest], ['#2f7041', 0.3], ['#3f8f4f', Math.max(0, 1 - forest)]], noise) };
+    if (camp > 0.44) return { kind: 'camp', color: mixMany([['#6f5532', camp], ['#3e7f47', Math.max(0, 1 - camp)]], noise) };
+    return { kind: 'grass', color: blendColor('#347d47', '#428c4e', noise * 0.32) };
+}
+
+function riverCenterY(x) {
+    return 735 + Math.sin(x * 0.0045) * 90 + Math.sin(x * 0.0018 + 1.7) * 68;
+}
+
+function riverDistance(x, y) {
+    return Math.abs(y - riverCenterY(x));
+}
+
+function regionWeight(x, y, cx, cy, radius) {
+    const d = Math.hypot(x - cx, y - cy);
+    return clamp(1 - d / radius, 0, 1);
+}
+
+function hash2(x, y) {
+    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return n - Math.floor(n);
+}
+
+function valueNoise(x, y) {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    const fx = x - ix;
+    const fy = y - iy;
+    const a = hash2(ix, iy);
+    const b = hash2(ix + 1, iy);
+    const c = hash2(ix, iy + 1);
+    const d = hash2(ix + 1, iy + 1);
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
+    return lerp(lerp(a, b, ux), lerp(c, d, ux), uy);
+}
+
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+function blendColor(a, b, t) {
+    const ca = hexToRgb(a);
+    const cb = hexToRgb(b);
+    return `rgb(${Math.round(lerp(ca.r, cb.r, t))}, ${Math.round(lerp(ca.g, cb.g, t))}, ${Math.round(lerp(ca.b, cb.b, t))})`;
+}
+
+function hexToRgb(hex) {
+    const value = Number.parseInt(hex.slice(1), 16);
+    return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+}
+
+function mixMany(entries, noise) {
+    let total = 0;
+    let r = 0, g = 0, b = 0;
+    for (const [color, weight] of entries) {
+        const w = Math.max(0, weight);
+        const c = hexToRgb(color);
+        r += c.r * w;
+        g += c.g * w;
+        b += c.b * w;
+        total += w;
+    }
+    total = total || 1;
+    const shade = 0.88 + noise * 0.18;
+    return `rgb(${Math.round((r / total) * shade)}, ${Math.round((g / total) * shade)}, ${Math.round((b / total) * shade)})`;
+}
+
+function drawTerrainDetail(x, y, grid, info) {
+    const sx = worldX(x);
+    const sy = worldY(y);
+    const h = hash2(x / grid, y / grid);
+    if (info.kind === 'water') return;
+    if (info.kind === 'shore') {
+        ctx.fillStyle = h > 0.5 ? 'rgba(230, 206, 145, 0.22)' : 'rgba(70, 105, 65, 0.2)';
+        ctx.fillRect(sx + 6 + (h * 9) % 16, sy + 12, 20, 4);
+        return;
+    }
+    if (info.kind === 'mine') {
+        ctx.fillStyle = 'rgba(20, 24, 29, 0.22)';
+        ctx.fillRect(sx + 6, sy + 8 + h * 12, 12 + h * 14, 4);
+        if (h > 0.58) ctx.fillRect(sx + 22, sy + 24, 7, 6);
+        return;
+    }
+    if (info.kind === 'ruins') {
+        ctx.strokeStyle = 'rgba(18, 24, 34, 0.22)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx + 2, sy + 2, grid - 4, grid - 4);
+        if (h > 0.7) {
+            ctx.fillStyle = 'rgba(183, 125, 255, 0.12)';
+            ctx.fillRect(sx + 12, sy + 8, 8, 8);
+        }
+        return;
+    }
+    if (info.kind === 'forest') {
+        ctx.fillStyle = h > 0.5 ? 'rgba(32, 22, 12, 0.18)' : 'rgba(132, 87, 43, 0.16)';
+        ctx.fillRect(sx + 7, sy + 18, 14, 5);
+        return;
+    }
+    ctx.fillStyle = h > 0.5 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
+    ctx.fillRect(sx + 8, sy + 10 + h * 12, 14, 4);
+}
+
+function drawWaterHighlights(now) {
+    const grid = 40;
+    const startX = Math.floor(camera.x / grid) * grid;
+    const startY = Math.floor(camera.y / grid) * grid;
+    for (let y = startY; y < camera.y + VIEW.height + grid; y += grid) {
+        for (let x = startX; x < camera.x + VIEW.width + grid; x += grid) {
+            const info = terrainInfoAt(x + grid / 2, y + grid / 2);
+            if (info.kind !== 'water') continue;
+            const wave = Math.sin((x + now * 0.08) * 0.035 + y * 0.018);
+            ctx.fillStyle = wave > 0.35 ? 'rgba(160, 225, 255, 0.28)' : 'rgba(20, 65, 105, 0.18)';
+            ctx.fillRect(worldX(x) + 7, worldY(y) + 14 + wave * 3, 24, 3);
         }
     }
 }
 
-function terrainAt(x, y) {
-    if (x > 1350 && y > 720) return '#59626b';
-    if (x > 1650 && y < 650) return '#414c58';
-    if (x < 700 && y < 520) return '#347d47';
-    if (x > 650 && x < 1350 && y < 760) return '#2f6b3d';
-    return '#3d8146';
-}
-
 function drawWorldObjects(now) {
     drawDecorations();
-    drawCamp();
-    drawRuins();
-    for (const r of state.resources) if (r.hp > 0) drawResource(r);
-    for (const e of state.enemies) if (e.hp > 0) drawEnemy(e, now);
-    drawPlayer(now);
+    const drawables = [
+        { y: state.camp.y, draw: () => drawCamp() },
+        { y: state.ruins.y, draw: () => drawRuins() },
+        ...state.resources.filter(r => r.hp > 0).map(r => ({ y: r.y, draw: () => drawResource(r) })),
+        ...state.enemies.filter(e => e.hp > 0).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
+        { y: state.player.y, draw: () => drawPlayer(now) },
+    ];
+    drawables.sort((a, b) => a.y - b.y);
+    drawables.forEach(item => item.draw());
 }
 
 function drawCamp() {
     const x = worldX(state.camp.x);
     const y = worldY(state.camp.y);
-    drawShadow(x, y + 19, 58, 18);
-    drawSprite('campfire', x - 36, y - 34, 4);
+    drawShadow(x, y, 74, 20);
+    drawSpriteGrounded('campfire', x, y + 8, 5);
     ctx.fillStyle = state.camp.repaired ? '#ffd166' : '#9fb3c8';
     ctx.font = 'bold 14px "Microsoft YaHei"';
     ctx.textAlign = 'center';
@@ -854,8 +977,8 @@ function drawCamp() {
 function drawRuins() {
     const x = worldX(state.ruins.x);
     const y = worldY(state.ruins.y);
-    drawShadow(x, y + 34, 92, 22);
-    drawSprite('ruins', x - 72, y - 44, 6);
+    drawShadow(x, y + 16, 142, 28);
+    drawSpriteGrounded('ruins', x, y + 24, 6);
     if (state.ruins.opened) {
         ctx.fillStyle = 'rgba(183, 125, 255, 0.55)';
         ctx.fillRect(x - 18, y - 6, 36, 58);
@@ -866,17 +989,18 @@ function drawResource(r) {
     const x = worldX(r.x);
     const y = worldY(r.y);
     const shake = r.shakeUntil && performance.now() < r.shakeUntil ? Math.sin(performance.now() / 18) * 3 : 0;
-    drawShadow(x, y + r.radius * 0.75, r.radius * 1.6, r.radius * 0.48);
     const sprite = r.kind === 'tree' ? 'tree' : (r.kind === 'rock' ? 'rock' : (r.kind === 'ore' ? 'ore' : r.kind));
-    const scale = r.kind === 'tree' ? 4 : 3;
-    drawSprite(sprite, x - (SPRITES[sprite].w * scale) / 2 + shake, y - 34, scale);
-    drawMiniBar(x, y + r.radius + 10, r.hp / r.maxHp, '#ffd166');
+    const scale = r.kind === 'tree' ? 5.4 : (r.kind === 'ore' ? 3.5 : 3.2);
+    drawShadow(x, y + 2, r.radius * (r.kind === 'tree' ? 1.35 : 1.85), r.radius * 0.46);
+    if (r.kind === 'ore' || r.kind === 'rock') drawGroundContact(x, y, r.kind);
+    drawSpriteGrounded(sprite, x + shake, y + (r.kind === 'tree' ? 6 : 0), scale);
+    drawMiniBar(x, y + 16, r.hp / r.maxHp, '#ffd166');
 }
 
 function drawEnemy(e, now) {
     const x = worldX(e.x);
     const y = worldY(e.y);
-    drawShadow(x, y + e.radius * 0.65, e.radius * 1.6, e.radius * 0.5);
+    drawShadow(x, y + 6, e.radius * 1.75, e.radius * 0.52);
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2);
     if (e.windupUntil) {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.85)' : 'rgba(255, 209, 102, 0.85)';
@@ -887,10 +1011,10 @@ function drawEnemy(e, now) {
     }
     if (e.hurtUntil) {
         ctx.globalAlpha = 0.72;
-        drawSprite(e.kind, x - (SPRITES[e.kind].w * 3.2) / 2, y - 34 + bounce, 3.2, { tint: '#ffffff' });
+        drawSpriteGrounded(e.kind, x, y + bounce, 3.2, { tint: '#ffffff' });
         ctx.globalAlpha = 1;
     } else {
-        drawSprite(e.kind, x - (SPRITES[e.kind].w * 3.2) / 2, y - 34 + bounce, 3.2);
+        drawSpriteGrounded(e.kind, x, y + bounce, 3.2);
     }
     drawMiniBar(x, y + e.radius + 10, e.hp / e.maxHp, '#ff6b6b');
 }
@@ -899,10 +1023,10 @@ function drawPlayer(now) {
     const p = state.player;
     const x = worldX(p.x);
     const y = worldY(p.y);
-    drawShadow(x, y + 17, 35, 10);
+    drawShadow(x, y + 5, 35, 10);
     const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
     if (p.invincibleUntil > now && Math.floor(now / 80) % 2 === 0) ctx.globalAlpha = 0.55;
-    drawSprite('player', x - 32, y - 42 + step, 4);
+    drawSpriteGrounded('player', x, y + step, 4);
     ctx.globalAlpha = 1;
     if (p.attackUntil > now) {
         drawAttackSlash(x, y, p.facing, now);
@@ -914,12 +1038,14 @@ function drawDecorations() {
         const x = worldX(item.x);
         const y = worldY(item.y);
         if (x < -80 || y < -80 || x > VIEW.width + 80 || y > VIEW.height + 80) continue;
-        if (item.kind === 'water') {
-            ctx.fillStyle = COLORS.water1;
-            ctx.fillRect(x - 34, y - 14, 68, 28);
-            ctx.fillStyle = COLORS.water2;
-            ctx.fillRect(x - 24, y - 6, 24, 4);
-            ctx.fillRect(x + 8, y + 4, 18, 4);
+        if (item.kind === 'reeds') {
+            if (terrainInfoAt(item.x, item.y).kind !== 'shore') continue;
+            ctx.fillStyle = '#5d7b3a';
+            ctx.fillRect(x - 12, y - 18, 4, 22);
+            ctx.fillRect(x - 2, y - 24, 4, 28);
+            ctx.fillRect(x + 10, y - 16, 4, 20);
+            ctx.fillStyle = '#c79649';
+            ctx.fillRect(x - 3, y - 27, 6, 7);
         } else if (item.kind === 'flowers') {
             ctx.fillStyle = COLORS.grass2;
             ctx.fillRect(x - 6, y + 3, 12, 8);
@@ -938,6 +1064,7 @@ function drawDecorations() {
             ctx.fillStyle = COLORS.gold;
             ctx.fillRect(x - 4, y - 7, 8, 4);
         } else if (item.kind === 'pebbles') {
+            if (terrainInfoAt(item.x, item.y).kind !== 'mine') continue;
             ctx.fillStyle = COLORS.stone2;
             ctx.fillRect(x - 13, y, 10, 7);
             ctx.fillRect(x + 2, y - 5, 13, 9);
@@ -945,6 +1072,7 @@ function drawDecorations() {
             ctx.fillRect(x - 10, y - 2, 5, 2);
             ctx.fillRect(x + 5, y - 7, 6, 2);
         } else if (item.kind === 'crack') {
+            if (terrainInfoAt(item.x, item.y).kind !== 'mine' && terrainInfoAt(item.x, item.y).kind !== 'ruins') continue;
             ctx.strokeStyle = 'rgba(20, 24, 29, 0.42)';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -1080,6 +1208,21 @@ function drawSprite(name, x, y, scale, options = {}) {
             ctx.fillRect(Math.round(x + col * scale), Math.round(y + row * scale), Math.ceil(scale), Math.ceil(scale));
         }
     }
+}
+
+function drawSpriteGrounded(name, centerX, groundY, scale, options = {}) {
+    const sprite = SPRITES[name];
+    if (!sprite) return;
+    const width = sprite.w * scale;
+    const height = sprite.rows.length * scale;
+    drawSprite(name, centerX - width / 2, groundY - height, scale, options);
+}
+
+function drawGroundContact(x, y, kind) {
+    ctx.fillStyle = kind === 'ore' ? 'rgba(48, 61, 68, 0.65)' : 'rgba(52, 48, 43, 0.55)';
+    ctx.fillRect(x - 22, y - 3, 44, 8);
+    ctx.fillStyle = kind === 'ore' ? 'rgba(148, 227, 255, 0.28)' : 'rgba(168, 179, 189, 0.26)';
+    ctx.fillRect(x - 12, y - 6, 24, 4);
 }
 
 function resourceName(kind) {
