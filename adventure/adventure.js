@@ -529,8 +529,10 @@ function createResources() {
         [690, 780, 'reed'], [875, 940, 'reed'], [500, 690, 'stump'],
         [520, 1750, 'tree'], [650, 1880, 'tree'], [830, 1710, 'stump'],
         [2620, 1550, 'ore'], [2840, 1760, 'rock'],
+        [4860, 1120, 'rock'], [5040, 1240, 'ore'], [5220, 1360, 'ore'],
         [4050, 720, 'tree'], [4320, 900, 'tree'], [4680, 1120, 'stump'],
         [5200, 3140, 'ore'], [5700, 3600, 'rock'], [6100, 3920, 'ore'],
+        [6000, 2320, 'rock'], [6200, 2500, 'ore'], [5840, 2620, 'ore'],
         [3880, 2860, 'reed'], [4300, 3080, 'reed'],
     ].forEach(([x, y, kind]) => {
         const config = {
@@ -1603,7 +1605,13 @@ function terrainInfoAt(x, y) {
     if (river < 46) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((46 - river) / 46, 0, 1)) };
     if (river < 82) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', (river - 46) / 36) };
 
-    const mine = Math.max(regionWeight(x, y, 1760, 1010, 620), regionWeight(x, y, 2700, 1760, 520), regionWeight(x, y, 5400, 3500, 720));
+    const mine = Math.max(
+        regionWeight(x, y, 1760, 1010, 620),
+        regionWeight(x, y, 2700, 1760, 520),
+        regionWeight(x, y, 5400, 3500, 720),
+        regionWeight(x, y, 4920, 1180, 560),
+        regionWeight(x, y, 6100, 2420, 620)
+    );
     const ruins = Math.max(regionWeight(x, y, 2060, 360, 560), regionWeight(x, y, 5600, 780, 520));
     const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1720, 620), regionWeight(x, y, 2500, 1450, 460), regionWeight(x, y, 4550, 1060, 760), regionWeight(x, y, 4200, 3100, 680));
     const camp = regionWeight(x, y, 250, 230, 360);
