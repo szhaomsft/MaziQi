@@ -19,12 +19,15 @@ const RESOURCE_LABELS = {
     herb: '草药',
     mushroom: '蘑菇',
     flower: '野花',
+    lotus: '莲花',
+    cactusFruit: '仙人掌果',
     ore: '铁矿',
     coal: '煤块',
     hide: '兽皮',
     meat: '生肉',
     slimeGel: '黏液',
     fang: '兽牙',
+    venom: '毒刺',
     crystal: '魔晶',
     stoneAxe: '石斧',
     stonePickaxe: '石镐',
@@ -41,6 +44,7 @@ const RESOURCE_LABELS = {
     potion: '治疗药水',
     stew: '蘑菇汤',
     salve: '黏液药膏',
+    speedPotion: '迅捷药水',
     roastMeat: '烤肉',
     key: '废墟钥匙',
 };
@@ -53,12 +57,15 @@ const RESOURCE_ICONS = {
     herb: '🌿',
     mushroom: '🍄',
     flower: '🌼',
+    lotus: '🪷',
+    cactusFruit: '🌵',
     ore: '⛏',
     coal: '◼',
     hide: '🟫',
     meat: '🥩',
     slimeGel: '🟢',
     fang: '🦷',
+    venom: '☠',
     crystal: '💎',
     stoneAxe: '🪓',
     stonePickaxe: '⛏',
@@ -75,11 +82,12 @@ const RESOURCE_ICONS = {
     potion: '🧪',
     stew: '🍲',
     salve: '💚',
+    speedPotion: '⚡',
     roastMeat: '🍖',
     key: '🗝',
 };
 
-const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'torch', 'potion', 'roastMeat', 'bedroll'];
+const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'torch', 'potion', 'speedPotion', 'bedroll'];
 
 const RECIPES = [
     recipe('axe', '石斧', '砍树更快', { wood: 4, stone: 3 }, game => {
@@ -105,6 +113,9 @@ const RECIPES = [
     }, () => false),
     recipe('salve', '黏液药膏', '恢复 45 生命', { slimeGel: 2, herb: 2, flower: 1 }, game => {
         game.inventory.salve += 1;
+    }, () => false),
+    recipe('speedPotion', '迅捷药水', '短时间加速', { cactusFruit: 2, slimeGel: 1, lotus: 1 }, game => {
+        game.inventory.speedPotion += 1;
     }, () => false),
     recipe('ironArmor', '铁甲', '防御大幅提升', { ore: 8, coal: 2, hide: 2 }, game => {
         game.inventory.ironArmor += 1;
@@ -167,6 +178,10 @@ const COLORS = {
     wolf2: '#46515d',
     bat1: '#4b3c74',
     bat2: '#241b3c',
+    frog1: '#5dbb63',
+    frog2: '#2f7f44',
+    scorpion1: '#c58a43',
+    scorpion2: '#6d4121',
     golem1: '#87919b',
     golem2: '#4f5964',
     fire1: '#ff9f1c',
@@ -368,6 +383,37 @@ const SPRITES = {
         ],
         map: { o: 'outline', b: 'bat1', B: 'bat2', e: 'white' },
     },
+    frog: {
+        w: 16,
+        rows: [
+            '................',
+            '....oo....oo....',
+            '...offooooffo...',
+            '..offfffffffo...',
+            '..offeffefffo...',
+            '..offffFFfffo...',
+            '...offfffffo....',
+            '..kk......kk....',
+            '................',
+        ],
+        map: { o: 'outline', f: 'frog1', F: 'frog2', e: 'white', k: 'frog2' },
+    },
+    scorpion: {
+        w: 18,
+        rows: [
+            '........oo........',
+            '.......osso.......',
+            '......ossso.......',
+            '..oo.ossSSssoo....',
+            '.ossoosssssssso...',
+            'osssoseessseesso..',
+            '.ossoosssssssso...',
+            '..oo..oo....oo....',
+            '......kk....kk....',
+            '..................',
+        ],
+        map: { o: 'outline', s: 'scorpion1', S: 'scorpion2', e: 'white', k: 'scorpion2' },
+    },
     golem: {
         w: 20,
         rows: [
@@ -446,8 +492,9 @@ function createState() {
             invincibleUntil: 0,
             harvestTarget: null,
             harvestBlockedAt: 0,
+            speedBoostUntil: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, roastMeat: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, speedPotion: 0, roastMeat: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -515,6 +562,13 @@ function createResources() {
                 else if (n > 0.32) add(n > 0.37 ? 'herb' : 'flower', px, py, n > 0.37 ? 'herb' : 'flower', 3, 18);
             } else if (info.kind === 'shore') {
                 if (n > 0.32) add('reed', px, py, 'fiber', 2, 16);
+            } else if (info.kind === 'swamp') {
+                if (n > 0.62) add('lotus', px, py, 'lotus', 3, 18);
+                else if (n > 0.28) add('reed', px, py, 'fiber', 2, 16);
+                else add('mushroom', px, py, 'mushroom', 3, 20);
+            } else if (info.kind === 'dry') {
+                if (n > 0.52) add('cactus', px, py, 'cactusFruit', 4, 22);
+                else if (n > 0.32) add('rock', px, py, 'stone', 6, 24);
             } else if (info.kind === 'mine') {
                 if (n > 0.62) add('ore', px, py, 'ore', 8, 28);
                 else if (n > 0.42) add('rock', px, py, 'stone', 7, 28);
@@ -601,6 +655,10 @@ function createEnemies() {
             const n = valueNoise(px * 0.01 + 4, py * 0.01 - 3);
             if ((info.kind === 'grass' || info.kind === 'shore' || info.kind === 'camp') && n > 0.76) {
                 add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, { slimeGel: 2, fiber: 1 }, 1));
+            } else if (info.kind === 'swamp' && n > 0.55) {
+                add(enemy('frog', '沼泽蛙', px, py, 16, 18, 2, 130, 58, { slimeGel: 1, lotus: 1 }, 1));
+            } else if (info.kind === 'dry' && n > 0.55) {
+                add(enemy('scorpion', '沙蝎', px, py, 15, 20, 3, 120, 54, { venom: 1, fang: 1 }, 1));
             } else if (info.kind === 'forest' && n > 0.64) {
                 add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
             } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.86) {
@@ -741,7 +799,8 @@ function updatePlayer(dt, now) {
         const sprinting = keys.has('Shift') && p.stamina > 0;
         const terrain = terrainInfoAt(p.x, p.y);
         const inWater = terrain.kind === 'water';
-        const speed = p.speed * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1);
+        const boost = performance.now() < p.speedBoostUntil ? 1.32 : 1;
+        const speed = p.speed * boost * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1);
         p.facing = dir;
         moveCircle(p, dir.x * speed * dt, dir.y * speed * dt);
         if (inWater) {
@@ -978,6 +1037,12 @@ function startEnemyAttack(e, now) {
     if (e.kind === 'slime') {
         e.windupUntil = now + 460;
         e.strikeAt = now + 360;
+    } else if (e.kind === 'frog') {
+        e.windupUntil = now + 380;
+        e.strikeAt = now + 300;
+    } else if (e.kind === 'scorpion') {
+        e.windupUntil = now + 260;
+        e.strikeAt = now + 190;
     } else if (e.kind === 'boar') {
         e.windupUntil = now + 560;
         e.strikeAt = now + 420;
@@ -1005,6 +1070,23 @@ function resolveEnemyAttack(e, now) {
         e.leapTargetY = clamp(e.y + e.attackDir.y * 125, e.radius, WORLD.height - e.radius);
         e.leapHit = false;
         e.attackCooldown = 2.8;
+    } else if (e.kind === 'frog') {
+        e.leapStartAt = now;
+        e.leapUntil = now + 360;
+        e.leapStartX = e.x;
+        e.leapStartY = e.y;
+        e.leapTargetX = clamp(e.x + e.attackDir.x * 110, e.radius, WORLD.width - e.radius);
+        e.leapTargetY = clamp(e.y + e.attackDir.y * 110, e.radius, WORLD.height - e.radius);
+        e.leapHit = false;
+        e.attackCooldown = 2.0;
+    } else if (e.kind === 'scorpion') {
+        moveEnemy(e, e.attackDir.x * 48, e.attackDir.y * 48);
+        if (distance(e, p) < e.radius + p.radius + 18) {
+            applyEnemyDamage(e, e.attack, '毒刺');
+            p.stamina = Math.max(0, p.stamina - 16);
+        }
+        e.attackCooldown = 1.25;
+        spawnBurst(e.x, e.y, '#c58a43', 8, 120, e.radius * 0.6);
     } else if (e.kind === 'boar') {
         e.chargeUntil = now + 430;
         e.chargeHit = false;
@@ -1475,6 +1557,11 @@ function useInventoryItem(key) {
             state.inventory.salve -= 1;
             showToast('使用黏液药膏，恢复 45 生命。');
             break;
+        case 'speedPotion':
+            p.speedBoostUntil = performance.now() + 12000;
+            state.inventory.speedPotion -= 1;
+            showToast('饮下迅捷药水，移动速度暂时提高。');
+            break;
         case 'roastMeat':
             p.hp = Math.min(p.maxHp, p.hp + 40);
             state.inventory.roastMeat -= 1;
@@ -1610,7 +1697,7 @@ function toggleInventory(force = null) {
 }
 
 function canUseInventoryItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
+    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'speedPotion', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
 }
 
 function render(now) {
@@ -1657,12 +1744,16 @@ function terrainInfoAt(x, y) {
         regionWeight(x, y, 6100, 2420, 620)
     );
     const ruins = Math.max(regionWeight(x, y, 2060, 360, 560), regionWeight(x, y, 5600, 780, 520));
+    const swamp = Math.max(regionWeight(x, y, 3380, 2760, 720), regionWeight(x, y, 1180, 3860, 520));
+    const dry = Math.max(regionWeight(x, y, 5700, 1280, 760), regionWeight(x, y, 6150, 3650, 620));
     const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1720, 620), regionWeight(x, y, 2500, 1450, 460), regionWeight(x, y, 4550, 1060, 760), regionWeight(x, y, 4200, 3100, 680));
     const camp = regionWeight(x, y, 250, 230, 360);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
     if (ruins > 0.54) return { kind: 'ruins', color: mixMany([['#38414d', ruins], ['#4f5964', 0.32], ['#2f6b3d', Math.max(0, 1 - ruins)]], noise) };
     if (mine > 0.52) return { kind: 'mine', color: mixMany([['#58636e', mine], ['#6a604f', 0.2], ['#376d3f', Math.max(0, 1 - mine)]], noise) };
+    if (swamp > 0.48) return { kind: 'swamp', color: mixMany([['#214b3d', swamp], ['#2f6d57', 0.25], ['#2f6b3d', Math.max(0, 1 - swamp)]], noise) };
+    if (dry > 0.5) return { kind: 'dry', color: mixMany([['#a47a3c', dry], ['#735536', 0.24], ['#3f8f4f', Math.max(0, 1 - dry)]], noise) };
     if (forest > 0.46) return { kind: 'forest', color: mixMany([['#1f5a35', forest], ['#2f7041', 0.3], ['#3f8f4f', Math.max(0, 1 - forest)]], noise) };
     if (camp > 0.44) return { kind: 'camp', color: mixMany([['#6f5532', camp], ['#3e7f47', Math.max(0, 1 - camp)]], noise) };
     return { kind: 'grass', color: blendColor('#347d47', '#428c4e', noise * 0.32) };
@@ -1894,6 +1985,29 @@ function drawGatherablePatch(r, x, y) {
         ctx.fillRect(x + 10, y - 24, 4, 25);
         ctx.fillStyle = '#c79649';
         ctx.fillRect(x - 2, y - 38, 6, 8);
+        return;
+    }
+    if (r.kind === 'lotus') {
+        drawShadow(x, y + 1, 30, 7);
+        ctx.fillStyle = '#2f7f58';
+        ctx.fillRect(x - 15, y - 8, 30, 8);
+        ctx.fillStyle = '#f4a6d7';
+        ctx.fillRect(x - 8, y - 22, 6, 10);
+        ctx.fillRect(x + 2, y - 22, 6, 10);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 3, y - 16, 6, 5);
+        return;
+    }
+    if (r.kind === 'cactus') {
+        drawShadow(x, y + 1, 24, 7);
+        ctx.fillStyle = '#1d6b47';
+        ctx.fillRect(x - 5, y - 40, 10, 40);
+        ctx.fillRect(x - 16, y - 27, 10, 8);
+        ctx.fillRect(x + 6, y - 22, 12, 8);
+        ctx.fillStyle = '#58c47a';
+        ctx.fillRect(x - 2, y - 36, 3, 32);
+        ctx.fillStyle = '#ff6b9a';
+        ctx.fillRect(x - 8, y - 32, 6, 6);
         return;
     }
     if (r.kind === 'mushroom') {
@@ -2361,7 +2475,7 @@ function drawGroundContact(x, y, kind) {
 }
 
 function resourceName(kind) {
-    return { tree: '树木', stump: '树桩', rock: '岩石', grass: '草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', ore: '铁矿' }[kind] || '资源';
+    return { tree: '树木', stump: '树桩', rock: '岩石', grass: '草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', flower: '野花', lotus: '莲花', cactus: '仙人掌', ore: '铁矿' }[kind] || '资源';
 }
 
 function loop(now) {
