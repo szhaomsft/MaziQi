@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>荒野工匠 Demo</title>
+    <link rel="stylesheet" href="adventure.css">
+</head>
+<body>
+    <main id="game-shell">
+        <section id="intro-panel">
+            <p class="eyebrow">采集 · 合成 · 冒险</p>
+            <h1>荒野工匠 Demo</h1>
+            <p>在开放荒野中自由探索，修复营地，合成工具和装备，击败守门石像，打开古代废墟。</p>
+            <div class="controls">
+                <span>移动：WASD / 方向键</span>
+                <span>采集/交互：E</span>
+                <span>攻击：鼠标左键 / 空格</span>
+                <span>冲刺：Shift</span>
+                <span>合成：点击右侧配方</span>
+            </div>
+        </section>
+
+        <section id="play-area">
+            <div id="canvas-wrap">
+                <canvas id="game-canvas" width="960" height="640" aria-label="荒野工匠游戏画面"></canvas>
+                <div id="toast">靠近资源后按 E 采集。</div>
+            </div>
+
+            <aside id="hud">
+                <div class="panel">
+                    <h2>状态</h2>
+                    <div class="stat-row"><span>生命</span><strong id="hp-label">100/100</strong></div>
+                    <div class="bar"><div id="hp-bar"></div></div>
+                    <div class="stat-row"><span>攻击</span><strong id="attack-label">1</strong></div>
+                    <div class="stat-row"><span>工具</span><strong id="tool-label">徒手</strong></div>
+                    <div class="stat-row"><span>装备</span><strong id="armor-label">布衣</strong></div>
+                </div>
+
+                <div class="panel">
+                    <h2>背包</h2>
+                    <div id="inventory"></div>
+                </div>
+
+                <div class="panel">
+                    <h2>合成</h2>
+                    <div id="recipes"></div>
+                </div>
+
+                <div class="panel">
+                    <h2>目标</h2>
+                    <p id="objective-text">采集木头和石头，准备修复营地篝火。</p>
+                    <ol>
+                        <li>采集资源并修复营地篝火。</li>
+                        <li>合成石镐、铁剑和防具。</li>
+                        <li>击败守门石像，合成废墟钥匙。</li>
+                        <li>打开右上角古代废墟完成 Demo。</li>
+                    </ol>
+                    <button id="restart-btn" type="button">重新开始</button>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script src="adventure.js"></script>
+</body>
+</html>
