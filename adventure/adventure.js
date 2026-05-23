@@ -553,6 +553,9 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
         windupUntil: 0,
         strikeAt: 0,
         attackDir: { x: 0, y: 1 },
+        circleDir: { x: 0, y: 1 },
+        circleSide: hash2(x * 0.02, y * 0.02) > 0.5 ? 1 : -1,
+        retreatUntil: 0,
         chargeUntil: 0,
         chargeHit: false,
         leapStartAt: 0,
@@ -745,6 +748,13 @@ function updateEnemies(dt, now) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
+        const p = state.player;
+        const dist = distance(e, p);
+        if (e.retreatUntil > now) {
+            const away = normalize(e.x - p.x, e.y - p.y);
+            moveEnemy(e, away.x * e.speed * 1.35 * dt, away.y * e.speed * 1.35 * dt);
+            continue;
+        }
         if (e.rootedUntil > now) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
@@ -783,8 +793,6 @@ function updateEnemies(dt, now) {
             e.knockX *= Math.pow(0.035, dt);
             e.knockY *= Math.pow(0.035, dt);
         }
-        const p = state.player;
-        const dist = distance(e, p);
         if (dist < e.radius + p.radius + 4 && e.contactCooldown <= 0) {
             applyEnemyDamage(e, Math.max(1, e.attack - 1), '碰撞');
             e.contactCooldown = e.kind === 'boar' ? 0.7 : 0.9;
@@ -796,7 +804,12 @@ function updateEnemies(dt, now) {
         const aggroRange = 330 + nightAmount() * (e.kind === 'bat' ? 190 : 90);
         const nightSpeed = 1 + nightAmount() * (e.kind === 'bat' ? 0.35 : 0.16);
         if (!e.windupUntil && dist < aggroRange) {
-            const dir = normalize(p.x - e.x, p.y - e.y);
+            let dir = normalize(p.x - e.x, p.y - e.y);
+            if (e.kind === 'wolf' && dist < 170 && e.attackCooldown > 0.25) {
+                const tangent = { x: -dir.y * e.circleSide, y: dir.x * e.circleSide };
+                dir = normalize(tangent.x * 0.82 + dir.x * 0.18, tangent.y * 0.82 + dir.y * 0.18);
+                e.circleDir = dir;
+            }
             moveEnemy(e, dir.x * e.speed * nightSpeed * dt, dir.y * e.speed * nightSpeed * dt);
         } else if (!e.windupUntil && distance(e, { x: e.spawnX, y: e.spawnY }) > 18) {
             const dir = normalize(e.spawnX - e.x, e.spawnY - e.y);
@@ -822,8 +835,8 @@ function startEnemyAttack(e, now) {
         e.windupUntil = now + 560;
         e.strikeAt = now + 420;
     } else if (e.kind === 'wolf') {
-        e.windupUntil = now + 300;
-        e.strikeAt = now + 220;
+        e.windupUntil = now + 440;
+        e.strikeAt = now + 320;
     } else if (e.kind === 'bat') {
         e.windupUntil = now + 360;
         e.strikeAt = now + 260;
@@ -850,9 +863,11 @@ function resolveEnemyAttack(e, now) {
         e.chargeHit = false;
         e.attackCooldown = 1.4;
     } else if (e.kind === 'wolf') {
-        moveEnemy(e, e.attackDir.x * 82, e.attackDir.y * 82);
+        moveEnemy(e, e.attackDir.x * 96, e.attackDir.y * 96);
         if (distance(e, p) < e.radius + p.radius + 20) applyEnemyDamage(e, e.attack, '撕咬');
-        e.attackCooldown = 1.05;
+        e.retreatUntil = now + 420;
+        e.circleSide *= -1;
+        e.attackCooldown = 1.55;
         spawnBurst(e.x, e.y, '#d8e5f2', 8, 130, e.radius * 0.6);
     } else if (e.kind === 'bat') {
         moveEnemy(e, e.attackDir.x * 118, e.attackDir.y * 118);
@@ -1767,6 +1782,27 @@ function drawEnemyTelegraph(e, x, y, now) {
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.ellipse(x + e.attackDir.x * 45, y + e.attackDir.y * 45, e.radius + 6 + pulse * 0.4, e.radius * 0.55 + 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    } else if (e.kind === 'wolf') {
+        const angle = Math.atan2(e.attackDir.y, e.attackDir.x);
+        ctx.save();
+        ctx.translate(x + e.attackDir.x * 42, y + e.attackDir.y * 42);
+        ctx.rotate(angle);
+        ctx.strokeStyle = 'rgba(255, 214, 112, 0.85)';
+        ctx.lineWidth = 3;
+        for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(-12, i * 8);
+            ctx.lineTo(18 + pulse, i * 5);
+            ctx.stroke();
+        }
+        ctx.restore();
+    } else if (e.kind === 'bat') {
+        ctx.strokeStyle = 'rgba(143, 184, 255, 0.75)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + e.attackDir.x * 18, y + e.attackDir.y * 18);
+        ctx.lineTo(x + e.attackDir.x * 105, y + e.attackDir.y * 105);
         ctx.stroke();
     } else {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.9)' : 'rgba(183, 125, 255, 0.7)';
