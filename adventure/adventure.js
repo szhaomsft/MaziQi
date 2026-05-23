@@ -2,7 +2,7 @@ const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
-const WORLD = { width: 3200, height: 2200 };
+const WORLD = { width: 6400, height: 4400 };
 const VIEW = { width: canvas.width, height: canvas.height };
 const keys = new Set();
 const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false };
@@ -471,6 +471,7 @@ function createState() {
         cameraShake: 0,
         selectedHotbar: 0,
         inventoryOpen: false,
+        wolfPack: { alertedUntil: 0, nextBiteAt: 0 },
         timeOfDay: 0.28,
         dayLength: 180,
         quest: 'collect-basic',
@@ -497,8 +498,8 @@ function createResources() {
         resources.push(resource(kind, x, y, gives, hp, radius));
     };
 
-    for (let y = 180; y <= 2050; y += 72) {
-        for (let x = 250; x <= 3020; x += 76) {
+    for (let y = 180; y <= WORLD.height - 170; y += 72) {
+        for (let x = 250; x <= WORLD.width - 180; x += 76) {
             const jitterX = (hash2(x * 0.07, y * 0.07) - 0.5) * 46;
             const jitterY = (hash2(x * 0.05 + 8, y * 0.05 - 2) - 0.5) * 44;
             const px = x + jitterX;
@@ -529,6 +530,9 @@ function createResources() {
         [690, 780, 'reed'], [875, 940, 'reed'], [500, 690, 'stump'],
         [520, 1750, 'tree'], [650, 1880, 'tree'], [830, 1710, 'stump'],
         [2620, 1550, 'ore'], [2840, 1760, 'rock'],
+        [4050, 720, 'tree'], [4320, 900, 'tree'], [4680, 1120, 'stump'],
+        [5200, 3140, 'ore'], [5700, 3600, 'rock'], [6100, 3920, 'ore'],
+        [3880, 2860, 'reed'], [4300, 3080, 'reed'],
     ].forEach(([x, y, kind]) => {
         const config = {
             tree: ['wood', 6, 34],
@@ -581,8 +585,8 @@ function createEnemies() {
         if (enemies.some(enemyItem => distance(enemyItem, item) < enemyItem.radius + item.radius + 110)) return;
         enemies.push(item);
     };
-    for (let y = 260; y <= 2050; y += 170) {
-        for (let x = 300; x <= 3020; x += 190) {
+    for (let y = 260; y <= WORLD.height - 220; y += 170) {
+        for (let x = 300; x <= WORLD.width - 260; x += 190) {
             const px = x + (hash2(x * 0.03, y * 0.03) - 0.5) * 95;
             const py = y + (hash2(x * 0.04 + 6, y * 0.04 - 4) - 0.5) * 95;
             const info = terrainInfoAt(px, py);
@@ -591,8 +595,6 @@ function createEnemies() {
                 add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, { slimeGel: 2, fiber: 1 }, 1));
             } else if (info.kind === 'forest' && n > 0.64) {
                 add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
-            } else if ((info.kind === 'forest' || info.kind === 'grass') && n > 0.58) {
-                add(enemy('wolf', '荒狼', px, py, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1));
             } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.6) {
                 add(enemy('bat', '夜蝠', px, py, 16, 14, 2, 150, 70, { fang: 1, slimeGel: 1 }, 1));
             } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
@@ -604,7 +606,23 @@ function createEnemies() {
     if (!enemies.some(item => item.kind === 'boar' && item.x < 800 && item.y > 1050)) {
         add(enemy('boar', '野猪', 560, 1260, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
     }
+    createWolfPack().forEach(add);
     return enemies;
+}
+
+function createWolfPack() {
+    const pack = [
+        enemy('wolf', '领头荒狼', 4520, 980, 21, 30, 4, 178, 72, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', 4460, 1040, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', 4610, 1050, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', 4540, 1130, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+    ];
+    ['leader', 'left', 'right', 'rear'].forEach((role, index) => {
+        pack[index].packId = 'main';
+        pack[index].packRole = role;
+        pack[index].circleSide = role === 'left' ? -1 : 1;
+    });
+    return pack;
 }
 
 function createDecorations() {
@@ -750,6 +768,10 @@ function updateEnemies(dt, now) {
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
         const p = state.player;
         const dist = distance(e, p);
+        if (e.kind === 'wolf' && updateWolfPackMember(e, dt, now, dist)) {
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
+        }
         if (e.retreatUntil > now) {
             const away = normalize(e.x - p.x, e.y - p.y);
             moveEnemy(e, away.x * e.speed * 1.35 * dt, away.y * e.speed * 1.35 * dt);
@@ -825,6 +847,55 @@ function updateEnemies(dt, now) {
     separateEnemies();
 }
 
+function updateWolfPackMember(e, dt, now, dist) {
+    const p = state.player;
+    if (dist < 420) state.wolfPack.alertedUntil = now + 7000;
+    const alerted = state.wolfPack.alertedUntil > now;
+    if (!alerted) {
+        if (distance(e, { x: e.spawnX, y: e.spawnY }) > 20) {
+            const home = normalize(e.spawnX - e.x, e.spawnY - e.y);
+            moveEnemy(e, home.x * e.speed * 0.35 * dt, home.y * e.speed * 0.35 * dt);
+        }
+        return true;
+    }
+    if (e.retreatUntil > now) {
+        const away = normalize(e.x - p.x, e.y - p.y);
+        moveEnemy(e, away.x * e.speed * 1.25 * dt, away.y * e.speed * 1.25 * dt);
+        return true;
+    }
+    if (e.rootedUntil > now) return true;
+
+    const desired = wolfRoleTarget(e);
+    const toTarget = normalize(desired.x - e.x, desired.y - e.y);
+    const targetDist = distance(e, desired);
+    if (!e.windupUntil && targetDist > 18) {
+        const cautious = e.attackCooldown > 0.2 ? 0.85 : 1.05;
+        moveEnemy(e, toTarget.x * e.speed * cautious * dt, toTarget.y * e.speed * cautious * dt);
+    }
+    const canBite = now >= state.wolfPack.nextBiteAt && e.attackCooldown <= 0 && dist < 78 && (e.packRole === 'leader' || e.packRole === 'left' || e.packRole === 'right');
+    if (!e.windupUntil && canBite) startEnemyAttack(e, now);
+    return true;
+}
+
+function wolfRoleTarget(e) {
+    const p = state.player;
+    const toWolf = normalize(e.x - p.x, e.y - p.y);
+    const base = Math.atan2(toWolf.y, toWolf.x);
+    const offsets = {
+        leader: { angle: 0, radius: 92 },
+        left: { angle: -Math.PI * 0.68, radius: 105 },
+        right: { angle: Math.PI * 0.68, radius: 105 },
+        rear: { angle: Math.PI, radius: 132 },
+    };
+    const config = offsets[e.packRole] || offsets.leader;
+    const angle = base + config.angle;
+    const nightBoost = 1 - nightAmount() * 0.18;
+    return {
+        x: clamp(p.x + Math.cos(angle) * config.radius * nightBoost, e.radius, WORLD.width - e.radius),
+        y: clamp(p.y + Math.sin(angle) * config.radius * nightBoost, e.radius, WORLD.height - e.radius),
+    };
+}
+
 function startEnemyAttack(e, now) {
     e.attackDir = normalize(state.player.x - e.x, state.player.y - e.y);
     e.chargeHit = false;
@@ -868,6 +939,7 @@ function resolveEnemyAttack(e, now) {
         e.retreatUntil = now + 420;
         e.circleSide *= -1;
         e.attackCooldown = 1.55;
+        state.wolfPack.nextBiteAt = now + 850;
         spawnBurst(e.x, e.y, '#d8e5f2', 8, 130, e.radius * 0.6);
     } else if (e.kind === 'bat') {
         moveEnemy(e, e.attackDir.x * 118, e.attackDir.y * 118);
@@ -1498,9 +1570,9 @@ function terrainInfoAt(x, y) {
     if (river < 46) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((46 - river) / 46, 0, 1)) };
     if (river < 82) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', (river - 46) / 36) };
 
-    const mine = Math.max(regionWeight(x, y, 1760, 1010, 620), regionWeight(x, y, 2700, 1760, 520));
-    const ruins = regionWeight(x, y, 2060, 360, 560);
-    const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1720, 620), regionWeight(x, y, 2500, 1450, 460));
+    const mine = Math.max(regionWeight(x, y, 1760, 1010, 620), regionWeight(x, y, 2700, 1760, 520), regionWeight(x, y, 5400, 3500, 720));
+    const ruins = Math.max(regionWeight(x, y, 2060, 360, 560), regionWeight(x, y, 5600, 780, 520));
+    const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1720, 620), regionWeight(x, y, 2500, 1450, 460), regionWeight(x, y, 4550, 1060, 760), regionWeight(x, y, 4200, 3100, 680));
     const camp = regionWeight(x, y, 250, 230, 360);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
