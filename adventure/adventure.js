@@ -1736,25 +1736,26 @@ function terrainInfoAt(x, y) {
     if (river < 46) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((46 - river) / 46, 0, 1)) };
     if (river < 82) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', (river - 46) / 36) };
 
+    const shapeNoise = biomeShapeNoise(x, y);
     const mine = Math.max(
-        regionWeight(x, y, 1760, 1010, 620),
-        regionWeight(x, y, 2700, 1760, 520),
-        regionWeight(x, y, 5400, 3500, 720),
-        regionWeight(x, y, 4920, 1180, 560),
-        regionWeight(x, y, 6100, 2420, 620)
+        naturalRegionWeight(x, y, 1760, 1010, 620, 0.2),
+        naturalRegionWeight(x, y, 2700, 1760, 520, 1.1),
+        naturalRegionWeight(x, y, 5400, 3500, 720, 2.0),
+        naturalRegionWeight(x, y, 4920, 1180, 560, 2.9),
+        naturalRegionWeight(x, y, 6100, 2420, 620, 3.7)
     );
-    const ruins = Math.max(regionWeight(x, y, 2060, 360, 560), regionWeight(x, y, 5600, 780, 520));
-    const swamp = Math.max(regionWeight(x, y, 3380, 2760, 720), regionWeight(x, y, 1180, 3860, 520));
-    const dry = Math.max(regionWeight(x, y, 5700, 1280, 760), regionWeight(x, y, 6150, 3650, 620));
-    const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1720, 620), regionWeight(x, y, 2500, 1450, 460), regionWeight(x, y, 4550, 1060, 760), regionWeight(x, y, 4200, 3100, 680));
-    const camp = regionWeight(x, y, 250, 230, 360);
+    const ruins = Math.max(naturalRegionWeight(x, y, 2060, 360, 560, 4.3), naturalRegionWeight(x, y, 5600, 780, 520, 5.1));
+    const swamp = Math.max(naturalRegionWeight(x, y, 3380, 2760, 720, 6.2), naturalRegionWeight(x, y, 1180, 3860, 520, 7.0));
+    const dry = Math.max(naturalRegionWeight(x, y, 5700, 1280, 760, 8.4), naturalRegionWeight(x, y, 6150, 3650, 620, 9.3));
+    const forest = Math.max(naturalRegionWeight(x, y, 780, 340, 620, 10.2), naturalRegionWeight(x, y, 520, 1720, 620, 11.1), naturalRegionWeight(x, y, 2500, 1450, 460, 12.4), naturalRegionWeight(x, y, 4550, 1060, 760, 13.3), naturalRegionWeight(x, y, 4200, 3100, 680, 14.6));
+    const camp = naturalRegionWeight(x, y, 250, 230, 360, 15.5);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
-    if (ruins > 0.54) return { kind: 'ruins', color: mixMany([['#38414d', ruins], ['#4f5964', 0.32], ['#2f6b3d', Math.max(0, 1 - ruins)]], noise) };
-    if (mine > 0.52) return { kind: 'mine', color: mixMany([['#58636e', mine], ['#6a604f', 0.2], ['#376d3f', Math.max(0, 1 - mine)]], noise) };
-    if (swamp > 0.48) return { kind: 'swamp', color: mixMany([['#214b3d', swamp], ['#2f6d57', 0.25], ['#2f6b3d', Math.max(0, 1 - swamp)]], noise) };
-    if (dry > 0.5) return { kind: 'dry', color: mixMany([['#a47a3c', dry], ['#735536', 0.24], ['#3f8f4f', Math.max(0, 1 - dry)]], noise) };
-    if (forest > 0.46) return { kind: 'forest', color: mixMany([['#1f5a35', forest], ['#2f7041', 0.3], ['#3f8f4f', Math.max(0, 1 - forest)]], noise) };
+    if (ruins + shapeNoise * 0.04 > 0.54) return { kind: 'ruins', color: mixMany([['#38414d', ruins], ['#4f5964', 0.32], ['#2f6b3d', Math.max(0, 1 - ruins)]], noise) };
+    if (mine + shapeNoise * 0.05 > 0.52) return { kind: 'mine', color: mixMany([['#58636e', mine], ['#6a604f', 0.2], ['#376d3f', Math.max(0, 1 - mine)]], noise) };
+    if (swamp + shapeNoise * 0.06 > 0.48) return { kind: 'swamp', color: mixMany([['#214b3d', swamp], ['#2f6d57', 0.25], ['#2f6b3d', Math.max(0, 1 - swamp)]], noise) };
+    if (dry + shapeNoise * 0.05 > 0.5) return { kind: 'dry', color: mixMany([['#a47a3c', dry], ['#735536', 0.24], ['#3f8f4f', Math.max(0, 1 - dry)]], noise) };
+    if (forest + shapeNoise * 0.07 > 0.46) return { kind: 'forest', color: mixMany([['#1f5a35', forest], ['#2f7041', 0.3], ['#3f8f4f', Math.max(0, 1 - forest)]], noise) };
     if (camp > 0.44) return { kind: 'camp', color: mixMany([['#6f5532', camp], ['#3e7f47', Math.max(0, 1 - camp)]], noise) };
     return { kind: 'grass', color: blendColor('#347d47', '#428c4e', noise * 0.32) };
 }
@@ -1792,6 +1793,22 @@ function waterCurrentAt(x, y) {
 function regionWeight(x, y, cx, cy, radius) {
     const d = Math.hypot(x - cx, y - cy);
     return clamp(1 - d / radius, 0, 1);
+}
+
+function naturalRegionWeight(x, y, cx, cy, radius, seed = 0) {
+    const angle = Math.atan2(y - cy, x - cx);
+    const wobble = Math.sin(angle * 3 + seed) * 0.16
+        + Math.sin(angle * 5.7 + seed * 1.9) * 0.09
+        + (valueNoise(x * 0.0025 + seed, y * 0.0025 - seed) - 0.5) * 0.32;
+    const stretchedX = (x - cx) * (1 + Math.sin(seed) * 0.18);
+    const stretchedY = (y - cy) * (1 + Math.cos(seed) * 0.16);
+    const d = Math.hypot(stretchedX, stretchedY);
+    return clamp(1 - d / (radius * (1 + wobble)), 0, 1);
+}
+
+function biomeShapeNoise(x, y) {
+    return (valueNoise(x * 0.003, y * 0.003) - 0.5)
+        + (valueNoise(x * 0.008 + 9, y * 0.008 - 4) - 0.5) * 0.45;
 }
 
 function hash2(x, y) {
