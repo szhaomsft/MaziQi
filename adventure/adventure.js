@@ -17,6 +17,7 @@ const RESOURCE_LABELS = {
     fiber: '纤维',
     berry: '浆果',
     herb: '草药',
+    mushroom: '蘑菇',
     ore: '铁矿',
     hide: '兽皮',
     crystal: '魔晶',
@@ -49,6 +50,9 @@ const RECIPES = [
     }, game => game.equipment.armor === '皮甲'),
     recipe('potion', '治疗药水', '恢复 35 生命', { herb: 2, berry: 2 }, game => {
         game.player.hp = Math.min(game.player.maxHp, game.player.hp + 35);
+    }, () => false),
+    recipe('stew', '蘑菇汤', '恢复 25 生命', { mushroom: 3, berry: 1 }, game => {
+        game.player.hp = Math.min(game.player.maxHp, game.player.hp + 25);
     }, () => false),
     recipe('key', '废墟钥匙', '打开古代废墟', { ore: 8, crystal: 3 }, game => {
         game.inventory.key += 1;
@@ -321,6 +325,8 @@ function createState() {
             hp: 100,
             maxHp: 100,
             stamina: 100,
+            knockX: 0,
+            knockY: 0,
             facing: { x: 1, y: 0 },
             attackUntil: 0,
             attackDir: { x: 1, y: 0 },
@@ -329,7 +335,7 @@ function createState() {
             harvestTarget: null,
             harvestBlockedAt: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, ore: 0, hide: 0, crystal: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, ore: 0, hide: 0, crystal: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -384,7 +390,7 @@ function createResources() {
             if (info.kind === 'forest') {
                 if (n > 0.38) add('tree', px, py, 'wood', 6, 34);
                 else if (n > 0.22) add('stump', px, py, 'wood', 3, 20);
-                else add('berry', px, py, 'berry', 3, 22);
+                else add(n > 0.1 ? 'mushroom' : 'berry', px, py, n > 0.1 ? 'mushroom' : 'berry', 3, 20);
             } else if (info.kind === 'grass' || info.kind === 'camp') {
                 if (n > 0.72) add('berry', px, py, 'berry', 3, 22);
                 else if (n > 0.42) add('grass', px, py, 'fiber', 3, 18);
@@ -455,11 +461,11 @@ function createEnemies() {
             const py = y + (hash2(x * 0.04 + 6, y * 0.04 - 4) - 0.5) * 95;
             const info = terrainInfoAt(px, py);
             const n = valueNoise(px * 0.01 + 4, py * 0.01 - 3);
-            if ((info.kind === 'grass' || info.kind === 'shore' || info.kind === 'camp') && n > 0.67) {
+            if ((info.kind === 'grass' || info.kind === 'shore' || info.kind === 'camp') && n > 0.76) {
                 add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, 'fiber', 1));
-            } else if (info.kind === 'forest' && n > 0.48) {
+            } else if (info.kind === 'forest' && n > 0.64) {
                 add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, 'hide', 2));
-            } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.58) {
+            } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
                 add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, 'crystal', 1));
             }
         }
@@ -526,6 +532,11 @@ function update(dt, now) {
 
 function updatePlayer(dt) {
     const p = state.player;
+    if (Math.abs(p.knockX) > 1 || Math.abs(p.knockY) > 1) {
+        moveCircle(p, p.knockX * dt, p.knockY * dt);
+        p.knockX *= Math.pow(0.025, dt);
+        p.knockY *= Math.pow(0.025, dt);
+    }
     let dx = 0;
     let dy = 0;
     if (keys.has('w') || keys.has('ArrowUp')) dy -= 1;
@@ -598,7 +609,7 @@ function updateEnemies(dt, now) {
             e.x = e.leapTargetX;
             e.y = e.leapTargetY;
             e.leapUntil = 0;
-            e.attackCooldown = 1.15;
+            e.attackCooldown = 2.2;
             spawnBurst(e.x, e.y, '#5ee089', 10, 110, e.radius);
         }
         if (e.chargeUntil > now) {
@@ -645,8 +656,8 @@ function startEnemyAttack(e, now) {
     e.attackDir = normalize(state.player.x - e.x, state.player.y - e.y);
     e.chargeHit = false;
     if (e.kind === 'slime') {
-        e.windupUntil = now + 420;
-        e.strikeAt = now + 320;
+        e.windupUntil = now + 460;
+        e.strikeAt = now + 360;
     } else if (e.kind === 'boar') {
         e.windupUntil = now + 560;
         e.strikeAt = now + 420;
@@ -661,11 +672,11 @@ function resolveEnemyAttack(e, now) {
     const p = state.player;
     if (e.kind === 'slime') {
         e.leapStartAt = now;
-        e.leapUntil = now + 260;
+        e.leapUntil = now + 340;
         e.leapStartX = e.x;
         e.leapStartY = e.y;
-        e.leapTargetX = clamp(e.x + e.attackDir.x * 92, e.radius, WORLD.width - e.radius);
-        e.leapTargetY = clamp(e.y + e.attackDir.y * 92, e.radius, WORLD.height - e.radius);
+        e.leapTargetX = clamp(e.x + e.attackDir.x * 82, e.radius, WORLD.width - e.radius);
+        e.leapTargetY = clamp(e.y + e.attackDir.y * 82, e.radius, WORLD.height - e.radius);
         e.leapHit = false;
     } else if (e.kind === 'boar') {
         e.chargeUntil = now + 430;
@@ -714,6 +725,11 @@ function applyEnemyDamage(e, rawDamage, verb) {
     const damage = Math.max(1, rawDamage - state.equipment.defense);
     p.hp = Math.max(0, p.hp - damage);
     p.invincibleUntil = performance.now() + 620;
+    const dir = normalize(p.x - e.x, p.y - e.y);
+    const force = e.kind === 'boar' ? 430 : (e.kind === 'golem' ? 330 : 260);
+    p.knockX += dir.x * force;
+    p.knockY += dir.y * force;
+    p.stamina = Math.max(0, p.stamina - (e.kind === 'boar' ? 18 : 10));
     state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
     spawnBurst(p.x, p.y, '#ff6b6b', 10, 170, p.radius * 0.55);
     addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
@@ -830,7 +846,7 @@ function harvest(node, dt = 0) {
     node.shakeUntil = performance.now() + 220;
     spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 8, 110, node.radius * 0.65);
     if (node.hp <= 0) {
-        const amount = ({ wood: 4, stone: 4, fiber: 3, berry: 3, herb: 2, ore: 4 }[node.gives] || 1);
+        const amount = ({ wood: 4, stone: 4, fiber: 3, berry: 3, herb: 2, mushroom: 2, ore: 4 }[node.gives] || 1);
         state.inventory[node.gives] += amount;
         addFloatText(`+${amount} ${RESOURCE_LABELS[node.gives]}`, node.x, node.y - 30, '#fff3b0');
         showToast(`采集成功：${RESOURCE_LABELS[node.gives]} x${amount}`);
@@ -847,7 +863,7 @@ function harvestBlockReason(node) {
 }
 
 function harvestPower(node) {
-    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb') return 1.05;
+    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb' || node.kind === 'mushroom') return 1.05;
     if (node.kind === 'stump') return 0.9 + state.equipment.woodPower * 0.45;
     if (node.gives === 'wood') return state.equipment.woodPower * 0.95;
     if (node.gives === 'stone') return state.equipment.stonePower * 0.9;
@@ -1344,6 +1360,19 @@ function drawGatherablePatch(r, x, y) {
         ctx.fillRect(x - 2, y - 38, 6, 8);
         return;
     }
+    if (r.kind === 'mushroom') {
+        drawShadow(x, y + 1, 26, 7);
+        ctx.fillStyle = COLORS.white;
+        ctx.fillRect(x - 4, y - 16, 8, 15);
+        ctx.fillStyle = '#d94b5f';
+        ctx.fillRect(x - 13, y - 25, 26, 11);
+        ctx.fillStyle = '#f8a6b3';
+        ctx.fillRect(x - 9, y - 28, 18, 5);
+        ctx.fillStyle = COLORS.white;
+        ctx.fillRect(x - 7, y - 23, 4, 3);
+        ctx.fillRect(x + 5, y - 22, 4, 3);
+        return;
+    }
     drawShadow(x, y + 1, 28, 6);
     ctx.fillStyle = r.kind === 'berry' ? COLORS.grass2 : COLORS.grass1;
     ctx.fillRect(x - 14, y - 17, 5, 18);
@@ -1385,10 +1414,10 @@ function drawEnemyTelegraph(e, x, y, now) {
         ctx.lineTo(x + e.attackDir.x * 130, y + e.attackDir.y * 130);
         ctx.stroke();
     } else if (e.kind === 'slime') {
-        ctx.strokeStyle = 'rgba(94, 224, 137, 0.9)';
+        ctx.strokeStyle = 'rgba(94, 224, 137, 0.75)';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.ellipse(x + e.attackDir.x * 62, y + e.attackDir.y * 62, e.radius + 20 + pulse, e.radius + 9, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + e.attackDir.x * 45, y + e.attackDir.y * 45, e.radius + 6 + pulse * 0.4, e.radius * 0.55 + 4, 0, 0, Math.PI * 2);
         ctx.stroke();
     } else {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.9)' : 'rgba(183, 125, 255, 0.7)';
