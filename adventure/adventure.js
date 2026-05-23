@@ -609,7 +609,6 @@ function updateEnemies(dt, now) {
             e.x = e.leapTargetX;
             e.y = e.leapTargetY;
             e.leapUntil = 0;
-            e.attackCooldown = 2.2;
             spawnBurst(e.x, e.y, '#5ee089', 10, 110, e.radius);
         }
         if (e.chargeUntil > now) {
@@ -672,12 +671,13 @@ function resolveEnemyAttack(e, now) {
     const p = state.player;
     if (e.kind === 'slime') {
         e.leapStartAt = now;
-        e.leapUntil = now + 340;
+        e.leapUntil = now + 420;
         e.leapStartX = e.x;
         e.leapStartY = e.y;
-        e.leapTargetX = clamp(e.x + e.attackDir.x * 82, e.radius, WORLD.width - e.radius);
-        e.leapTargetY = clamp(e.y + e.attackDir.y * 82, e.radius, WORLD.height - e.radius);
+        e.leapTargetX = clamp(e.x + e.attackDir.x * 125, e.radius, WORLD.width - e.radius);
+        e.leapTargetY = clamp(e.y + e.attackDir.y * 125, e.radius, WORLD.height - e.radius);
         e.leapHit = false;
+        e.attackCooldown = 2.8;
     } else if (e.kind === 'boar') {
         e.chargeUntil = now + 430;
         e.chargeHit = false;
