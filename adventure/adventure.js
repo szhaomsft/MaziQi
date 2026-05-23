@@ -2,7 +2,7 @@ const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
-const WORLD = { width: 2400, height: 1600 };
+const WORLD = { width: 3200, height: 2200 };
 const VIEW = { width: canvas.width, height: canvas.height };
 const keys = new Set();
 const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false };
@@ -33,9 +33,13 @@ const RESOURCE_LABELS = {
     crystalBlade: '魔晶剑',
     leatherArmor: '皮甲',
     ironArmor: '铁甲',
+    torch: '火把',
+    bedroll: '睡袋',
+    campCharm: '营地护符',
     potion: '治疗药水',
     stew: '蘑菇汤',
     salve: '黏液药膏',
+    roastMeat: '烤肉',
     key: '废墟钥匙',
 };
 
@@ -61,13 +65,17 @@ const RESOURCE_ICONS = {
     crystalBlade: '🗡',
     leatherArmor: '🥋',
     ironArmor: '🛡',
+    torch: '🔥',
+    bedroll: '🛏',
+    campCharm: '✨',
     potion: '🧪',
     stew: '🍲',
     salve: '💚',
+    roastMeat: '🍖',
     key: '🗝',
 };
 
-const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'potion', 'stew', 'salve', 'key'];
+const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'torch', 'potion', 'roastMeat', 'bedroll'];
 
 const RECIPES = [
     recipe('axe', '石斧', '砍树更快', { wood: 4, stone: 3 }, game => {
@@ -97,9 +105,21 @@ const RECIPES = [
     recipe('ironArmor', '铁甲', '防御大幅提升', { ore: 8, coal: 2, hide: 2 }, game => {
         game.inventory.ironArmor += 1;
     }, game => game.inventory.ironArmor > 0 || game.equipment.armor === '铁甲'),
+    recipe('torch', '火把', '夜晚照明', { wood: 2, coal: 1, slimeGel: 1 }, game => {
+        game.inventory.torch += 1;
+    }, game => game.inventory.torch > 0 || game.equipment.utility === '火把'),
+    recipe('bedroll', '睡袋', '在营地跳到清晨', { hide: 2, fiber: 4, flower: 1 }, game => {
+        game.inventory.bedroll += 1;
+    }, game => game.inventory.bedroll > 0),
+    recipe('campCharm', '营地护符', '提高最大生命', { crystal: 1, flower: 2, fang: 1 }, game => {
+        game.inventory.campCharm += 1;
+    }, game => game.inventory.campCharm > 0),
     recipe('crystalBlade', '魔晶剑', '高伤害长剑', { ironSword: 1, crystal: 4, fang: 2 }, game => {
         game.inventory.crystalBlade += 1;
     }, game => game.inventory.crystalBlade > 0 || game.equipment.weapon === '魔晶剑'),
+    recipe('roastMeat', '烤肉', '恢复 40 生命', { meat: 1, coal: 1 }, game => {
+        game.inventory.roastMeat += 1;
+    }, () => false),
     recipe('key', '废墟钥匙', '打开古代废墟', { ore: 8, crystal: 3, fang: 1 }, game => {
         game.inventory.key += 1;
         game.quest = 'open-ruins';
@@ -133,6 +153,10 @@ const COLORS = {
     slime2: '#168b64',
     boar1: '#9a5f3f',
     boar2: '#5f3527',
+    wolf1: '#7f8b99',
+    wolf2: '#46515d',
+    bat1: '#4b3c74',
+    bat2: '#241b3c',
     golem1: '#87919b',
     golem2: '#4f5964',
     fire1: '#ff9f1c',
@@ -303,6 +327,38 @@ const SPRITES = {
         ],
         map: { o: 'outline', b: 'boar1', B: 'boar2', e: 'outline', W: 'white', k: 'boot' },
     },
+    wolf: {
+        w: 20,
+        rows: [
+            '....................',
+            '...oo..........oo...',
+            '..owwoooooooooowwo..',
+            '.owwwwwwwwwwwwwwwo.',
+            '.owweewwwwwwwweewo.',
+            '..owwwwWWWWwwwwwo..',
+            '...owwwwwwwwwwo....',
+            '....ooo....ooo.....',
+            '....kk......kk.....',
+            '...kk........kk....',
+            '....................',
+        ],
+        map: { o: 'outline', w: 'wolf1', W: 'wolf2', e: 'outline', k: 'boot' },
+    },
+    bat: {
+        w: 22,
+        rows: [
+            '......................',
+            '..oo..............oo..',
+            '.obbo..........obbo.',
+            'obbbbo..oooo..obbbbo',
+            '.obbbbobbBBbbobbbbo.',
+            '..obbbeBBBBBebbbbo..',
+            '....ooobbbbbooo.....',
+            '.......bb.bb........',
+            '......................',
+        ],
+        map: { o: 'outline', b: 'bat1', B: 'bat2', e: 'white' },
+    },
     golem: {
         w: 20,
         rows: [
@@ -382,7 +438,7 @@ function createState() {
             harvestTarget: null,
             harvestBlockedAt: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, potion: 0, stew: 0, salve: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, torch: 0, bedroll: 0, campCharm: 0, potion: 0, stew: 0, salve: 0, roastMeat: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -393,6 +449,7 @@ function createState() {
             woodPower: 1,
             stonePower: 1,
             orePower: 1,
+            utility: '无',
         },
         resources: createResources(),
         enemies: createEnemies(),
@@ -404,6 +461,8 @@ function createState() {
         cameraShake: 0,
         selectedHotbar: 0,
         inventoryOpen: false,
+        timeOfDay: 0.28,
+        dayLength: 180,
         quest: 'collect-basic',
         win: false,
         lose: false,
@@ -428,8 +487,8 @@ function createResources() {
         resources.push(resource(kind, x, y, gives, hp, radius));
     };
 
-    for (let y = 180; y <= 1500; y += 72) {
-        for (let x = 250; x <= 2180; x += 76) {
+    for (let y = 180; y <= 2050; y += 72) {
+        for (let x = 250; x <= 3020; x += 76) {
             const jitterX = (hash2(x * 0.07, y * 0.07) - 0.5) * 46;
             const jitterY = (hash2(x * 0.05 + 8, y * 0.05 - 2) - 0.5) * 44;
             const px = x + jitterX;
@@ -458,6 +517,8 @@ function createResources() {
         [430, 250, 'tree'], [520, 360, 'tree'], [760, 220, 'tree'],
         [1420, 880, 'rock'], [1780, 1080, 'ore'], [1980, 920, 'ore'],
         [690, 780, 'reed'], [875, 940, 'reed'], [500, 690, 'stump'],
+        [520, 1750, 'tree'], [650, 1880, 'tree'], [830, 1710, 'stump'],
+        [2620, 1550, 'ore'], [2840, 1760, 'rock'],
     ].forEach(([x, y, kind]) => {
         const config = {
             tree: ['wood', 6, 34],
@@ -506,8 +567,8 @@ function createEnemies() {
         if (enemies.some(enemyItem => distance(enemyItem, item) < enemyItem.radius + item.radius + 110)) return;
         enemies.push(item);
     };
-    for (let y = 260; y <= 1480; y += 170) {
-        for (let x = 300; x <= 2200; x += 190) {
+    for (let y = 260; y <= 2050; y += 170) {
+        for (let x = 300; x <= 3020; x += 190) {
             const px = x + (hash2(x * 0.03, y * 0.03) - 0.5) * 95;
             const py = y + (hash2(x * 0.04 + 6, y * 0.04 - 4) - 0.5) * 95;
             const info = terrainInfoAt(px, py);
@@ -516,6 +577,10 @@ function createEnemies() {
                 add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, { slimeGel: 2, fiber: 1 }, 1));
             } else if (info.kind === 'forest' && n > 0.64) {
                 add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
+            } else if ((info.kind === 'forest' || info.kind === 'grass') && n > 0.58) {
+                add(enemy('wolf', '荒狼', px, py, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1));
+            } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.6) {
+                add(enemy('bat', '夜蝠', px, py, 16, 14, 2, 150, 70, { fang: 1, slimeGel: 1 }, 1));
             } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
                 add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, { crystal: 1, stone: 2, coal: 1 }, 1));
             }
@@ -585,9 +650,16 @@ function update(dt, now) {
     updateParticles(dt);
     updateFloatTexts(dt);
     state.cameraShake = Math.max(0, state.cameraShake - dt * 36);
+    state.timeOfDay = (state.timeOfDay + dt / state.dayLength) % 1;
+    updateTimeLabel();
     updateCamera();
     render(now);
     requestAnimationFrame(loop);
+}
+
+function updateTimeLabel() {
+    const label = document.getElementById('time-label');
+    if (label) label.textContent = nightAmount() > 0.2 ? '黑夜' : '白天';
 }
 
 function updatePlayer(dt, now) {
@@ -706,9 +778,11 @@ function updateEnemies(dt, now) {
             resolveEnemyAttack(e, now);
         }
 
-        if (!e.windupUntil && dist < 330) {
+        const aggroRange = 330 + nightAmount() * (e.kind === 'bat' ? 190 : 90);
+        const nightSpeed = 1 + nightAmount() * (e.kind === 'bat' ? 0.35 : 0.16);
+        if (!e.windupUntil && dist < aggroRange) {
             const dir = normalize(p.x - e.x, p.y - e.y);
-            moveEnemy(e, dir.x * e.speed * dt, dir.y * e.speed * dt);
+            moveEnemy(e, dir.x * e.speed * nightSpeed * dt, dir.y * e.speed * nightSpeed * dt);
         } else if (!e.windupUntil && distance(e, { x: e.spawnX, y: e.spawnY }) > 18) {
             const dir = normalize(e.spawnX - e.x, e.spawnY - e.y);
             moveEnemy(e, dir.x * e.speed * 0.42 * dt, dir.y * e.speed * 0.42 * dt);
@@ -732,6 +806,12 @@ function startEnemyAttack(e, now) {
     } else if (e.kind === 'boar') {
         e.windupUntil = now + 560;
         e.strikeAt = now + 420;
+    } else if (e.kind === 'wolf') {
+        e.windupUntil = now + 300;
+        e.strikeAt = now + 220;
+    } else if (e.kind === 'bat') {
+        e.windupUntil = now + 360;
+        e.strikeAt = now + 260;
     } else {
         e.windupUntil = now + (e.boss ? 760 : 620);
         e.strikeAt = now + (e.boss ? 560 : 450);
@@ -754,6 +834,19 @@ function resolveEnemyAttack(e, now) {
         e.chargeUntil = now + 430;
         e.chargeHit = false;
         e.attackCooldown = 1.4;
+    } else if (e.kind === 'wolf') {
+        moveEnemy(e, e.attackDir.x * 82, e.attackDir.y * 82);
+        if (distance(e, p) < e.radius + p.radius + 20) applyEnemyDamage(e, e.attack, '撕咬');
+        e.attackCooldown = 1.05;
+        spawnBurst(e.x, e.y, '#d8e5f2', 8, 130, e.radius * 0.6);
+    } else if (e.kind === 'bat') {
+        moveEnemy(e, e.attackDir.x * 118, e.attackDir.y * 118);
+        if (distance(e, p) < e.radius + p.radius + 24) {
+            applyEnemyDamage(e, e.attack, '俯冲');
+            p.stamina = Math.max(0, p.stamina - 12);
+        }
+        e.attackCooldown = 1.65;
+        spawnBurst(e.x, e.y, '#8fb8ff', 8, 130, e.radius * 0.6);
     } else {
         const slamRadius = e.boss ? 112 : 86;
         state.cameraShake = Math.max(state.cameraShake, e.boss ? 16 : 10);
@@ -935,7 +1028,7 @@ function harvestBlockReason(node) {
 }
 
 function harvestPower(node) {
-    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb' || node.kind === 'mushroom') return 1.05;
+    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb' || node.kind === 'mushroom' || node.kind === 'flower') return 2.2;
     if (node.kind === 'stump') return 0.9 + state.equipment.woodPower * 0.45;
     if (node.gives === 'wood') return state.equipment.woodPower * 0.95;
     if (node.gives === 'stone') return state.equipment.stonePower * 0.9;
@@ -1159,6 +1252,25 @@ function useInventoryItem(key) {
         case 'ironArmor':
             equipArmor('铁甲', 2, '已装备铁甲。');
             break;
+        case 'torch':
+            state.equipment.utility = '火把';
+            showToast('已点燃火把，夜晚视野扩大。');
+            break;
+        case 'bedroll':
+            if (distance(state.player, state.camp) > state.camp.radius + 60) {
+                showToast('睡袋只能在营地附近使用。');
+                return;
+            }
+            state.timeOfDay = 0.25;
+            state.player.hp = state.player.maxHp;
+            showToast('你在营地休息到清晨，生命已恢复。');
+            break;
+        case 'campCharm':
+            state.player.maxHp = Math.max(state.player.maxHp, 125);
+            state.player.hp = Math.min(state.player.maxHp, state.player.hp + 25);
+            state.inventory.campCharm -= 1;
+            showToast('营地护符生效，最大生命提高。');
+            break;
         case 'potion':
             p.hp = Math.min(p.maxHp, p.hp + 35);
             state.inventory.potion -= 1;
@@ -1173,6 +1285,11 @@ function useInventoryItem(key) {
             p.hp = Math.min(p.maxHp, p.hp + 45);
             state.inventory.salve -= 1;
             showToast('使用黏液药膏，恢复 45 生命。');
+            break;
+        case 'roastMeat':
+            p.hp = Math.min(p.maxHp, p.hp + 40);
+            state.inventory.roastMeat -= 1;
+            showToast('吃下烤肉，恢复 40 生命。');
             break;
         default:
             return;
@@ -1221,6 +1338,7 @@ function renderHud() {
     document.getElementById('attack-label').textContent = state.equipment.attack;
     document.getElementById('tool-label').textContent = state.equipment.tool;
     document.getElementById('armor-label').textContent = state.equipment.armor;
+    document.getElementById('time-label').textContent = nightAmount() > 0.2 ? '黑夜' : '白天';
 
     const inventory = document.getElementById('inventory');
     inventory.innerHTML = '';
@@ -1275,7 +1393,7 @@ function toggleInventory(force = null) {
 }
 
 function canUseInventoryItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'potion', 'stew', 'salve'].includes(key) && (state.inventory[key] || 0) > 0;
+    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'potion', 'stew', 'salve', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
 }
 
 function render(now) {
@@ -1285,6 +1403,7 @@ function render(now) {
     drawParticles();
     drawFloatTexts();
     drawEffects(now);
+    drawNightOverlay();
     drawUiOverlay();
 }
 
@@ -1313,9 +1432,9 @@ function terrainInfoAt(x, y) {
     if (river < 46) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((46 - river) / 46, 0, 1)) };
     if (river < 82) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', (river - 46) / 36) };
 
-    const mine = regionWeight(x, y, 1760, 1010, 620);
+    const mine = Math.max(regionWeight(x, y, 1760, 1010, 620), regionWeight(x, y, 2700, 1760, 520));
     const ruins = regionWeight(x, y, 2060, 360, 560);
-    const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1290, 540));
+    const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1720, 620), regionWeight(x, y, 2500, 1450, 460));
     const camp = regionWeight(x, y, 250, 230, 360);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
@@ -1621,9 +1740,26 @@ function drawPlayer(now) {
     const lean = keys.size ? Math.sin(now / 110) * 2 : 0;
     drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4);
     ctx.globalAlpha = 1;
+    drawArmorOverlay(x + p.facing.x * Math.abs(lean), y + step);
     drawPlayerHandsAndWeapon(x, y + step, p, now);
     if (p.attackUntil > now) {
         drawAttackSlash(x, y, p.attackDir || p.facing, now);
+    }
+}
+
+function drawArmorOverlay(x, y) {
+    if (state.equipment.armor === '布衣') return;
+    const color = state.equipment.armor === '铁甲' ? 'rgba(190, 210, 222, 0.95)' : 'rgba(128, 78, 48, 0.95)';
+    const trim = state.equipment.armor === '铁甲' ? '#ffffff' : '#d6a06a';
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 15, y - 36, 30, 18);
+    ctx.fillRect(x - 18, y - 32, 8, 12);
+    ctx.fillRect(x + 10, y - 32, 8, 12);
+    ctx.fillStyle = trim;
+    ctx.fillRect(x - 11, y - 34, 22, 3);
+    if (state.equipment.armor === '铁甲') {
+        ctx.fillStyle = 'rgba(130, 150, 165, 0.9)';
+        ctx.fillRect(x - 2, y - 36, 4, 18);
     }
 }
 
@@ -1753,6 +1889,37 @@ function drawFloatTexts() {
 
 function drawEffects() {
     drawHarvestProgress();
+}
+
+function nightAmount() {
+    const t = state.timeOfDay;
+    if (t > 0.22 && t < 0.72) return 0;
+    const midnightDistance = Math.min(Math.abs(t - 0), Math.abs(t - 1));
+    if (t >= 0.72) return clamp((t - 0.72) / 0.16, 0, 1);
+    return clamp((0.22 - t) / 0.16, 0, 1) * clamp(1 - midnightDistance / 0.22, 0.45, 1);
+}
+
+function drawNightOverlay() {
+    const darkness = nightAmount();
+    if (darkness <= 0.01) return;
+    ctx.save();
+    ctx.fillStyle = `rgba(4, 10, 26, ${0.58 * darkness})`;
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    const lights = [
+        { x: state.player.x, y: state.player.y, radius: state.equipment.utility === '火把' ? 210 : 110 },
+        { x: state.camp.x, y: state.camp.y, radius: state.camp.repaired ? 230 : 120 },
+    ];
+    ctx.globalCompositeOperation = 'destination-out';
+    for (const light of lights) {
+        const gradient = ctx.createRadialGradient(worldX(light.x), worldY(light.y), 18, worldX(light.x), worldY(light.y), light.radius);
+        gradient.addColorStop(0, `rgba(255,255,255,${0.9 * darkness})`);
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(worldX(light.x), worldY(light.y), light.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
 }
 
 function drawHarvestProgress() {
