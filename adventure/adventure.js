@@ -36,6 +36,8 @@ const RESOURCE_LABELS = {
     torch: '火把',
     bedroll: '睡袋',
     campCharm: '营地护符',
+    snare: '捕兽夹',
+    campFlag: '营地旗帜',
     potion: '治疗药水',
     stew: '蘑菇汤',
     salve: '黏液药膏',
@@ -68,6 +70,8 @@ const RESOURCE_ICONS = {
     torch: '🔥',
     bedroll: '🛏',
     campCharm: '✨',
+    snare: '🪤',
+    campFlag: '🚩',
     potion: '🧪',
     stew: '🍲',
     salve: '💚',
@@ -114,6 +118,12 @@ const RECIPES = [
     recipe('campCharm', '营地护符', '提高最大生命', { crystal: 1, flower: 2, fang: 1 }, game => {
         game.inventory.campCharm += 1;
     }, game => game.inventory.campCharm > 0),
+    recipe('snare', '捕兽夹', '短暂定住野兽', { fang: 2, fiber: 3, ore: 1 }, game => {
+        game.inventory.snare += 1;
+    }, () => false),
+    recipe('campFlag', '营地旗帜', '回到营地附近', { wood: 3, fiber: 2, flower: 1 }, game => {
+        game.inventory.campFlag += 1;
+    }, game => game.inventory.campFlag > 0),
     recipe('crystalBlade', '魔晶剑', '高伤害长剑', { ironSword: 1, crystal: 4, fang: 2 }, game => {
         game.inventory.crystalBlade += 1;
     }, game => game.inventory.crystalBlade > 0 || game.equipment.weapon === '魔晶剑'),
@@ -438,7 +448,7 @@ function createState() {
             harvestTarget: null,
             harvestBlockedAt: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, torch: 0, bedroll: 0, campCharm: 0, potion: 0, stew: 0, salve: 0, roastMeat: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, roastMeat: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -539,6 +549,7 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
         hurtUntil: 0,
         attackCooldown: 0,
         contactCooldown: 0,
+        rootedUntil: 0,
         windupUntil: 0,
         strikeAt: 0,
         attackDir: { x: 0, y: 1 },
@@ -734,6 +745,10 @@ function updateEnemies(dt, now) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
+        if (e.rootedUntil > now) {
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
+        }
         if (e.leapUntil > now) {
             const progress = clamp((now - e.leapStartAt) / Math.max(1, e.leapUntil - e.leapStartAt), 0, 1);
             const arc = Math.sin(progress * Math.PI);
@@ -1271,6 +1286,14 @@ function useInventoryItem(key) {
             state.inventory.campCharm -= 1;
             showToast('营地护符生效，最大生命提高。');
             break;
+        case 'snare':
+            deploySnare();
+            break;
+        case 'campFlag':
+            state.player.x = state.camp.x + 85;
+            state.player.y = state.camp.y + 42;
+            showToast('营地旗帜指引你回到营地。');
+            break;
         case 'potion':
             p.hp = Math.min(p.maxHp, p.hp + 35);
             state.inventory.potion -= 1;
@@ -1308,6 +1331,26 @@ function equipArmor(name, defense, message) {
     state.equipment.armor = name;
     state.equipment.defense = defense;
     showToast(message);
+}
+
+function deploySnare() {
+    const p = state.player;
+    const target = state.enemies
+        .filter(enemy => enemy.hp > 0 && distance(enemy, p) < 130)
+        .sort((a, b) => distance(a, p) - distance(b, p))[0];
+    if (!target) {
+        showToast('附近没有可困住的野兽。');
+        return;
+    }
+    state.inventory.snare -= 1;
+    target.rootedUntil = performance.now() + 2600;
+    target.windupUntil = 0;
+    target.strikeAt = 0;
+    target.chargeUntil = 0;
+    target.leapUntil = 0;
+    spawnBurst(target.x, target.y, '#ffd166', 18, 120, target.radius);
+    addFloatText('束缚', target.x, target.y - 42, '#fff3b0');
+    showToast(`${target.name} 被捕兽夹困住了。`);
 }
 
 function updateQuest() {
@@ -1355,7 +1398,15 @@ function renderHud() {
 
     const recipes = document.getElementById('recipes');
     recipes.innerHTML = '';
-    RECIPES.forEach(item => {
+    const sortedRecipes = RECIPES.slice().sort((a, b) => {
+        const aCraft = canCraft(a) ? 0 : 1;
+        const bCraft = canCraft(b) ? 0 : 1;
+        if (aCraft !== bCraft) return aCraft - bCraft;
+        const aOwned = a.owned(state) ? 1 : 0;
+        const bOwned = b.owned(state) ? 1 : 0;
+        return aOwned - bOwned;
+    });
+    sortedRecipes.forEach(item => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'recipe-btn';
@@ -1393,7 +1444,7 @@ function toggleInventory(force = null) {
 }
 
 function canUseInventoryItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'potion', 'stew', 'salve', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
+    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
 }
 
 function render(now) {
