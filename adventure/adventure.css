@@ -35,12 +35,12 @@ button {
 #game-shell {
     width: min(1420px, 100%);
     margin: 0 auto;
-    padding: 22px;
+    padding: 16px;
 }
 
 #intro-panel {
-    margin-bottom: 16px;
-    padding: 22px 24px;
+    margin-bottom: 12px;
+    padding: 16px 20px;
     position: relative;
     overflow: hidden;
     border: 1px solid var(--panel-border);
@@ -84,7 +84,7 @@ h2 {
 
 #intro-panel p {
     max-width: 860px;
-    margin: 0 0 12px;
+    margin: 0 0 10px;
     color: #dcecff;
     line-height: 1.65;
 }
@@ -107,7 +107,7 @@ h2 {
 
 #play-area {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
     gap: 16px;
     align-items: start;
 }
@@ -152,13 +152,16 @@ h2 {
     display: grid;
     gap: 12px;
     position: sticky;
-    top: 14px;
+    top: 10px;
+    max-height: calc(100vh - 20px);
+    overflow: auto;
+    padding-right: 2px;
 }
 
 .panel {
     position: relative;
     overflow: hidden;
-    padding: 16px;
+    padding: 13px;
     border: 1px solid var(--panel-border);
     border-radius: 20px;
     background: linear-gradient(180deg, var(--panel-strong), var(--panel));
@@ -223,14 +226,41 @@ h2 {
 
 #inventory {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px;
 }
 
 .inventory-row {
-    padding: 7px 9px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 7px 8px;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.055);
+}
+
+.inventory-row.empty {
+    opacity: 0.42;
+}
+
+.inventory-icon {
+    display: grid;
+    place-items: center;
+    width: 23px;
+    height: 23px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+}
+
+.inventory-name {
+    overflow: hidden;
+    color: #d8e5f2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #recipes {
@@ -322,6 +352,9 @@ ol {
 
     #hud {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        position: static;
+        max-height: none;
+        overflow: visible;
     }
 }
 
