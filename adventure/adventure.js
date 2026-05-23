@@ -692,7 +692,7 @@ function harvest(node, dt = 0) {
         addFloatText(`+${amount} ${RESOURCE_LABELS[node.gives]}`, node.x, node.y - 30, '#fff3b0');
         showToast(`采集成功：${RESOURCE_LABELS[node.gives]} x${amount}`);
     } else {
-        showToast(`${resourceName(node.kind)} 剩余 ${Math.max(0, node.hp)}/${node.maxHp}`);
+        showToast(`${resourceName(node.kind)} 剩余 ${Math.ceil(Math.max(0, node.hp))}/${node.maxHp}`);
     }
     renderHud();
 }
@@ -805,7 +805,7 @@ function damageEnemy(hit, now) {
         addFloatText(`+${hit.dropAmount} ${RESOURCE_LABELS[hit.drop]}`, hit.x, hit.y - 52, '#9cffb7');
         showToast(`击败 ${hit.name}，获得 ${RESOURCE_LABELS[hit.drop]} x${hit.dropAmount}`);
     } else {
-        showToast(`${hit.name} 受伤，剩余 ${hit.hp}/${hit.maxHp}`);
+        showToast(`${hit.name} 受伤，剩余 ${Math.ceil(Math.max(0, hit.hp))}/${hit.maxHp}`);
     }
 }
 
