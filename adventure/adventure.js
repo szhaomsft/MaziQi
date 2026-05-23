@@ -327,7 +327,6 @@ function createState() {
             attackCooldown: 0,
             invincibleUntil: 0,
             harvestTarget: null,
-            harvestProgress: 0,
             harvestBlockedAt: 0,
         },
         inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, ore: 0, hide: 0, crystal: 0, key: 0 },
@@ -644,7 +643,6 @@ function beginHarvest(node) {
     const p = state.player;
     if (p.harvestTarget !== node) {
         p.harvestTarget = node;
-        p.harvestProgress = 0;
     }
     const blocked = harvestBlockReason(node);
     if (blocked && performance.now() - p.harvestBlockedAt > 900) {
@@ -669,26 +667,21 @@ function updateHarvestHold(dt) {
     beginHarvest(node);
     if (harvestBlockReason(node)) return;
 
-    p.harvestProgress += dt;
     node.lastHarvestAt = performance.now();
     node.shakeUntil = performance.now() + 120;
     if (Math.random() < 0.28) {
         spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 2, 55, node.radius * 0.55);
     }
-    if (p.harvestProgress >= harvestDuration(node)) {
-        p.harvestProgress = 0;
-        harvest(node);
-        if (node.hp <= 0) resetHarvestHold();
-    }
+    harvest(node, dt);
+    if (node.hp <= 0) resetHarvestHold();
 }
 
 function resetHarvestHold() {
     state.player.harvestTarget = null;
-    state.player.harvestProgress = 0;
 }
 
-function harvest(node) {
-    const power = harvestPower(node);
+function harvest(node, dt = 0) {
+    const power = harvestPower(node) * (dt || 0.016);
     node.lastHarvestAt = performance.now();
     node.hp -= power;
     node.shakeUntil = performance.now() + 220;
@@ -711,21 +704,12 @@ function harvestBlockReason(node) {
 }
 
 function harvestPower(node) {
-    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb') return 0.5;
-    if (node.kind === 'stump') return 0.75 + state.equipment.woodPower * 0.35;
-    if (node.gives === 'wood') return state.equipment.woodPower * 0.65;
-    if (node.gives === 'stone') return state.equipment.stonePower * 0.65;
-    if (node.gives === 'ore') return state.equipment.orePower * 0.6;
+    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb') return 1.05;
+    if (node.kind === 'stump') return 0.9 + state.equipment.woodPower * 0.45;
+    if (node.gives === 'wood') return state.equipment.woodPower * 0.95;
+    if (node.gives === 'stone') return state.equipment.stonePower * 0.9;
+    if (node.gives === 'ore') return state.equipment.orePower * 0.8;
     return 1;
-}
-
-function harvestDuration(node) {
-    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb') return 0.75;
-    if (node.kind === 'stump') return 0.95;
-    if (node.kind === 'tree') return state.equipment.tool === '石斧' ? 0.9 : 1.35;
-    if (node.kind === 'rock') return state.equipment.tool === '石镐' ? 0.95 : 1.25;
-    if (node.kind === 'ore') return 1.2;
-    return 0.9;
 }
 
 function useCamp() {
@@ -1395,8 +1379,7 @@ function drawHarvestProgress() {
     const p = state.player;
     const node = p.harvestTarget;
     if (!node || node.hp <= 0 || !keys.has('e')) return;
-    const duration = harvestDuration(node);
-    const progress = clamp(p.harvestProgress / duration, 0, 1);
+    const progress = clamp(1 - node.hp / node.maxHp, 0, 1);
     const x = worldX(node.x);
     const y = worldY(node.y - node.radius - 16);
     ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
