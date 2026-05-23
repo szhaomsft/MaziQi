@@ -355,17 +355,16 @@ const SPRITES = {
         map: { o: 'outline', w: 'wolf1', W: 'wolf2', e: 'outline', k: 'boot' },
     },
     bat: {
-        w: 22,
+        w: 16,
         rows: [
-            '......................',
-            '..oo..............oo..',
-            '.obbo..........obbo.',
-            'obbbbo..oooo..obbbbo',
-            '.obbbbobbBBbbobbbbo.',
-            '..obbbeBBBBBebbbbo..',
-            '....ooobbbbbooo.....',
-            '.......bb.bb........',
-            '......................',
+            '................',
+            '.oo........oo...',
+            'obbo..oo..obbo.',
+            '.obboobboobbo..',
+            '..obbeBBebbo...',
+            '...oobBBboo....',
+            '.....b..b......',
+            '................',
         ],
         map: { o: 'outline', b: 'bat1', B: 'bat2', e: 'white' },
     },
@@ -569,6 +568,13 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
         leapTargetX: x,
         leapTargetY: y,
         leapHit: false,
+        swoopUntil: 0,
+        swoopStartAt: 0,
+        swoopStartX: x,
+        swoopStartY: y,
+        swoopTargetX: x,
+        swoopTargetY: y,
+        swoopHit: false,
         knockX: 0,
         knockY: 0,
     };
@@ -596,7 +602,7 @@ function createEnemies() {
             } else if (info.kind === 'forest' && n > 0.64) {
                 add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
             } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.6) {
-                add(enemy('bat', '夜蝠', px, py, 16, 14, 2, 150, 70, { fang: 1, slimeGel: 1 }, 1));
+                add(enemy('bat', '夜蝠', px, py, 12, 12, 2, 210, 96, { fang: 1, slimeGel: 1 }, 1));
             } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
                 add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, { crystal: 1, stone: 2, coal: 1 }, 1));
             }
@@ -810,6 +816,23 @@ function updateEnemies(dt, now) {
             e.chargeUntil = 0;
             e.attackCooldown = 1.25;
         }
+        if (e.swoopUntil > now) {
+            const progress = clamp((now - e.swoopStartAt) / Math.max(1, e.swoopUntil - e.swoopStartAt), 0, 1);
+            e.x = lerp(e.swoopStartX, e.swoopTargetX, progress);
+            e.y = lerp(e.swoopStartY, e.swoopTargetY, progress) - Math.sin(progress * Math.PI) * 24;
+            if (!e.swoopHit && progress > 0.42 && distance(e, state.player) < e.radius + state.player.radius + 24) {
+                applyEnemyDamage(e, e.attack, '掠袭');
+                state.player.stamina = Math.max(0, state.player.stamina - 10);
+                e.swoopHit = true;
+            }
+            if (Math.random() < 0.35) spawnBurst(e.x, e.y, '#8fb8ff', 1, 70, e.radius);
+            continue;
+        } else if (e.swoopUntil) {
+            e.x = e.swoopTargetX;
+            e.y = e.swoopTargetY;
+            e.swoopUntil = 0;
+            e.attackCooldown = 1.8;
+        }
         if (Math.abs(e.knockX) > 1 || Math.abs(e.knockY) > 1) {
             moveEnemy(e, e.knockX * dt, e.knockY * dt);
             e.knockX *= Math.pow(0.035, dt);
@@ -909,8 +932,8 @@ function startEnemyAttack(e, now) {
         e.windupUntil = now + 440;
         e.strikeAt = now + 320;
     } else if (e.kind === 'bat') {
-        e.windupUntil = now + 360;
-        e.strikeAt = now + 260;
+        e.windupUntil = now + 300;
+        e.strikeAt = now + 220;
     } else {
         e.windupUntil = now + (e.boss ? 760 : 620);
         e.strikeAt = now + (e.boss ? 560 : 450);
@@ -942,13 +965,15 @@ function resolveEnemyAttack(e, now) {
         state.wolfPack.nextBiteAt = now + 850;
         spawnBurst(e.x, e.y, '#d8e5f2', 8, 130, e.radius * 0.6);
     } else if (e.kind === 'bat') {
-        moveEnemy(e, e.attackDir.x * 118, e.attackDir.y * 118);
-        if (distance(e, p) < e.radius + p.radius + 24) {
-            applyEnemyDamage(e, e.attack, '俯冲');
-            p.stamina = Math.max(0, p.stamina - 12);
-        }
-        e.attackCooldown = 1.65;
-        spawnBurst(e.x, e.y, '#8fb8ff', 8, 130, e.radius * 0.6);
+        e.swoopStartAt = now;
+        e.swoopUntil = now + 520;
+        e.swoopStartX = e.x;
+        e.swoopStartY = e.y;
+        e.swoopTargetX = clamp(p.x + e.attackDir.x * 82, e.radius, WORLD.width - e.radius);
+        e.swoopTargetY = clamp(p.y + e.attackDir.y * 82, e.radius, WORLD.height - e.radius);
+        e.swoopHit = false;
+        e.attackCooldown = 2.1;
+        spawnBurst(e.x, e.y, '#8fb8ff', 6, 100, e.radius * 0.6);
     } else {
         const slamRadius = e.boss ? 112 : 86;
         state.cameraShake = Math.max(state.cameraShake, e.boss ? 16 : 10);
@@ -1824,9 +1849,11 @@ function drawEnemy(e, now) {
     const y = worldY(e.y);
     const leapProgress = e.leapUntil > now ? clamp((now - e.leapStartAt) / Math.max(1, e.leapUntil - e.leapStartAt), 0, 1) : 0;
     const leapLift = e.leapUntil > now ? Math.sin(leapProgress * Math.PI) * 18 : 0;
+    const swoopProgress = e.swoopUntil > now ? clamp((now - e.swoopStartAt) / Math.max(1, e.swoopUntil - e.swoopStartAt), 0, 1) : 0;
+    const flyLift = e.kind === 'bat' ? 16 + Math.sin(now / 90) * 6 + Math.sin(swoopProgress * Math.PI) * 18 : 0;
     const chargeLean = e.chargeUntil > now ? 8 : 0;
-    const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2) - leapLift;
-    drawShadow(x, y + 1, e.radius * 1.62, e.radius * 0.42);
+    const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2) - leapLift - flyLift;
+    drawShadow(x, y + 1, e.radius * (e.kind === 'bat' ? 1.1 : 1.62), e.radius * (e.kind === 'bat' ? 0.25 : 0.42));
     if (e.windupUntil) {
         drawEnemyTelegraph(e, x, y, now);
     }
@@ -1873,8 +1900,13 @@ function drawEnemyTelegraph(e, x, y, now) {
         ctx.strokeStyle = 'rgba(143, 184, 255, 0.75)';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(x + e.attackDir.x * 18, y + e.attackDir.y * 18);
-        ctx.lineTo(x + e.attackDir.x * 105, y + e.attackDir.y * 105);
+        ctx.moveTo(x + e.attackDir.x * 14, y + e.attackDir.y * 14);
+        ctx.quadraticCurveTo(
+            x + e.attackDir.x * 48 - e.attackDir.y * 24,
+            y + e.attackDir.y * 48 + e.attackDir.x * 24,
+            x + e.attackDir.x * 96,
+            y + e.attackDir.y * 96
+        );
         ctx.stroke();
     } else {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.9)' : 'rgba(183, 125, 255, 0.7)';
