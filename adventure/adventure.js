@@ -18,10 +18,33 @@ const RESOURCE_LABELS = {
     berry: '浆果',
     herb: '草药',
     mushroom: '蘑菇',
+    flower: '野花',
     ore: '铁矿',
+    coal: '煤块',
     hide: '兽皮',
+    meat: '生肉',
+    slimeGel: '黏液',
+    fang: '兽牙',
     crystal: '魔晶',
     key: '废墟钥匙',
+};
+
+const RESOURCE_ICONS = {
+    wood: '🪵',
+    stone: '🪨',
+    fiber: '🌾',
+    berry: '🍓',
+    herb: '🌿',
+    mushroom: '🍄',
+    flower: '🌼',
+    ore: '⛏',
+    coal: '◼',
+    hide: '🟫',
+    meat: '🥩',
+    slimeGel: '🟢',
+    fang: '🦷',
+    crystal: '💎',
+    key: '🗝',
 };
 
 const RECIPES = [
@@ -37,12 +60,12 @@ const RECIPES = [
     recipe('spear', '石矛', '近战伤害 +2', { wood: 3, stone: 3, fiber: 2 }, game => {
         game.equipment.weapon = '石矛';
         game.equipment.attack = 3;
-        game.equipment.range = 58;
+        game.equipment.range = 86;
     }, game => game.equipment.weapon === '石矛' || game.equipment.weapon === '铁剑'),
     recipe('sword', '铁剑', '可以挑战守门石像', { wood: 2, ore: 6, hide: 2 }, game => {
         game.equipment.weapon = '铁剑';
         game.equipment.attack = 6;
-        game.equipment.range = 66;
+        game.equipment.range = 68;
     }, game => game.equipment.weapon === '铁剑'),
     recipe('armor', '皮甲', '受到伤害 -1', { hide: 4, fiber: 4 }, game => {
         game.equipment.armor = '皮甲';
@@ -54,7 +77,10 @@ const RECIPES = [
     recipe('stew', '蘑菇汤', '恢复 25 生命', { mushroom: 3, berry: 1 }, game => {
         game.player.hp = Math.min(game.player.maxHp, game.player.hp + 25);
     }, () => false),
-    recipe('key', '废墟钥匙', '打开古代废墟', { ore: 8, crystal: 3 }, game => {
+    recipe('salve', '黏液药膏', '恢复 45 生命', { slimeGel: 2, herb: 2, flower: 1 }, game => {
+        game.player.hp = Math.min(game.player.maxHp, game.player.hp + 45);
+    }, () => false),
+    recipe('key', '废墟钥匙', '打开古代废墟', { ore: 8, crystal: 3, fang: 1 }, game => {
         game.inventory.key += 1;
         game.quest = 'open-ruins';
         showToast('废墟钥匙完成！去地图右上角打开古代废墟。');
@@ -336,13 +362,13 @@ function createState() {
             harvestTarget: null,
             harvestBlockedAt: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, ore: 0, hide: 0, crystal: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, crystal: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
             armor: '布衣',
             attack: 1,
-            range: 46,
+            range: 42,
             defense: 0,
             woodPower: 1,
             stonePower: 1,
@@ -395,12 +421,13 @@ function createResources() {
             } else if (info.kind === 'grass' || info.kind === 'camp') {
                 if (n > 0.72) add('berry', px, py, 'berry', 3, 22);
                 else if (n > 0.42) add('grass', px, py, 'fiber', 3, 18);
-                else if (n > 0.32) add('herb', px, py, 'herb', 3, 18);
+                else if (n > 0.32) add(n > 0.37 ? 'herb' : 'flower', px, py, n > 0.37 ? 'herb' : 'flower', 3, 18);
             } else if (info.kind === 'shore') {
                 if (n > 0.32) add('reed', px, py, 'fiber', 2, 16);
             } else if (info.kind === 'mine') {
                 if (n > 0.62) add('ore', px, py, 'ore', 8, 28);
-                else if (n > 0.28) add('rock', px, py, 'stone', 7, 28);
+                else if (n > 0.42) add('rock', px, py, 'stone', 7, 28);
+                else if (n > 0.28) add('rock', px, py, 'coal', 6, 26);
             }
         }
     }
@@ -464,17 +491,17 @@ function createEnemies() {
             const info = terrainInfoAt(px, py);
             const n = valueNoise(px * 0.01 + 4, py * 0.01 - 3);
             if ((info.kind === 'grass' || info.kind === 'shore' || info.kind === 'camp') && n > 0.76) {
-                add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, 'fiber', 1));
+                add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, { slimeGel: 2, fiber: 1 }, 1));
             } else if (info.kind === 'forest' && n > 0.64) {
-                add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, 'hide', 2));
+                add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
             } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
-                add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, 'crystal', 1));
+                add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, { crystal: 1, stone: 2, coal: 1 }, 1));
             }
         }
     }
-    add(enemy('golem', '守门石像', 1980, 520, 28, 55, 5, 78, 92, 'crystal', 3, true));
+    add(enemy('golem', '守门石像', 1980, 520, 28, 55, 5, 78, 92, { crystal: 3, stone: 4, coal: 2 }, 1, true));
     if (!enemies.some(item => item.kind === 'boar' && item.x < 800 && item.y > 1050)) {
-        add(enemy('boar', '野猪', 560, 1260, 22, 28, 3, 135, 68, 'hide', 2));
+        add(enemy('boar', '野猪', 560, 1260, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
     }
     return enemies;
 }
@@ -507,6 +534,15 @@ function normalize(x, y) {
 
 function screenToWorld(x, y) {
     return { x: x + camera.x, y: y + camera.y };
+}
+
+function currentAimDir() {
+    const p = state.player;
+    const playerScreenX = worldX(p.x);
+    const playerScreenY = worldY(p.y);
+    const dx = mouse.x - playerScreenX;
+    const dy = mouse.y - playerScreenY;
+    return Math.hypot(dx, dy) > 18 ? normalize(dx, dy) : p.facing;
 }
 
 function showToast(message) {
@@ -569,6 +605,7 @@ function updatePlayer(dt, now) {
         p.stamina = clamp(p.stamina + 30 * dt, 0, 100);
     }
 
+    p.attackDir = currentAimDir();
     if (p.attackCooldown > 0) p.attackCooldown -= dt;
     if ((mouse.down || keys.has(' ')) && p.attackCooldown <= 0) {
         attack(now);
@@ -933,10 +970,7 @@ function attack(now = performance.now()) {
     p.stamina = Math.max(0, p.stamina - staminaCost);
     p.attackCooldown = weaponCooldown();
     p.attackUntil = now + 160;
-    const playerScreenX = worldX(p.x);
-    const playerScreenY = worldY(p.y);
-    const aim = normalize(mouse.x - playerScreenX, mouse.y - playerScreenY);
-    const attackDir = Math.hypot(mouse.x - playerScreenX, mouse.y - playerScreenY) > 18 ? aim : p.facing;
+    const attackDir = currentAimDir();
     p.attackDir = attackDir;
     p.facing = attackDir;
     const strike = { x: p.x + attackDir.x * p.radius, y: p.y + attackDir.y * p.radius };
@@ -978,13 +1012,28 @@ function damageEnemy(hit, now) {
     spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
     addFloatText(`-${state.equipment.attack}`, hit.x, hit.y - 36, '#fff3b0');
     if (hit.hp <= 0) {
-        state.inventory[hit.drop] += hit.dropAmount;
+        const drops = grantEnemyDrops(hit);
         spawnBurst(hit.x, hit.y, '#ffffff', 24, 260, hit.radius);
-        addFloatText(`+${hit.dropAmount} ${RESOURCE_LABELS[hit.drop]}`, hit.x, hit.y - 52, '#9cffb7');
-        showToast(`击败 ${hit.name}，获得 ${RESOURCE_LABELS[hit.drop]} x${hit.dropAmount}`);
+        addFloatText(drops.floatText, hit.x, hit.y - 52, '#9cffb7');
+        showToast(`击败 ${hit.name}，获得 ${drops.toastText}`);
     } else {
         showToast(`${hit.name} 受伤，剩余 ${Math.ceil(Math.max(0, hit.hp))}/${hit.maxHp}`);
     }
+}
+
+function grantEnemyDrops(hit) {
+    const entries = typeof hit.drop === 'string' ? [[hit.drop, hit.dropAmount]] : Object.entries(hit.drop);
+    const received = [];
+    for (const [key, amount] of entries) {
+        const bonus = hit.boss ? 0 : (Math.random() < 0.28 ? 1 : 0);
+        const finalAmount = amount + bonus;
+        state.inventory[key] = (state.inventory[key] || 0) + finalAmount;
+        received.push(`${RESOURCE_LABELS[key]} x${finalAmount}`);
+    }
+    return {
+        floatText: `+${received[0]}${received.length > 1 ? '…' : ''}`,
+        toastText: received.join('、'),
+    };
 }
 
 function weaponCooldown() {
@@ -1092,7 +1141,8 @@ function renderHud() {
     Object.entries(RESOURCE_LABELS).forEach(([key, label]) => {
         const row = document.createElement('div');
         row.className = 'inventory-row';
-        row.innerHTML = `<span>${label}</span><strong>${state.inventory[key] || 0}</strong>`;
+        row.classList.toggle('empty', !state.inventory[key]);
+        row.innerHTML = `<span class="inventory-icon">${RESOURCE_ICONS[key] || '•'}</span><span class="inventory-name">${label}</span><strong>${state.inventory[key] || 0}</strong>`;
         inventory.appendChild(row);
     });
 
@@ -1472,7 +1522,7 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
     const handY = y - 31 + dir.y * 8 + (keys.size ? Math.sin(now / 90) * 1.5 : 0);
     ctx.fillStyle = COLORS.skin;
     ctx.fillRect(handX - 4, handY - 4, 8, 8);
-    const weaponLength = state.equipment.weapon === '铁剑' ? 30 : (state.equipment.weapon === '石矛' ? 36 : 20);
+    const weaponLength = Math.max(20, state.equipment.range * 0.58);
     ctx.strokeStyle = state.equipment.weapon === '铁剑' ? '#d8e5f2' : (state.equipment.weapon === '石矛' ? '#a8b3bd' : COLORS.trunk);
     ctx.lineWidth = state.equipment.weapon === '石矛' ? 3 : 5;
     ctx.beginPath();
