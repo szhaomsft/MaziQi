@@ -326,6 +326,9 @@ function createState() {
             attackDir: { x: 1, y: 0 },
             attackCooldown: 0,
             invincibleUntil: 0,
+            harvestTarget: null,
+            harvestProgress: 0,
+            harvestBlockedAt: 0,
         },
         inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, ore: 0, hide: 0, crystal: 0, key: 0 },
         equipment: {
@@ -464,6 +467,7 @@ function showToast(message) {
 function update(dt, now) {
     if (!state.win && !state.lose) {
         updatePlayer(dt);
+        updateHarvestHold(dt);
         updateEnemies(dt, now);
         updateQuest();
     }
@@ -620,7 +624,7 @@ function interact() {
         return;
     }
 
-    if (target.type === 'resource') harvest(target.item);
+    if (target.type === 'resource') beginHarvest(target.item);
     if (target.type === 'camp') useCamp();
     if (target.type === 'ruins') openRuins();
 }
@@ -636,13 +640,54 @@ function nearestInteractable() {
     return [...resources, ...specials].sort((a, b) => a.d - b.d)[0] || null;
 }
 
-function harvest(node) {
+function beginHarvest(node) {
+    const p = state.player;
+    if (p.harvestTarget !== node) {
+        p.harvestTarget = node;
+        p.harvestProgress = 0;
+    }
     const blocked = harvestBlockReason(node);
-    if (blocked) {
+    if (blocked && performance.now() - p.harvestBlockedAt > 900) {
+        p.harvestBlockedAt = performance.now();
         showToast(blocked);
         addFloatText('需要工具', node.x, node.y - 28, '#ffb3b3');
+    }
+}
+
+function updateHarvestHold(dt) {
+    const p = state.player;
+    if (!keys.has('e')) {
+        resetHarvestHold();
         return;
     }
+    const target = nearestInteractable();
+    if (!target || target.type !== 'resource') {
+        resetHarvestHold();
+        return;
+    }
+    const node = target.item;
+    beginHarvest(node);
+    if (harvestBlockReason(node)) return;
+
+    p.harvestProgress += dt;
+    node.lastHarvestAt = performance.now();
+    node.shakeUntil = performance.now() + 120;
+    if (Math.random() < 0.28) {
+        spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 2, 55, node.radius * 0.55);
+    }
+    if (p.harvestProgress >= harvestDuration(node)) {
+        p.harvestProgress = 0;
+        harvest(node);
+        if (node.hp <= 0) resetHarvestHold();
+    }
+}
+
+function resetHarvestHold() {
+    state.player.harvestTarget = null;
+    state.player.harvestProgress = 0;
+}
+
+function harvest(node) {
     const power = harvestPower(node);
     node.lastHarvestAt = performance.now();
     node.hp -= power;
@@ -672,6 +717,15 @@ function harvestPower(node) {
     if (node.gives === 'stone') return state.equipment.stonePower * 0.65;
     if (node.gives === 'ore') return state.equipment.orePower * 0.6;
     return 1;
+}
+
+function harvestDuration(node) {
+    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb') return 0.75;
+    if (node.kind === 'stump') return 0.95;
+    if (node.kind === 'tree') return state.equipment.tool === '石斧' ? 0.9 : 1.35;
+    if (node.kind === 'rock') return state.equipment.tool === '石镐' ? 0.95 : 1.25;
+    if (node.kind === 'ore') return 1.2;
+    return 0.9;
 }
 
 function useCamp() {
@@ -1334,15 +1388,24 @@ function drawFloatTexts() {
 }
 
 function drawEffects() {
-    const target = nearestInteractable();
-    if (target) {
-        const item = target.item;
-        ctx.strokeStyle = 'rgba(255, 209, 102, 0.9)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(worldX(item.x), worldY(item.y), (item.radius || 42) + 12, 0, Math.PI * 2);
-        ctx.stroke();
-    }
+    drawHarvestProgress();
+}
+
+function drawHarvestProgress() {
+    const p = state.player;
+    const node = p.harvestTarget;
+    if (!node || node.hp <= 0 || !keys.has('e')) return;
+    const duration = harvestDuration(node);
+    const progress = clamp(p.harvestProgress / duration, 0, 1);
+    const x = worldX(node.x);
+    const y = worldY(node.y - node.radius - 16);
+    ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
+    ctx.fillRect(x - 30, y, 60, 8);
+    ctx.fillStyle = harvestBlockReason(node) ? '#ff6b6b' : '#ffd166';
+    ctx.fillRect(x - 30, y, 60 * progress, 8);
+    ctx.strokeStyle = '#101820';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 30, y, 60, 8);
 }
 
 function drawUiOverlay() {
@@ -1469,7 +1532,15 @@ function loop(now) {
 window.addEventListener('keydown', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'Shift'].includes(key)) event.preventDefault();
-    if (key === 'e') interact();
+    if (key === 'e') {
+        keys.add(key);
+        if (!event.repeat) {
+            const target = nearestInteractable();
+            if (target?.type === 'camp') useCamp();
+            else if (target?.type === 'ruins') openRuins();
+            else if (!target) showToast('靠近资源后长按 E 采集。');
+        }
+    }
     else if (key === ' ') attack();
     else if (key === 'r') {
         state.player.x = state.camp.x + 80;
@@ -1483,6 +1554,7 @@ window.addEventListener('keydown', event => {
 window.addEventListener('keyup', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     keys.delete(key);
+    if (key === 'e') resetHarvestHold();
 });
 
 canvas.addEventListener('mousemove', event => {
