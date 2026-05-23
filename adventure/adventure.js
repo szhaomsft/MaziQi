@@ -364,10 +364,13 @@ function resource(kind, x, y, gives, hp, radius) {
 function createResources() {
     const resources = [];
     const campPoint = { x: 260, y: 230 };
+    const ruinsPoint = { x: 2110, y: 330 };
     const add = (kind, x, y, gives, hp, radius) => {
         const point = { x, y };
-        if (terrainInfoAt(x, y).kind === 'water') return;
+        const terrain = terrainInfoAt(x, y);
+        if (terrain.kind === 'water' || terrain.kind === 'ruins') return;
         if (distance(point, campPoint) < 95 && kind !== 'grass') return;
+        if (distance(point, ruinsPoint) < 230) return;
         if (resources.some(item => distance(item, point) < item.radius + radius + (kind === 'grass' ? 8 : 24))) return;
         resources.push(resource(kind, x, y, gives, hp, radius));
     };
@@ -393,9 +396,6 @@ function createResources() {
             } else if (info.kind === 'mine') {
                 if (n > 0.62) add('ore', px, py, 'ore', 8, 28);
                 else if (n > 0.28) add('rock', px, py, 'stone', 7, 28);
-            } else if (info.kind === 'ruins') {
-                if (n > 0.68) add('ore', px, py, 'ore', 8, 28);
-                else if (n > 0.45) add('rock', px, py, 'stone', 7, 28);
             }
         }
     }
@@ -636,9 +636,13 @@ function nearestInteractable() {
 }
 
 function harvest(node) {
-    const power = node.gives === 'wood'
-        ? state.equipment.woodPower
-        : (node.gives === 'stone' ? state.equipment.stonePower : (node.gives === 'ore' ? state.equipment.orePower : 1));
+    const blocked = harvestBlockReason(node);
+    if (blocked) {
+        showToast(blocked);
+        addFloatText('需要工具', node.x, node.y - 28, '#ffb3b3');
+        return;
+    }
+    const power = harvestPower(node);
     node.hp -= power;
     node.shakeUntil = performance.now() + 140;
     spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 8, 110, node.radius * 0.65);
@@ -651,6 +655,19 @@ function harvest(node) {
         showToast(`${resourceName(node.kind)} 剩余 ${Math.max(0, node.hp)}/${node.maxHp}`);
     }
     renderHud();
+}
+
+function harvestBlockReason(node) {
+    if (node.gives === 'ore' && state.equipment.tool !== '石镐') return '铁矿太硬，需要先合成石镐。';
+    if (node.kind === 'tree' && state.equipment.tool === '徒手') return '徒手砍不动整棵树，先收集木头和石头合成石斧。';
+    return '';
+}
+
+function harvestPower(node) {
+    if (node.gives === 'wood') return node.kind === 'stump' ? Math.max(1, state.equipment.woodPower) : state.equipment.woodPower;
+    if (node.gives === 'stone') return state.equipment.stonePower;
+    if (node.gives === 'ore') return state.equipment.orePower;
+    return 1;
 }
 
 function useCamp() {
@@ -690,31 +707,50 @@ function openRuins() {
 function attack(now = performance.now()) {
     const p = state.player;
     if (state.win || state.lose || p.attackCooldown > 0) return;
-    p.attackCooldown = 0.34;
-    p.attackUntil = now + 140;
+    const staminaCost = weaponStaminaCost();
+    if (p.stamina < staminaCost) {
+        showToast('体力不足，稍等恢复后再攻击。');
+        return;
+    }
+    p.stamina = Math.max(0, p.stamina - staminaCost);
+    p.attackCooldown = weaponCooldown();
+    p.attackUntil = now + 160;
     const aim = normalize(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2);
     if (Math.hypot(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2) > 18) p.facing = aim;
     const strike = { x: p.x + p.facing.x * p.radius, y: p.y + p.facing.y * p.radius };
-    let hit = null;
+    const hits = [];
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         const toEnemy = normalize(e.x - p.x, e.y - p.y);
         const facingDot = toEnemy.x * p.facing.x + toEnemy.y * p.facing.y;
-        if (distance(strike, e) <= state.equipment.range + e.radius && facingDot > 0.18) {
-            hit = e;
-            break;
+        const dist = distance(strike, e);
+        if (dist <= state.equipment.range + e.radius && facingDot > weaponArcDot()) {
+            hits.push({ enemy: e, dist });
         }
     }
     spawnArcParticles(p.x, p.y, p.facing);
-    if (!hit) {
+    if (!hits.length) {
         addFloatText('挥空', p.x + p.facing.x * 50, p.y + p.facing.y * 50, '#d8e5f2');
+        renderHud();
         return;
     }
 
+    hits.sort((a, b) => a.dist - b.dist);
+    const maxHits = state.equipment.weapon === '铁剑' ? 2 : 1;
+    for (const { enemy: hit } of hits.slice(0, maxHits)) {
+        damageEnemy(hit, now);
+    }
+    renderHud();
+}
+
+function damageEnemy(hit, now) {
     hit.hp -= state.equipment.attack;
     hit.hurtUntil = now + 160;
-    hit.knockX += p.facing.x * (hit.boss ? 130 : 240);
-    hit.knockY += p.facing.y * (hit.boss ? 130 : 240);
+    hit.attackCooldown = Math.max(hit.attackCooldown, 0.24);
+    hit.windupUntil = 0;
+    hit.strikeAt = 0;
+    hit.knockX += state.player.facing.x * (hit.boss ? 130 : 240);
+    hit.knockY += state.player.facing.y * (hit.boss ? 130 : 240);
     state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
     spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
     addFloatText(`-${state.equipment.attack}`, hit.x, hit.y - 36, '#fff3b0');
@@ -726,7 +762,24 @@ function attack(now = performance.now()) {
     } else {
         showToast(`${hit.name} 受伤，剩余 ${hit.hp}/${hit.maxHp}`);
     }
-    renderHud();
+}
+
+function weaponCooldown() {
+    if (state.equipment.weapon === '铁剑') return 0.42;
+    if (state.equipment.weapon === '石矛') return 0.48;
+    return 0.34;
+}
+
+function weaponStaminaCost() {
+    if (state.equipment.weapon === '铁剑') return 18;
+    if (state.equipment.weapon === '石矛') return 14;
+    return 10;
+}
+
+function weaponArcDot() {
+    if (state.equipment.weapon === '铁剑') return 0.08;
+    if (state.equipment.weapon === '石矛') return 0.28;
+    return 0.18;
 }
 
 function spawnBurst(x, y, color, count = 8, speed = 120, spread = 0) {
