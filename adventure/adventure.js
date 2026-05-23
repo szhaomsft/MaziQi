@@ -91,6 +91,11 @@ const COLORS = {
     ruin2: '#2f3945',
     crystal1: '#b77dff',
     crystal2: '#5d2ea6',
+    water1: '#286ea6',
+    water2: '#58b6df',
+    flower1: '#ffd166',
+    flower2: '#ff6b9a',
+    slash: '#fff3b0',
 };
 
 const SPRITES = {
@@ -319,6 +324,7 @@ function createState() {
             facing: { x: 1, y: 0 },
             attackUntil: 0,
             attackCooldown: 0,
+            invincibleUntil: 0,
         },
         inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, ore: 0, hide: 0, crystal: 0, key: 0 },
         equipment: {
@@ -358,6 +364,10 @@ function createState() {
         ],
         camp: { x: 260, y: 230, radius: 70, repaired: false },
         ruins: { x: 2110, y: 330, radius: 58, opened: false },
+        decorations: createDecorations(),
+        particles: [],
+        floatTexts: [],
+        cameraShake: 0,
         quest: 'collect-basic',
         win: false,
         lose: false,
@@ -369,7 +379,26 @@ function resource(kind, x, y, gives, hp, radius) {
 }
 
 function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmount, boss = false) {
-    return { kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss, hurtUntil: 0, attackCooldown: 0 };
+    return { kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss, hurtUntil: 0, attackCooldown: 0, windupUntil: 0, strikeAt: 0, knockX: 0, knockY: 0 };
+}
+
+function createDecorations() {
+    const items = [];
+    const add = (kind, x, y, scale = 1) => items.push({ kind, x, y, scale });
+    [
+        [190, 420], [310, 590], [690, 420], [940, 520], [1230, 240], [1360, 690],
+        [1510, 1210], [1860, 700], [2170, 650], [2250, 1180],
+    ].forEach(([x, y], index) => add(index % 2 ? 'flowers' : 'tuft', x, y, 1 + (index % 3) * 0.15));
+    [
+        [1120, 1010], [1300, 910], [1660, 1190], [1910, 1040], [2040, 790],
+    ].forEach(([x, y], index) => add(index % 2 ? 'pebbles' : 'crack', x, y, 1));
+    [
+        [720, 860], [790, 920], [860, 980], [930, 1040], [1000, 1100],
+    ].forEach(([x, y]) => add('water', x, y, 1));
+    [
+        [500, 690], [1160, 430], [1730, 1330],
+    ].forEach(([x, y]) => add('stump', x, y, 1));
+    return items;
 }
 
 function clamp(value, min, max) {
@@ -403,6 +432,9 @@ function update(dt, now) {
         updateEnemies(dt, now);
         updateQuest();
     }
+    updateParticles(dt);
+    updateFloatTexts(dt);
+    state.cameraShake = Math.max(0, state.cameraShake - dt * 36);
     updateCamera();
     render(now);
     requestAnimationFrame(loop);
@@ -450,26 +482,45 @@ function updateEnemies(dt, now) {
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
+        if (Math.abs(e.knockX) > 1 || Math.abs(e.knockY) > 1) {
+            moveEnemy(e, e.knockX * dt, e.knockY * dt);
+            e.knockX *= Math.pow(0.035, dt);
+            e.knockY *= Math.pow(0.035, dt);
+        }
         const p = state.player;
         const dist = distance(e, p);
-        if (dist < 330) {
+        if (e.strikeAt && now >= e.strikeAt) {
+            if (dist < e.radius + p.radius + e.range * 0.46 && now > p.invincibleUntil) {
+                const damage = Math.max(1, e.attack - state.equipment.defense);
+                p.hp = Math.max(0, p.hp - damage);
+                p.invincibleUntil = now + 620;
+                state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
+                spawnBurst(p.x, p.y, '#ff6b6b', 10, 170);
+                addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
+                showToast(`${e.name} 命中你，生命 -${damage}`);
+                if (p.hp <= 0) {
+                    state.lose = true;
+                    showToast('你倒下了。回到营地重新准备吧。');
+                }
+                renderHud();
+            }
+            e.strikeAt = 0;
+            e.windupUntil = 0;
+            e.attackCooldown = e.boss ? 1.0 : 1.35;
+        }
+
+        if (!e.windupUntil && dist < 330) {
             const dir = normalize(p.x - e.x, p.y - e.y);
             moveEnemy(e, dir.x * e.speed * dt, dir.y * e.speed * dt);
-        } else if (distance(e, { x: e.spawnX, y: e.spawnY }) > 18) {
+        } else if (!e.windupUntil && distance(e, { x: e.spawnX, y: e.spawnY }) > 18) {
             const dir = normalize(e.spawnX - e.x, e.spawnY - e.y);
             moveEnemy(e, dir.x * e.speed * 0.42 * dt, dir.y * e.speed * 0.42 * dt);
         }
 
-        if (dist < e.radius + p.radius + 12 && e.attackCooldown <= 0) {
-            const damage = Math.max(1, e.attack - state.equipment.defense);
-            p.hp = Math.max(0, p.hp - damage);
-            e.attackCooldown = e.boss ? 0.8 : 1.1;
-            showToast(`${e.name} 攻击了你，生命 -${damage}`);
-            if (p.hp <= 0) {
-                state.lose = true;
-                showToast('你倒下了。回到营地重新准备吧。');
-            }
-            renderHud();
+        if (!e.windupUntil && dist < e.radius + p.radius + e.range * 0.42 && e.attackCooldown <= 0) {
+            e.windupUntil = now + (e.boss ? 480 : 360);
+            e.strikeAt = now + (e.boss ? 360 : 250);
+            spawnBurst(e.x, e.y - 12, '#ffd166', 5, 80);
         }
 
         if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
@@ -484,6 +535,29 @@ function moveEnemy(e, dx, dy) {
 function updateCamera() {
     camera.x = clamp(state.player.x - VIEW.width / 2, 0, WORLD.width - VIEW.width);
     camera.y = clamp(state.player.y - VIEW.height / 2, 0, WORLD.height - VIEW.height);
+    if (state.cameraShake > 0) {
+        camera.x = clamp(camera.x + (Math.random() - 0.5) * state.cameraShake, 0, WORLD.width - VIEW.width);
+        camera.y = clamp(camera.y + (Math.random() - 0.5) * state.cameraShake, 0, WORLD.height - VIEW.height);
+    }
+}
+
+function updateParticles(dt) {
+    state.particles = state.particles.filter(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vx *= Math.pow(0.05, dt);
+        p.vy *= Math.pow(0.05, dt);
+        p.life -= dt;
+        return p.life > 0;
+    });
+}
+
+function updateFloatTexts(dt) {
+    state.floatTexts = state.floatTexts.filter(t => {
+        t.y -= 42 * dt;
+        t.life -= dt;
+        return t.life > 0;
+    });
 }
 
 function interact() {
@@ -515,9 +589,12 @@ function harvest(node) {
         ? state.equipment.woodPower
         : (node.gives === 'stone' ? state.equipment.stonePower : (node.gives === 'ore' ? state.equipment.orePower : 1));
     node.hp -= power;
+    node.shakeUntil = performance.now() + 140;
+    spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 6, 110);
     if (node.hp <= 0) {
         const amount = ({ wood: 4, stone: 4, fiber: 3, berry: 3, herb: 2, ore: 4 }[node.gives] || 1);
         state.inventory[node.gives] += amount;
+        addFloatText(`+${amount} ${RESOURCE_LABELS[node.gives]}`, node.x, node.y - 30, '#fff3b0');
         showToast(`采集成功：${RESOURCE_LABELS[node.gives]} x${amount}`);
     } else {
         showToast(`${resourceName(node.kind)} 剩余 ${Math.max(0, node.hp)}/${node.maxHp}`);
@@ -577,17 +654,64 @@ function attack(now = performance.now()) {
             break;
         }
     }
-    if (!hit) return;
+    spawnArcParticles(p.x, p.y, p.facing);
+    if (!hit) {
+        addFloatText('挥空', p.x + p.facing.x * 50, p.y + p.facing.y * 50, '#d8e5f2');
+        return;
+    }
 
     hit.hp -= state.equipment.attack;
     hit.hurtUntil = now + 160;
+    hit.knockX += p.facing.x * (hit.boss ? 130 : 240);
+    hit.knockY += p.facing.y * (hit.boss ? 130 : 240);
+    state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
+    spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220);
+    addFloatText(`-${state.equipment.attack}`, hit.x, hit.y - 36, '#fff3b0');
     if (hit.hp <= 0) {
         state.inventory[hit.drop] += hit.dropAmount;
+        spawnBurst(hit.x, hit.y, '#ffffff', 24, 260);
+        addFloatText(`+${hit.dropAmount} ${RESOURCE_LABELS[hit.drop]}`, hit.x, hit.y - 52, '#9cffb7');
         showToast(`击败 ${hit.name}，获得 ${RESOURCE_LABELS[hit.drop]} x${hit.dropAmount}`);
     } else {
         showToast(`${hit.name} 受伤，剩余 ${hit.hp}/${hit.maxHp}`);
     }
     renderHud();
+}
+
+function spawnBurst(x, y, color, count = 8, speed = 120) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = speed * (0.35 + Math.random() * 0.65);
+        state.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * velocity,
+            vy: Math.sin(angle) * velocity,
+            color,
+            size: 2 + Math.random() * 4,
+            life: 0.25 + Math.random() * 0.35,
+        });
+    }
+}
+
+function spawnArcParticles(x, y, dir) {
+    const base = Math.atan2(dir.y, dir.x);
+    for (let i = 0; i < 9; i++) {
+        const angle = base - 0.65 + i * 0.16;
+        state.particles.push({
+            x: x + Math.cos(angle) * 42,
+            y: y + Math.sin(angle) * 42,
+            vx: Math.cos(angle) * 80,
+            vy: Math.sin(angle) * 80,
+            color: '#fff3b0',
+            size: 3,
+            life: 0.16,
+        });
+    }
+}
+
+function addFloatText(text, x, y, color) {
+    state.floatTexts.push({ text, x, y, color, life: 0.85 });
 }
 
 function canCraft(item) {
@@ -668,6 +792,8 @@ function render(now) {
     ctx.clearRect(0, 0, VIEW.width, VIEW.height);
     drawTerrain();
     drawWorldObjects(now);
+    drawParticles();
+    drawFloatTexts();
     drawEffects(now);
     drawUiOverlay();
 }
@@ -676,7 +802,10 @@ function worldX(x) { return Math.round(x - camera.x); }
 function worldY(y) { return Math.round(y - camera.y); }
 
 function drawTerrain() {
-    ctx.fillStyle = '#2f7041';
+    const gradient = ctx.createLinearGradient(0, 0, 0, VIEW.height);
+    gradient.addColorStop(0, '#3f8b4c');
+    gradient.addColorStop(1, '#275a36');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     const grid = 80;
     const startX = Math.floor(camera.x / grid) * grid;
@@ -686,8 +815,10 @@ function drawTerrain() {
             const zone = terrainAt(x + grid / 2, y + grid / 2);
             ctx.fillStyle = zone;
             ctx.fillRect(worldX(x), worldY(y), grid, grid);
-            ctx.fillStyle = 'rgba(255,255,255,0.04)';
+            ctx.fillStyle = 'rgba(255,255,255,0.035)';
             if (((x / grid) + (y / grid)) % 3 === 0) ctx.fillRect(worldX(x) + 10, worldY(y) + 14, 18, 4);
+            ctx.fillStyle = 'rgba(0,0,0,0.045)';
+            if (((x / grid) + (y / grid)) % 4 === 0) ctx.fillRect(worldX(x) + 50, worldY(y) + 55, 16, 5);
         }
     }
 }
@@ -701,6 +832,7 @@ function terrainAt(x, y) {
 }
 
 function drawWorldObjects(now) {
+    drawDecorations();
     drawCamp();
     drawRuins();
     for (const r of state.resources) if (r.hp > 0) drawResource(r);
@@ -733,10 +865,11 @@ function drawRuins() {
 function drawResource(r) {
     const x = worldX(r.x);
     const y = worldY(r.y);
+    const shake = r.shakeUntil && performance.now() < r.shakeUntil ? Math.sin(performance.now() / 18) * 3 : 0;
     drawShadow(x, y + r.radius * 0.75, r.radius * 1.6, r.radius * 0.48);
     const sprite = r.kind === 'tree' ? 'tree' : (r.kind === 'rock' ? 'rock' : (r.kind === 'ore' ? 'ore' : r.kind));
     const scale = r.kind === 'tree' ? 4 : 3;
-    drawSprite(sprite, x - (SPRITES[sprite].w * scale) / 2, y - 34, scale);
+    drawSprite(sprite, x - (SPRITES[sprite].w * scale) / 2 + shake, y - 34, scale);
     drawMiniBar(x, y + r.radius + 10, r.hp / r.maxHp, '#ffd166');
 }
 
@@ -745,6 +878,13 @@ function drawEnemy(e, now) {
     const y = worldY(e.y);
     drawShadow(x, y + e.radius * 0.65, e.radius * 1.6, e.radius * 0.5);
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2);
+    if (e.windupUntil) {
+        ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.85)' : 'rgba(255, 209, 102, 0.85)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, e.radius + 16 + Math.sin(now / 42) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+    }
     if (e.hurtUntil) {
         ctx.globalAlpha = 0.72;
         drawSprite(e.kind, x - (SPRITES[e.kind].w * 3.2) / 2, y - 34 + bounce, 3.2, { tint: '#ffffff' });
@@ -761,14 +901,108 @@ function drawPlayer(now) {
     const y = worldY(p.y);
     drawShadow(x, y + 17, 35, 10);
     const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
+    if (p.invincibleUntil > now && Math.floor(now / 80) % 2 === 0) ctx.globalAlpha = 0.55;
     drawSprite('player', x - 32, y - 42 + step, 4);
+    ctx.globalAlpha = 1;
     if (p.attackUntil > now) {
-        ctx.strokeStyle = 'rgba(255, 209, 102, 0.95)';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.arc(x + p.facing.x * 30, y + p.facing.y * 30, state.equipment.range * 0.72, -0.7, 0.7);
-        ctx.stroke();
+        drawAttackSlash(x, y, p.facing, now);
     }
+}
+
+function drawDecorations() {
+    for (const item of state.decorations) {
+        const x = worldX(item.x);
+        const y = worldY(item.y);
+        if (x < -80 || y < -80 || x > VIEW.width + 80 || y > VIEW.height + 80) continue;
+        if (item.kind === 'water') {
+            ctx.fillStyle = COLORS.water1;
+            ctx.fillRect(x - 34, y - 14, 68, 28);
+            ctx.fillStyle = COLORS.water2;
+            ctx.fillRect(x - 24, y - 6, 24, 4);
+            ctx.fillRect(x + 8, y + 4, 18, 4);
+        } else if (item.kind === 'flowers') {
+            ctx.fillStyle = COLORS.grass2;
+            ctx.fillRect(x - 6, y + 3, 12, 8);
+            ctx.fillStyle = COLORS.flower1;
+            ctx.fillRect(x - 8, y - 4, 5, 5);
+            ctx.fillStyle = COLORS.flower2;
+            ctx.fillRect(x + 4, y - 6, 5, 5);
+            ctx.fillStyle = COLORS.herb;
+            ctx.fillRect(x - 1, y - 10, 4, 4);
+        } else if (item.kind === 'stump') {
+            drawShadow(x, y + 9, 28, 8);
+            ctx.fillStyle = COLORS.bark;
+            ctx.fillRect(x - 13, y - 4, 26, 16);
+            ctx.fillStyle = COLORS.trunk;
+            ctx.fillRect(x - 10, y - 9, 20, 8);
+            ctx.fillStyle = COLORS.gold;
+            ctx.fillRect(x - 4, y - 7, 8, 4);
+        } else if (item.kind === 'pebbles') {
+            ctx.fillStyle = COLORS.stone2;
+            ctx.fillRect(x - 13, y, 10, 7);
+            ctx.fillRect(x + 2, y - 5, 13, 9);
+            ctx.fillStyle = COLORS.stone1;
+            ctx.fillRect(x - 10, y - 2, 5, 2);
+            ctx.fillRect(x + 5, y - 7, 6, 2);
+        } else if (item.kind === 'crack') {
+            ctx.strokeStyle = 'rgba(20, 24, 29, 0.42)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x - 18, y - 5);
+            ctx.lineTo(x - 4, y + 1);
+            ctx.lineTo(x + 8, y - 2);
+            ctx.lineTo(x + 18, y + 8);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = COLORS.grass2;
+            ctx.fillRect(x - 8, y - 6, 4, 12);
+            ctx.fillRect(x, y - 10, 4, 16);
+            ctx.fillRect(x + 8, y - 5, 4, 10);
+        }
+    }
+}
+
+function drawAttackSlash(x, y, dir, now) {
+    const progress = 1 - Math.max(0, state.player.attackUntil - now) / 140;
+    const angle = Math.atan2(dir.y, dir.x);
+    ctx.save();
+    ctx.translate(x + dir.x * 34, y + dir.y * 34);
+    ctx.rotate(angle);
+    ctx.strokeStyle = 'rgba(255, 243, 176, 0.95)';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.arc(0, 0, state.equipment.range * 0.62, -0.85 + progress * 0.35, 0.55 + progress * 0.35);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 159, 28, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, state.equipment.range * 0.46, -0.65 + progress * 0.25, 0.42 + progress * 0.25);
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawParticles() {
+    for (const p of state.particles) {
+        const alpha = clamp(p.life / 0.6, 0, 1);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(worldX(p.x), worldY(p.y), p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawFloatTexts() {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 16px "Microsoft YaHei"';
+    for (const t of state.floatTexts) {
+        ctx.globalAlpha = clamp(t.life / 0.85, 0, 1);
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillText(t.text, worldX(t.x) + 1, worldY(t.y) + 1);
+        ctx.fillStyle = t.color;
+        ctx.fillText(t.text, worldX(t.x), worldY(t.y));
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
 }
 
 function drawEffects() {
