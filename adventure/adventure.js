@@ -338,24 +338,7 @@ function createState() {
             stonePower: 1,
             orePower: 1,
         },
-        resources: [
-            resource('tree', 430, 250, 'wood', 6, 34),
-            resource('tree', 520, 360, 'wood', 6, 34),
-            resource('tree', 760, 220, 'wood', 6, 34),
-            resource('tree', 1040, 430, 'wood', 6, 34),
-            resource('grass', 360, 510, 'fiber', 3, 22),
-            resource('grass', 610, 560, 'fiber', 3, 22),
-            resource('berry', 820, 620, 'berry', 3, 22),
-            resource('berry', 1090, 650, 'berry', 3, 22),
-            resource('herb', 1180, 310, 'herb', 3, 18),
-            resource('herb', 1320, 560, 'herb', 3, 18),
-            resource('rock', 1420, 880, 'stone', 7, 28),
-            resource('rock', 1580, 980, 'stone', 7, 28),
-            resource('rock', 1760, 800, 'stone', 7, 28),
-            resource('ore', 1780, 1080, 'ore', 8, 28),
-            resource('ore', 1980, 920, 'ore', 8, 28),
-            resource('ore', 2110, 1120, 'ore', 8, 28),
-        ],
+        resources: createResources(),
         enemies: [
             enemy('slime', '史莱姆', 900, 760, 18, 16, 1, 92, 26, 'fiber', 1),
             enemy('boar', '野猪', 1260, 710, 22, 28, 3, 135, 34, 'hide', 2),
@@ -378,6 +361,45 @@ function resource(kind, x, y, gives, hp, radius) {
     return { kind, x, y, gives, hp, maxHp: hp, radius };
 }
 
+function createResources() {
+    const resources = [];
+    const add = (kind, x, y, gives, hp, radius) => resources.push(resource(kind, x, y, gives, hp, radius));
+    const candidates = [
+        [360, 230], [430, 290], [520, 230], [610, 330], [700, 250], [790, 345], [880, 270], [960, 390], [1080, 440],
+        [320, 480], [470, 520], [650, 560], [820, 575], [1010, 610], [1160, 585], [1280, 520],
+    ];
+    for (const [x, y] of candidates) {
+        const info = terrainInfoAt(x, y);
+        if (info.kind === 'forest') add('tree', x, y, 'wood', 6, 34);
+        else if (info.kind === 'grass' || info.kind === 'camp') add('grass', x, y, 'fiber', 3, 18);
+    }
+
+    [
+        [410, 410], [560, 470], [740, 510], [970, 565], [1120, 665], [1340, 635],
+    ].forEach(([x, y], index) => add(index % 2 ? 'berry' : 'grass', x, y, index % 2 ? 'berry' : 'fiber', 3, index % 2 ? 22 : 18));
+
+    [
+        [500, 690], [1160, 430], [1730, 1330], [870, 430], [1030, 720],
+    ].forEach(([x, y]) => add('stump', x, y, 'wood', 3, 20));
+
+    [
+        [690, 780], [770, 860], [875, 940], [990, 1025], [1085, 1110],
+    ].forEach(([x, y]) => add('reed', x, y, 'fiber', 2, 16));
+
+    [
+        [1180, 310], [1320, 560], [1450, 660],
+    ].forEach(([x, y]) => add('herb', x, y, 'herb', 3, 18));
+
+    [
+        [1420, 880], [1580, 980], [1760, 800], [1870, 1210], [2110, 1320],
+    ].forEach(([x, y], index) => add(index < 3 ? 'rock' : 'ore', x, y, index < 3 ? 'stone' : 'ore', index < 3 ? 7 : 8, 28));
+    [
+        [1780, 1080], [1980, 920], [2110, 1120],
+    ].forEach(([x, y]) => add('ore', x, y, 'ore', 8, 28));
+
+    return resources.filter(item => terrainInfoAt(item.x, item.y).kind !== 'water');
+}
+
 function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmount, boss = false) {
     return { kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss, hurtUntil: 0, attackCooldown: 0, windupUntil: 0, strikeAt: 0, knockX: 0, knockY: 0 };
 }
@@ -392,12 +414,6 @@ function createDecorations() {
     [
         [1120, 1010], [1300, 910], [1660, 1190], [1910, 1040], [2040, 790],
     ].forEach(([x, y], index) => add(index % 2 ? 'pebbles' : 'crack', x, y, 1));
-    [
-        [690, 780], [770, 860], [875, 940], [990, 1025], [1085, 1110],
-    ].forEach(([x, y]) => add('reeds', x, y, 1));
-    [
-        [500, 690], [1160, 430], [1730, 1330],
-    ].forEach(([x, y]) => add('stump', x, y, 1));
     return items;
 }
 
@@ -452,11 +468,23 @@ function updatePlayer(dt) {
     if (dx || dy) {
         const dir = normalize(dx, dy);
         const sprinting = keys.has('Shift') && p.stamina > 0;
-        const speed = p.speed * (sprinting ? 1.55 : 1);
+        const terrain = terrainInfoAt(p.x, p.y);
+        const inWater = terrain.kind === 'water';
+        const speed = p.speed * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1);
         p.facing = dir;
         moveCircle(p, dir.x * speed * dt, dir.y * speed * dt);
+        if (inWater) {
+            const current = waterCurrentAt(p.x, p.y);
+            moveCircle(p, current.x * dt, current.y * dt);
+            spawnWaterRipple(p.x, p.y + 12);
+        }
         p.stamina = clamp(p.stamina + (sprinting ? -38 : 24) * dt, 0, 100);
     } else {
+        if (terrainInfoAt(p.x, p.y).kind === 'water') {
+            const current = waterCurrentAt(p.x, p.y);
+            moveCircle(p, current.x * 0.55 * dt, current.y * 0.55 * dt);
+            spawnWaterRipple(p.x, p.y + 12);
+        }
         p.stamina = clamp(p.stamina + 30 * dt, 0, 100);
     }
 
@@ -471,12 +499,16 @@ function moveCircle(entity, dx, dy) {
 }
 
 function collides(entity) {
-    if (terrainInfoAt(entity.x, entity.y).kind === 'water') return true;
     for (const r of state.resources) {
+        if (!isSolidResource(r)) continue;
         if (r.hp > 0 && distance(entity, r) < entity.radius + r.radius * (r.kind === 'tree' ? 0.42 : 0.72)) return true;
     }
     if (distance(entity, state.ruins) < entity.radius + state.ruins.radius && !state.ruins.opened) return true;
     return false;
+}
+
+function isSolidResource(item) {
+    return item.kind === 'tree' || item.kind === 'rock' || item.kind === 'ore';
 }
 
 function updateEnemies(dt, now) {
@@ -845,6 +877,13 @@ function riverDistance(x, y) {
     return Math.abs(y - riverCenterY(x));
 }
 
+function waterCurrentAt(x, y) {
+    return {
+        x: 42 + Math.sin(y * 0.012) * 18,
+        y: Math.cos(x * 0.006) * 16,
+    };
+}
+
 function regionWeight(x, y, cx, cy, radius) {
     const d = Math.hypot(x - cx, y - cy);
     return clamp(1 - d / radius, 0, 1);
@@ -950,6 +989,19 @@ function drawWaterHighlights(now) {
     }
 }
 
+function spawnWaterRipple(x, y) {
+    if (Math.random() > 0.38) return;
+    state.particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 20,
+        vy: (Math.random() - 0.5) * 8,
+        color: 'rgba(170, 230, 255, 0.75)',
+        size: 2 + Math.random() * 3,
+        life: 0.18 + Math.random() * 0.18,
+    });
+}
+
 function drawWorldObjects(now) {
     drawDecorations();
     const drawables = [
@@ -989,12 +1041,49 @@ function drawResource(r) {
     const x = worldX(r.x);
     const y = worldY(r.y);
     const shake = r.shakeUntil && performance.now() < r.shakeUntil ? Math.sin(performance.now() / 18) * 3 : 0;
-    const sprite = r.kind === 'tree' ? 'tree' : (r.kind === 'rock' ? 'rock' : (r.kind === 'ore' ? 'ore' : r.kind));
-    const scale = r.kind === 'tree' ? 5.4 : (r.kind === 'ore' ? 3.5 : 3.2);
-    drawShadow(x, y + 2, r.radius * (r.kind === 'tree' ? 1.35 : 1.85), r.radius * 0.46);
-    if (r.kind === 'ore' || r.kind === 'rock') drawGroundContact(x, y, r.kind);
-    drawSpriteGrounded(sprite, x + shake, y + (r.kind === 'tree' ? 6 : 0), scale);
-    drawMiniBar(x, y + 16, r.hp / r.maxHp, '#ffd166');
+    const sprite = r.kind === 'tree' ? 'tree' : (r.kind === 'rock' ? 'rock' : (r.kind === 'ore' ? 'ore' : (SPRITES[r.kind] ? r.kind : null)));
+    if (sprite) {
+        const scale = r.kind === 'tree' ? 5.8 : (r.kind === 'ore' ? 3.5 : 3.2);
+        drawShadow(x, y + 2, r.radius * (r.kind === 'tree' ? 1.35 : 1.85), r.radius * 0.46);
+        if (r.kind === 'ore' || r.kind === 'rock') drawGroundContact(x, y, r.kind);
+        drawSpriteGrounded(sprite, x + shake, y + (r.kind === 'tree' ? 6 : 0), scale);
+    } else {
+        drawGatherablePatch(r, x + shake, y);
+    }
+    if (r.hp < r.maxHp || isSolidResource(r)) drawMiniBar(x, y + 16, r.hp / r.maxHp, '#ffd166');
+}
+
+function drawGatherablePatch(r, x, y) {
+    if (r.kind === 'stump') {
+        drawShadow(x, y + 3, 32, 10);
+        ctx.fillStyle = COLORS.bark;
+        ctx.fillRect(x - 15, y - 13, 30, 17);
+        ctx.fillStyle = COLORS.trunk;
+        ctx.fillRect(x - 12, y - 18, 24, 9);
+        ctx.fillStyle = COLORS.gold;
+        ctx.fillRect(x - 5, y - 16, 10, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(x - 2, y - 15, 5, 2);
+        return;
+    }
+    if (r.kind === 'reed') {
+        drawShadow(x, y + 3, 26, 7);
+        ctx.fillStyle = '#5d7b3a';
+        ctx.fillRect(x - 12, y - 27, 4, 28);
+        ctx.fillRect(x - 1, y - 34, 4, 35);
+        ctx.fillRect(x + 10, y - 24, 4, 25);
+        ctx.fillStyle = '#c79649';
+        ctx.fillRect(x - 2, y - 38, 6, 8);
+        return;
+    }
+    drawShadow(x, y + 2, 30, 8);
+    ctx.fillStyle = r.kind === 'berry' ? COLORS.grass2 : COLORS.grass1;
+    ctx.fillRect(x - 14, y - 17, 5, 18);
+    ctx.fillRect(x - 4, y - 24, 5, 25);
+    ctx.fillRect(x + 8, y - 16, 5, 17);
+    ctx.fillStyle = r.kind === 'berry' ? COLORS.berry : (r.kind === 'herb' ? COLORS.herb : COLORS.grass2);
+    ctx.fillRect(x - 9, y - 24, 6, 6);
+    ctx.fillRect(x + 4, y - 28, 6, 6);
 }
 
 function drawEnemy(e, now) {
@@ -1226,7 +1315,7 @@ function drawGroundContact(x, y, kind) {
 }
 
 function resourceName(kind) {
-    return { tree: '树木', rock: '岩石', grass: '草丛', berry: '浆果丛', herb: '草药', ore: '铁矿' }[kind] || '资源';
+    return { tree: '树木', stump: '树桩', rock: '岩石', grass: '草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', ore: '铁矿' }[kind] || '资源';
 }
 
 function loop(now) {
