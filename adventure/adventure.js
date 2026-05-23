@@ -403,6 +403,7 @@ function createState() {
         floatTexts: [],
         cameraShake: 0,
         selectedHotbar: 0,
+        inventoryOpen: false,
         quest: 'collect-basic',
         win: false,
         lose: false,
@@ -575,7 +576,7 @@ function showToast(message) {
 }
 
 function update(dt, now) {
-    if (!state.win && !state.lose) {
+    if (!state.inventoryOpen && !state.win && !state.lose) {
         updatePlayer(dt, now);
         updateHarvestHold(dt);
         updateEnemies(dt, now);
@@ -1254,6 +1255,23 @@ function renderHud() {
 
     const objective = document.getElementById('objective-text');
     if (objective) objective.textContent = questText();
+    updateInventoryOverlay();
+}
+
+function updateInventoryOverlay() {
+    const overlay = document.getElementById('inventory-overlay');
+    if (!overlay) return;
+    overlay.classList.toggle('hidden', !state.inventoryOpen);
+    overlay.setAttribute('aria-hidden', state.inventoryOpen ? 'false' : 'true');
+}
+
+function toggleInventory(force = null) {
+    state.inventoryOpen = force === null ? !state.inventoryOpen : !!force;
+    if (state.inventoryOpen) {
+        mouse.down = false;
+        resetHarvestHold();
+    }
+    renderHud();
 }
 
 function canUseInventoryItem(key) {
@@ -1918,7 +1936,16 @@ function loop(now) {
 
 window.addEventListener('keydown', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'Shift'].includes(key)) event.preventDefault();
+    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'i', 'I', 'Escape', 'Shift'].includes(key)) event.preventDefault();
+    if (key === 'i') {
+        toggleInventory();
+        return;
+    }
+    if (key === 'Escape' && state.inventoryOpen) {
+        toggleInventory(false);
+        return;
+    }
+    if (state.inventoryOpen) return;
     if (/^[1-9]$/.test(key)) {
         const index = Number(key) - 1;
         state.selectedHotbar = index;
@@ -1961,6 +1988,7 @@ canvas.addEventListener('mousemove', event => {
 });
 
 canvas.addEventListener('mousedown', () => {
+    if (state.inventoryOpen) return;
     mouse.down = true;
     attack();
 });
@@ -1973,6 +2001,12 @@ document.getElementById('restart-btn').addEventListener('click', () => {
     state = createState();
     showToast('新的冒险开始了。先收集木头和石头修复营地。');
     renderHud();
+});
+
+document.getElementById('inventory-close-btn').addEventListener('click', () => toggleInventory(false));
+
+document.getElementById('inventory-overlay').addEventListener('click', event => {
+    if (event.target.id === 'inventory-overlay') toggleInventory(false);
 });
 
 renderHud();

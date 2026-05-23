@@ -18,7 +18,7 @@
                 <span>交互：按 E</span>
                 <span>攻击：鼠标左键 / 空格</span>
                 <span>冲刺：Shift</span>
-                <span>合成：点击右侧配方</span>
+                <span>背包/合成：I</span>
             </div>
         </section>
 
@@ -39,16 +39,6 @@
                 </div>
 
                 <div class="panel">
-                    <h2>背包</h2>
-                    <div id="inventory"></div>
-                </div>
-
-                <div class="panel">
-                    <h2>合成表</h2>
-                    <div id="recipes"></div>
-                </div>
-
-                <div class="panel">
                     <h2>目标</h2>
                     <p id="objective-text">采集木头和石头，准备修复营地篝火。</p>
                     <ol>
@@ -62,6 +52,28 @@
             </aside>
         </section>
     </main>
+
+    <div id="inventory-overlay" class="hidden" aria-hidden="true">
+        <section id="inventory-window" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
+            <header id="inventory-header">
+                <div>
+                    <p class="eyebrow">背包 · 合成</p>
+                    <h2 id="inventory-title">物品栏</h2>
+                </div>
+                <button id="inventory-close-btn" type="button">关闭</button>
+            </header>
+            <div id="inventory-layout">
+                <section class="inventory-section">
+                    <h3>已获得物品</h3>
+                    <div id="inventory"></div>
+                </section>
+                <section class="inventory-section">
+                    <h3>合成栏</h3>
+                    <div id="recipes"></div>
+                </section>
+            </div>
+        </section>
+    </div>
 
     <script src="adventure.js"></script>
 </body>
