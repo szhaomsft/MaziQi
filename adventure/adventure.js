@@ -342,12 +342,7 @@ function createState() {
             orePower: 1,
         },
         resources: createResources(),
-        enemies: [
-            enemy('slime', '史莱姆', 900, 760, 18, 16, 1, 92, 26, 'fiber', 1),
-            enemy('boar', '野猪', 1260, 710, 22, 28, 3, 135, 34, 'hide', 2),
-            enemy('boar', '野猪', 1550, 560, 22, 28, 3, 135, 34, 'hide', 2),
-            enemy('golem', '守门石像', 1980, 520, 28, 55, 5, 78, 42, 'crystal', 3, true),
-        ],
+        enemies: createEnemies(),
         camp: { x: 260, y: 230, radius: 70, repaired: false },
         ruins: { x: 2110, y: 330, radius: 58, opened: false },
         decorations: createDecorations(),
@@ -378,7 +373,7 @@ function createResources() {
         resources.push(resource(kind, x, y, gives, hp, radius));
     };
 
-    for (let y = 180; y <= 1320; y += 72) {
+    for (let y = 180; y <= 1500; y += 72) {
         for (let x = 250; x <= 2180; x += 76) {
             const jitterX = (hash2(x * 0.07, y * 0.07) - 0.5) * 46;
             const jitterY = (hash2(x * 0.05 + 8, y * 0.05 - 2) - 0.5) * 44;
@@ -422,7 +417,51 @@ function createResources() {
 }
 
 function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmount, boss = false) {
-    return { kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss, hurtUntil: 0, attackCooldown: 0, windupUntil: 0, strikeAt: 0, knockX: 0, knockY: 0 };
+    return {
+        kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss,
+        hurtUntil: 0,
+        attackCooldown: 0,
+        windupUntil: 0,
+        strikeAt: 0,
+        attackDir: { x: 0, y: 1 },
+        chargeUntil: 0,
+        chargeHit: false,
+        knockX: 0,
+        knockY: 0,
+    };
+}
+
+function createEnemies() {
+    const enemies = [];
+    const campPoint = { x: 260, y: 230 };
+    const ruinsPoint = { x: 2110, y: 330 };
+    const add = item => {
+        if (terrainInfoAt(item.x, item.y).kind === 'water') return;
+        if (distance(item, campPoint) < 260) return;
+        if (item.kind !== 'golem' && distance(item, ruinsPoint) < 180) return;
+        if (enemies.some(enemyItem => distance(enemyItem, item) < enemyItem.radius + item.radius + 110)) return;
+        enemies.push(item);
+    };
+    for (let y = 260; y <= 1480; y += 170) {
+        for (let x = 300; x <= 2200; x += 190) {
+            const px = x + (hash2(x * 0.03, y * 0.03) - 0.5) * 95;
+            const py = y + (hash2(x * 0.04 + 6, y * 0.04 - 4) - 0.5) * 95;
+            const info = terrainInfoAt(px, py);
+            const n = valueNoise(px * 0.01 + 4, py * 0.01 - 3);
+            if ((info.kind === 'grass' || info.kind === 'shore' || info.kind === 'camp') && n > 0.67) {
+                add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, 'fiber', 1));
+            } else if (info.kind === 'forest' && n > 0.48) {
+                add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, 'hide', 2));
+            } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.58) {
+                add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, 'crystal', 1));
+            }
+        }
+    }
+    add(enemy('golem', '守门石像', 1980, 520, 28, 55, 5, 78, 92, 'crystal', 3, true));
+    if (!enemies.some(item => item.kind === 'boar' && item.x < 800 && item.y > 1050)) {
+        add(enemy('boar', '野猪', 560, 1260, 22, 28, 3, 135, 68, 'hide', 2));
+    }
+    return enemies;
 }
 
 function createDecorations() {
@@ -537,6 +576,17 @@ function updateEnemies(dt, now) {
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
+        if (e.chargeUntil > now) {
+            moveEnemy(e, e.attackDir.x * e.speed * 3.2 * dt, e.attackDir.y * e.speed * 3.2 * dt);
+            if (!e.chargeHit && distance(e, state.player) < e.radius + state.player.radius + 10) {
+                applyEnemyDamage(e, e.attack + 1, '冲撞');
+                e.chargeHit = true;
+            }
+            continue;
+        } else if (e.chargeUntil) {
+            e.chargeUntil = 0;
+            e.attackCooldown = 1.25;
+        }
         if (Math.abs(e.knockX) > 1 || Math.abs(e.knockY) > 1) {
             moveEnemy(e, e.knockX * dt, e.knockY * dt);
             e.knockX *= Math.pow(0.035, dt);
@@ -545,23 +595,7 @@ function updateEnemies(dt, now) {
         const p = state.player;
         const dist = distance(e, p);
         if (e.strikeAt && now >= e.strikeAt) {
-            if (dist < e.radius + p.radius + e.range * 0.46 && now > p.invincibleUntil) {
-                const damage = Math.max(1, e.attack - state.equipment.defense);
-                p.hp = Math.max(0, p.hp - damage);
-                p.invincibleUntil = now + 620;
-                state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
-                spawnBurst(p.x, p.y, '#ff6b6b', 10, 170, p.radius * 0.55);
-                addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
-                showToast(`${e.name} 命中你，生命 -${damage}`);
-                if (p.hp <= 0) {
-                    state.lose = true;
-                    showToast('你倒下了。回到营地重新准备吧。');
-                }
-                renderHud();
-            }
-            e.strikeAt = 0;
-            e.windupUntil = 0;
-            e.attackCooldown = e.boss ? 1.0 : 1.35;
+            resolveEnemyAttack(e, now);
         }
 
         if (!e.windupUntil && dist < 330) {
@@ -572,14 +606,67 @@ function updateEnemies(dt, now) {
             moveEnemy(e, dir.x * e.speed * 0.42 * dt, dir.y * e.speed * 0.42 * dt);
         }
 
-        if (!e.windupUntil && dist < e.radius + p.radius + e.range * 0.42 && e.attackCooldown <= 0) {
-            e.windupUntil = now + (e.boss ? 480 : 360);
-            e.strikeAt = now + (e.boss ? 360 : 250);
-            spawnBurst(e.x, e.y - 12, '#ffd166', 5, 80, e.radius * 0.45);
+        if (!e.windupUntil && dist < e.radius + p.radius + e.range && e.attackCooldown <= 0) {
+            startEnemyAttack(e, now);
         }
 
         if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
     }
+}
+
+function startEnemyAttack(e, now) {
+    e.attackDir = normalize(state.player.x - e.x, state.player.y - e.y);
+    e.chargeHit = false;
+    if (e.kind === 'slime') {
+        e.windupUntil = now + 420;
+        e.strikeAt = now + 320;
+    } else if (e.kind === 'boar') {
+        e.windupUntil = now + 560;
+        e.strikeAt = now + 420;
+    } else {
+        e.windupUntil = now + (e.boss ? 760 : 620);
+        e.strikeAt = now + (e.boss ? 560 : 450);
+    }
+    spawnBurst(e.x, e.y - 12, e.kind === 'golem' ? '#b77dff' : '#ffd166', 5, 80, e.radius * 0.45);
+}
+
+function resolveEnemyAttack(e, now) {
+    const p = state.player;
+    if (e.kind === 'slime') {
+        moveEnemy(e, e.attackDir.x * 72, e.attackDir.y * 72);
+        if (distance(e, p) < e.radius + p.radius + 18) applyEnemyDamage(e, e.attack, '跳扑');
+        spawnBurst(e.x, e.y, '#5ee089', 10, 110, e.radius);
+        e.attackCooldown = 1.15;
+    } else if (e.kind === 'boar') {
+        e.chargeUntil = now + 430;
+        e.chargeHit = false;
+        e.attackCooldown = 1.4;
+    } else {
+        const slamRadius = e.boss ? 112 : 86;
+        state.cameraShake = Math.max(state.cameraShake, e.boss ? 16 : 10);
+        spawnBurst(e.x, e.y, '#b77dff', e.boss ? 28 : 18, 180, slamRadius * 0.42);
+        if (distance(e, p) < slamRadius) applyEnemyDamage(e, e.attack, '震地');
+        e.attackCooldown = e.boss ? 1.5 : 1.8;
+    }
+    e.strikeAt = 0;
+    e.windupUntil = 0;
+}
+
+function applyEnemyDamage(e, rawDamage, verb) {
+    const p = state.player;
+    if (performance.now() <= p.invincibleUntil) return;
+    const damage = Math.max(1, rawDamage - state.equipment.defense);
+    p.hp = Math.max(0, p.hp - damage);
+    p.invincibleUntil = performance.now() + 620;
+    state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
+    spawnBurst(p.x, p.y, '#ff6b6b', 10, 170, p.radius * 0.55);
+    addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
+    showToast(`${e.name}${verb ? ` ${verb}` : ''}命中你，生命 -${damage}`);
+    if (p.hp <= 0) {
+        state.lose = true;
+        showToast('你倒下了。回到营地重新准备吧。');
+    }
+    renderHud();
 }
 
 function moveEnemy(e, dx, dy) {
@@ -975,7 +1062,7 @@ function terrainInfoAt(x, y) {
 
     const mine = regionWeight(x, y, 1760, 1010, 620);
     const ruins = regionWeight(x, y, 2060, 360, 560);
-    const forest = regionWeight(x, y, 780, 340, 620);
+    const forest = Math.max(regionWeight(x, y, 780, 340, 620), regionWeight(x, y, 520, 1290, 540));
     const camp = regionWeight(x, y, 250, 230, 360);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
@@ -1215,11 +1302,7 @@ function drawEnemy(e, now) {
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2);
     drawShadow(x, y + 1, e.radius * 1.62, e.radius * 0.42);
     if (e.windupUntil) {
-        ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.85)' : 'rgba(255, 209, 102, 0.85)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(x, y, e.radius + 16 + Math.sin(now / 42) * 3, 0, Math.PI * 2);
-        ctx.stroke();
+        drawEnemyTelegraph(e, x, y, now);
     }
     if (e.hurtUntil) {
         ctx.globalAlpha = 0.72;
@@ -1229,6 +1312,38 @@ function drawEnemy(e, now) {
         drawSpriteGrounded(e.kind, x, y + bounce, 3.2);
     }
     drawMiniBar(x, y + e.radius + 10, e.hp / e.maxHp, '#ff6b6b');
+}
+
+function drawEnemyTelegraph(e, x, y, now) {
+    const pulse = Math.sin(now / 42) * 3;
+    if (e.kind === 'boar') {
+        ctx.strokeStyle = 'rgba(255, 92, 92, 0.75)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + e.attackDir.x * 125, y + e.attackDir.y * 125);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 92, 92, 0.16)';
+        ctx.beginPath();
+        ctx.ellipse(x + e.attackDir.x * 65, y + e.attackDir.y * 65, 24, 70, Math.atan2(e.attackDir.y, e.attackDir.x), 0, Math.PI * 2);
+        ctx.fill();
+    } else if (e.kind === 'slime') {
+        ctx.strokeStyle = 'rgba(94, 224, 137, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x + e.attackDir.x * 62, y + e.attackDir.y * 62, e.radius + 20 + pulse, e.radius + 9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    } else {
+        ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.9)' : 'rgba(183, 125, 255, 0.7)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(x, y, (e.boss ? 112 : 86) + pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(183, 125, 255, 0.1)';
+        ctx.beginPath();
+        ctx.arc(x, y, e.boss ? 112 : 86, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
 function drawPlayer(now) {
