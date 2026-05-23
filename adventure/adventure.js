@@ -426,6 +426,13 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
         attackDir: { x: 0, y: 1 },
         chargeUntil: 0,
         chargeHit: false,
+        leapStartAt: 0,
+        leapUntil: 0,
+        leapStartX: x,
+        leapStartY: y,
+        leapTargetX: x,
+        leapTargetY: y,
+        leapHit: false,
         knockX: 0,
         knockY: 0,
     };
@@ -576,8 +583,27 @@ function updateEnemies(dt, now) {
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
+        if (e.leapUntil > now) {
+            const progress = clamp((now - e.leapStartAt) / Math.max(1, e.leapUntil - e.leapStartAt), 0, 1);
+            const arc = Math.sin(progress * Math.PI);
+            e.x = lerp(e.leapStartX, e.leapTargetX, progress);
+            e.y = lerp(e.leapStartY, e.leapTargetY, progress) - arc * 10;
+            if (!e.leapHit && progress > 0.55 && distance(e, state.player) < e.radius + state.player.radius + 18) {
+                applyEnemyDamage(e, e.attack, '跳扑');
+                e.leapHit = true;
+            }
+            if (Math.random() < 0.45) spawnBurst(e.x, e.y + e.radius, '#5ee089', 1, 42, e.radius * 0.3);
+            continue;
+        } else if (e.leapUntil) {
+            e.x = e.leapTargetX;
+            e.y = e.leapTargetY;
+            e.leapUntil = 0;
+            e.attackCooldown = 1.15;
+            spawnBurst(e.x, e.y, '#5ee089', 10, 110, e.radius);
+        }
         if (e.chargeUntil > now) {
             moveEnemy(e, e.attackDir.x * e.speed * 3.2 * dt, e.attackDir.y * e.speed * 3.2 * dt);
+            if (Math.random() < 0.7) spawnBurst(e.x - e.attackDir.x * 18, e.y - e.attackDir.y * 18, '#c89a6a', 1, 70, e.radius * 0.35);
             if (!e.chargeHit && distance(e, state.player) < e.radius + state.player.radius + 10) {
                 applyEnemyDamage(e, e.attack + 1, '冲撞');
                 e.chargeHit = true;
@@ -612,6 +638,7 @@ function updateEnemies(dt, now) {
 
         if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
     }
+    separateEnemies();
 }
 
 function startEnemyAttack(e, now) {
@@ -633,10 +660,13 @@ function startEnemyAttack(e, now) {
 function resolveEnemyAttack(e, now) {
     const p = state.player;
     if (e.kind === 'slime') {
-        moveEnemy(e, e.attackDir.x * 72, e.attackDir.y * 72);
-        if (distance(e, p) < e.radius + p.radius + 18) applyEnemyDamage(e, e.attack, '跳扑');
-        spawnBurst(e.x, e.y, '#5ee089', 10, 110, e.radius);
-        e.attackCooldown = 1.15;
+        e.leapStartAt = now;
+        e.leapUntil = now + 260;
+        e.leapStartX = e.x;
+        e.leapStartY = e.y;
+        e.leapTargetX = clamp(e.x + e.attackDir.x * 92, e.radius, WORLD.width - e.radius);
+        e.leapTargetY = clamp(e.y + e.attackDir.y * 92, e.radius, WORLD.height - e.radius);
+        e.leapHit = false;
     } else if (e.kind === 'boar') {
         e.chargeUntil = now + 430;
         e.chargeHit = false;
@@ -650,6 +680,32 @@ function resolveEnemyAttack(e, now) {
     }
     e.strikeAt = 0;
     e.windupUntil = 0;
+}
+
+function separateEnemies() {
+    const alive = state.enemies.filter(item => item.hp > 0);
+    for (let i = 0; i < alive.length; i++) {
+        for (let j = i + 1; j < alive.length; j++) {
+            const a = alive[i];
+            const b = alive[j];
+            const minDist = a.radius + b.radius + 4;
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            if (dist >= minDist) continue;
+            const push = (minDist - dist) * 0.5;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            if (!a.chargeUntil && !a.leapUntil) {
+                a.x = clamp(a.x - nx * push, a.radius, WORLD.width - a.radius);
+                a.y = clamp(a.y - ny * push, a.radius, WORLD.height - a.radius);
+            }
+            if (!b.chargeUntil && !b.leapUntil) {
+                b.x = clamp(b.x + nx * push, b.radius, WORLD.width - b.radius);
+                b.y = clamp(b.y + ny * push, b.radius, WORLD.height - b.radius);
+            }
+        }
+    }
 }
 
 function applyEnemyDamage(e, rawDamage, verb) {
@@ -844,8 +900,10 @@ function attack(now = performance.now()) {
     p.stamina = Math.max(0, p.stamina - staminaCost);
     p.attackCooldown = weaponCooldown();
     p.attackUntil = now + 160;
-    const aim = normalize(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2);
-    const attackDir = Math.hypot(mouse.x - VIEW.width / 2, mouse.y - VIEW.height / 2) > 18 ? aim : p.facing;
+    const playerScreenX = worldX(p.x);
+    const playerScreenY = worldY(p.y);
+    const aim = normalize(mouse.x - playerScreenX, mouse.y - playerScreenY);
+    const attackDir = Math.hypot(mouse.x - playerScreenX, mouse.y - playerScreenY) > 18 ? aim : p.facing;
     p.attackDir = attackDir;
     p.facing = attackDir;
     const strike = { x: p.x + attackDir.x * p.radius, y: p.y + attackDir.y * p.radius };
@@ -1299,17 +1357,20 @@ function drawGatherablePatch(r, x, y) {
 function drawEnemy(e, now) {
     const x = worldX(e.x);
     const y = worldY(e.y);
-    const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2);
+    const leapProgress = e.leapUntil > now ? clamp((now - e.leapStartAt) / Math.max(1, e.leapUntil - e.leapStartAt), 0, 1) : 0;
+    const leapLift = e.leapUntil > now ? Math.sin(leapProgress * Math.PI) * 18 : 0;
+    const chargeLean = e.chargeUntil > now ? 8 : 0;
+    const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2) - leapLift;
     drawShadow(x, y + 1, e.radius * 1.62, e.radius * 0.42);
     if (e.windupUntil) {
         drawEnemyTelegraph(e, x, y, now);
     }
     if (e.hurtUntil) {
         ctx.globalAlpha = 0.72;
-        drawSpriteGrounded(e.kind, x, y + bounce, 3.2, { tint: '#ffffff' });
+        drawSpriteGrounded(e.kind, x + e.attackDir.x * chargeLean, y + bounce, 3.2, { tint: '#ffffff' });
         ctx.globalAlpha = 1;
     } else {
-        drawSpriteGrounded(e.kind, x, y + bounce, 3.2);
+        drawSpriteGrounded(e.kind, x + e.attackDir.x * chargeLean, y + bounce, 3.2);
     }
     drawMiniBar(x, y + e.radius + 10, e.hp / e.maxHp, '#ff6b6b');
 }
@@ -1318,15 +1379,11 @@ function drawEnemyTelegraph(e, x, y, now) {
     const pulse = Math.sin(now / 42) * 3;
     if (e.kind === 'boar') {
         ctx.strokeStyle = 'rgba(255, 92, 92, 0.75)';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + e.attackDir.x * 125, y + e.attackDir.y * 125);
+        ctx.moveTo(x + e.attackDir.x * 22, y + e.attackDir.y * 22);
+        ctx.lineTo(x + e.attackDir.x * 130, y + e.attackDir.y * 130);
         ctx.stroke();
-        ctx.fillStyle = 'rgba(255, 92, 92, 0.16)';
-        ctx.beginPath();
-        ctx.ellipse(x + e.attackDir.x * 65, y + e.attackDir.y * 65, 24, 70, Math.atan2(e.attackDir.y, e.attackDir.x), 0, Math.PI * 2);
-        ctx.fill();
     } else if (e.kind === 'slime') {
         ctx.strokeStyle = 'rgba(94, 224, 137, 0.9)';
         ctx.lineWidth = 3;
