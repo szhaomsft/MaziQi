@@ -1629,7 +1629,22 @@ function riverCenterY(x) {
 }
 
 function riverDistance(x, y) {
-    return Math.abs(y - riverCenterY(x));
+    const mainRiver = Math.abs(y - riverCenterY(x));
+    const easternBranch = Math.abs(y - (1120 + Math.sin(x * 0.003 + 2.1) * 78 + Math.sin(x * 0.008) * 28))
+        + rangePenalty(x, 2200, 5200) * 1.8;
+    const northCreek = Math.abs(y - (430 + Math.sin(x * 0.005 + 0.8) * 52))
+        + rangePenalty(x, 2800, 6200) * 2.2;
+    const southRiver = Math.abs(y - (3160 + Math.sin(x * 0.0028 + 1.4) * 105))
+        + rangePenalty(x, 3600, WORLD.width) * 1.5;
+    const verticalStream = Math.abs(x - (3840 + Math.sin(y * 0.004) * 95))
+        + rangePenalty(y, 980, 3520) * 1.6;
+    return Math.min(mainRiver, easternBranch, northCreek, southRiver, verticalStream);
+}
+
+function rangePenalty(value, min, max) {
+    if (value < min) return min - value;
+    if (value > max) return value - max;
+    return 0;
 }
 
 function waterCurrentAt(x, y) {
