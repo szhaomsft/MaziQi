@@ -1,6 +1,10 @@
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
+const lightCanvas = document.createElement('canvas');
+lightCanvas.width = canvas.width;
+lightCanvas.height = canvas.height;
+const lightCtx = lightCanvas.getContext('2d');
 
 const WORLD = { width: 6400, height: 4400 };
 const VIEW = { width: canvas.width, height: canvas.height };
@@ -988,7 +992,8 @@ function updateWolfPackMember(e, dt, now, dist) {
         const cautious = e.attackCooldown > 0.2 ? 0.85 : 1.05;
         moveEnemy(e, toTarget.x * e.speed * cautious * dt, toTarget.y * e.speed * cautious * dt);
     }
-    const canBite = now >= pack.nextBiteAt && e.attackCooldown <= 0 && dist < 78 && (e.packRole === 'leader' || e.packRole === 'left' || e.packRole === 'right');
+    const biteRange = e.packRole === 'rear' ? 150 : 92;
+    const canBite = now >= pack.nextBiteAt && e.attackCooldown <= 0 && dist < biteRange;
     if (!e.windupUntil && canBite) startEnemyAttack(e, now);
     return true;
 }
@@ -2154,6 +2159,25 @@ function drawEnemyTelegraph(e, x, y, now) {
             y + e.attackDir.y * 96
         );
         ctx.stroke();
+    } else if (e.kind === 'frog') {
+        ctx.strokeStyle = 'rgba(92, 220, 120, 0.78)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x + e.attackDir.x * 50, y + e.attackDir.y * 50, e.radius + 10 + pulse * 0.35, e.radius * 0.55 + 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    } else if (e.kind === 'scorpion') {
+        const angle = Math.atan2(e.attackDir.y, e.attackDir.x);
+        ctx.save();
+        ctx.translate(x + e.attackDir.x * 30, y + e.attackDir.y * 30);
+        ctx.rotate(angle);
+        ctx.strokeStyle = 'rgba(255, 170, 74, 0.82)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-8, -6);
+        ctx.lineTo(20 + pulse, 0);
+        ctx.lineTo(-8, 6);
+        ctx.stroke();
+        ctx.restore();
     } else {
         ctx.strokeStyle = e.boss ? 'rgba(183, 125, 255, 0.9)' : 'rgba(183, 125, 255, 0.7)';
         ctx.lineWidth = 4;
@@ -2339,24 +2363,26 @@ function nightAmount() {
 function drawNightOverlay() {
     const darkness = nightAmount();
     if (darkness <= 0.01) return;
-    ctx.save();
-    ctx.fillStyle = `rgba(4, 10, 26, ${0.58 * darkness})`;
-    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    lightCtx.clearRect(0, 0, VIEW.width, VIEW.height);
+    lightCtx.globalCompositeOperation = 'source-over';
+    lightCtx.fillStyle = `rgba(4, 10, 26, ${0.58 * darkness})`;
+    lightCtx.fillRect(0, 0, VIEW.width, VIEW.height);
     const lights = [
         { x: state.player.x, y: state.player.y, radius: state.equipment.utility === '火把' ? 210 : 110 },
         { x: state.camp.x, y: state.camp.y, radius: state.camp.repaired ? 230 : 120 },
     ];
-    ctx.globalCompositeOperation = 'destination-out';
+    lightCtx.globalCompositeOperation = 'destination-out';
     for (const light of lights) {
-        const gradient = ctx.createRadialGradient(worldX(light.x), worldY(light.y), 18, worldX(light.x), worldY(light.y), light.radius);
+        const gradient = lightCtx.createRadialGradient(worldX(light.x), worldY(light.y), 18, worldX(light.x), worldY(light.y), light.radius);
         gradient.addColorStop(0, `rgba(255,255,255,${0.9 * darkness})`);
         gradient.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(worldX(light.x), worldY(light.y), light.radius, 0, Math.PI * 2);
-        ctx.fill();
+        lightCtx.fillStyle = gradient;
+        lightCtx.beginPath();
+        lightCtx.arc(worldX(light.x), worldY(light.y), light.radius, 0, Math.PI * 2);
+        lightCtx.fill();
     }
-    ctx.restore();
+    lightCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(lightCanvas, 0, 0);
 }
 
 function drawHarvestProgress() {
