@@ -1904,6 +1904,29 @@ function drawTerrainDetail(x, y, grid, info) {
         }
         return;
     }
+    if (info.kind === 'swamp') {
+        ctx.fillStyle = h > 0.5 ? 'rgba(25, 82, 68, 0.28)' : 'rgba(8, 26, 22, 0.22)';
+        ctx.fillRect(sx + 4 + (h * 11) % 12, sy + 14, 22, 6);
+        if (h > 0.68) {
+            ctx.fillStyle = 'rgba(180, 120, 190, 0.22)';
+            ctx.fillRect(sx + 17, sy + 8, 6, 6);
+        }
+        return;
+    }
+    if (info.kind === 'dry') {
+        ctx.fillStyle = 'rgba(90, 56, 28, 0.24)';
+        ctx.fillRect(sx + 5, sy + 12 + h * 10, 22, 3);
+        if (h > 0.62) {
+            ctx.strokeStyle = 'rgba(75, 46, 25, 0.28)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(sx + 10, sy + 22);
+            ctx.lineTo(sx + 16, sy + 18);
+            ctx.lineTo(sx + 24, sy + 25);
+            ctx.stroke();
+        }
+        return;
+    }
     if (info.kind === 'forest') {
         ctx.fillStyle = h > 0.5 ? 'rgba(32, 22, 12, 0.18)' : 'rgba(132, 87, 43, 0.16)';
         ctx.fillRect(sx + 7, sy + 18, 14, 5);
