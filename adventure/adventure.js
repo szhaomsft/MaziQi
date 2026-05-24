@@ -2847,14 +2847,31 @@ canvas.addEventListener('mousemove', event => {
     mouse.y = (event.clientY - rect.top) * (canvas.height / rect.height);
 });
 
-canvas.addEventListener('mousedown', () => {
+canvas.addEventListener('contextmenu', event => {
+    event.preventDefault();
+});
+
+canvas.addEventListener('mousedown', event => {
     if (state.inventoryOpen) return;
+    if (event.button === 2) {
+        mouse.blocking = true;
+        return;
+    }
     mouse.down = true;
     attack();
 });
 
-canvas.addEventListener('mouseup', () => {
+canvas.addEventListener('mouseup', event => {
+    if (event.button === 2) {
+        mouse.blocking = false;
+        return;
+    }
     mouse.down = false;
+});
+
+canvas.addEventListener('mouseleave', () => {
+    mouse.down = false;
+    mouse.blocking = false;
 });
 
 document.getElementById('restart-btn').addEventListener('click', () => {
