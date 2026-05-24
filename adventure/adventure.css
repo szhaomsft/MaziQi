@@ -255,6 +255,14 @@ button.inventory-row {
     cursor: pointer;
 }
 
+ .inventory-row.draggable {
+    cursor: grab;
+}
+
+ .inventory-row.draggable:active {
+    cursor: grabbing;
+}
+
 button.inventory-row:hover {
     border-color: rgba(255, 209, 102, 0.65);
     background: rgba(255, 209, 102, 0.12);
@@ -271,7 +279,82 @@ button.inventory-row:hover {
     height: 34px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.08);
-    font-size: 21px;
+}
+
+.pixel-icon {
+    position: relative;
+    display: inline-block;
+    image-rendering: pixelated;
+}
+
+.pixel-icon span,
+.pixel-icon i {
+    position: absolute;
+    display: block;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.inventory-hint {
+    margin: -4px 0 10px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+#hotbar-drop-zone {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(42px, 1fr));
+    gap: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hotbar-drop-slot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 52px;
+    padding: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.22);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.hotbar-drop-slot.selected,
+.hotbar-drop-slot.drop-target {
+    border-color: rgba(255, 209, 102, 0.85);
+    background: rgba(255, 209, 102, 0.14);
+}
+
+.hotbar-drop-slot small {
+    position: absolute;
+    left: 4px;
+    top: 2px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.hotbar-drop-slot span:not(.pixel-icon) {
+    max-width: 100%;
+    overflow: hidden;
+    color: #d8e5f2;
+    font-size: 10px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hotbar-drop-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.recipe-pixel-icon {
+    width: 16px;
+    height: 16px;
 }
 
 .inventory-name {
