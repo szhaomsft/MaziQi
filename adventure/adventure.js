@@ -904,9 +904,11 @@ function updateEnemies(dt, now) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
         }
-        if (e.kind === 'wolf' && updateWolfPackMember(e, dt, now, dist)) {
+        if (e.kind === 'wolf') {
+            const handled = updateWolfPackMember(e, dt, now, dist);
+            if (e.strikeAt && now >= e.strikeAt) resolveEnemyAttack(e, now);
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
-            continue;
+            if (handled) continue;
         }
         if (e.retreatUntil > now) {
             const away = normalize(e.x - p.x, e.y - p.y);
@@ -1030,7 +1032,10 @@ function updateWolfPackMember(e, dt, now, dist) {
     }
     const biteRange = e.packRole === 'rear' ? 150 : 92;
     const canBite = now >= pack.nextBiteAt && e.attackCooldown <= 0 && dist < biteRange;
-    if (!e.windupUntil && canBite) startEnemyAttack(e, now);
+    if (!e.windupUntil && canBite) {
+        startEnemyAttack(e, now);
+        return false;
+    }
     return true;
 }
 
