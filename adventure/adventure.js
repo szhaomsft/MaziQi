@@ -909,10 +909,6 @@ function updateEnemies(dt, now) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
-        if (terrainInfoAt(e.x, e.y).kind === 'water' && e.kind !== 'bat') {
-            const current = waterCurrentAt(e.x, e.y);
-            moveEnemy(e, current.x * 0.35 * dt, current.y * 0.35 * dt);
-        }
         const p = state.player;
         const dist = distance(e, p);
         if (dist > 1400 && e.kind !== 'wolf' && !e.boss && e.rootedUntil <= now && !e.chargeUntil && !e.leapUntil && !e.swoopUntil) {
@@ -1262,6 +1258,12 @@ function getBlockResult(e, rawDamage, verb) {
 }
 
 function moveEnemy(e, dx, dy) {
+    if (e.kind !== 'bat' && terrainInfoAt(e.x, e.y).kind === 'water') {
+        const current = waterCurrentAt(e.x, e.y);
+        dx = dx * 0.45 + (current.x / 60) * 1.6;
+        dy = dy * 0.45 + (current.y / 60) * 1.6;
+        if (Math.random() < 0.25) spawnWaterRipple(e.x, e.y + e.radius * 0.5);
+    }
     e.x = clamp(e.x + dx, e.radius, WORLD.width - e.radius);
     e.y = clamp(e.y + dy, e.radius, WORLD.height - e.radius);
 }
