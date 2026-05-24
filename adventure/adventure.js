@@ -8,9 +8,12 @@ const lightCtx = lightCanvas.getContext('2d');
 
 const WORLD = { width: 6400, height: 4400 };
 const VIEW = { width: canvas.width, height: canvas.height };
+const TERRAIN_CHUNK_SIZE = 256;
+const MAX_PARTICLES = 220;
 const keys = new Set();
 const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false };
 const camera = { x: 0, y: 0 };
+const terrainChunkCache = new Map();
 let toastTimer = null;
 let lastTime = performance.now();
 let state = createState();
@@ -19,6 +22,7 @@ const RESOURCE_LABELS = {
     wood: '木头',
     stone: '石头',
     fiber: '纤维',
+    pebble: '小石子',
     berry: '浆果',
     herb: '草药',
     mushroom: '蘑菇',
@@ -38,8 +42,13 @@ const RESOURCE_LABELS = {
     stoneSpear: '石矛',
     ironSword: '铁剑',
     crystalBlade: '魔晶剑',
+    venomDagger: '毒牙匕首',
     leatherArmor: '皮甲',
     ironArmor: '铁甲',
+    crystalArmor: '魔晶甲',
+    woodShield: '木盾',
+    ironShield: '铁盾',
+    coalBomb: '煤火弹',
     torch: '火把',
     bedroll: '睡袋',
     campCharm: '营地护符',
@@ -57,6 +66,7 @@ const RESOURCE_ICONS = {
     wood: '🪵',
     stone: '🪨',
     fiber: '🌾',
+    pebble: '▫',
     berry: '🍓',
     herb: '🌿',
     mushroom: '🍄',
@@ -76,8 +86,13 @@ const RESOURCE_ICONS = {
     stoneSpear: '🔱',
     ironSword: '⚔',
     crystalBlade: '🗡',
+    venomDagger: '🔪',
     leatherArmor: '🥋',
     ironArmor: '🛡',
+    crystalArmor: '💠',
+    woodShield: '◧',
+    ironShield: '◨',
+    coalBomb: '💣',
     torch: '🔥',
     bedroll: '🛏',
     campCharm: '✨',
@@ -142,6 +157,21 @@ const RECIPES = [
     recipe('crystalBlade', '魔晶剑', '高伤害长剑', { ironSword: 1, crystal: 4, fang: 2 }, game => {
         game.inventory.crystalBlade += 1;
     }, game => game.inventory.crystalBlade > 0 || game.equipment.weapon === '魔晶剑'),
+    recipe('venomDagger', '毒牙匕首', '快攻短武器', { fang: 2, venom: 2, wood: 1 }, game => {
+        game.inventory.venomDagger += 1;
+    }, game => game.inventory.venomDagger > 0 || game.equipment.weapon === '毒牙匕首'),
+    recipe('woodShield', '木盾', '轻量格挡', { wood: 5, hide: 1 }, game => {
+        game.inventory.woodShield += 1;
+    }, game => game.inventory.woodShield > 0 || game.equipment.shield === '木盾'),
+    recipe('ironShield', '铁盾', '强力格挡', { wood: 2, ore: 4, coal: 1 }, game => {
+        game.inventory.ironShield += 1;
+    }, game => game.inventory.ironShield > 0 || game.equipment.shield === '铁盾'),
+    recipe('crystalArmor', '魔晶甲', '高防御护甲', { ironArmor: 1, crystal: 3, slimeGel: 2 }, game => {
+        game.inventory.crystalArmor += 1;
+    }, game => game.inventory.crystalArmor > 0 || game.equipment.armor === '魔晶甲'),
+    recipe('coalBomb', '煤火弹', '范围伤害道具', { coal: 3, slimeGel: 1, fiber: 1 }, game => {
+        game.inventory.coalBomb += 1;
+    }, () => false),
     recipe('roastMeat', '烤肉', '恢复 40 生命', { meat: 1, coal: 1 }, game => {
         game.inventory.roastMeat += 1;
     }, () => false),
@@ -498,11 +528,12 @@ function createState() {
             harvestBlockedAt: 0,
             speedBoostUntil: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, leatherArmor: 0, ironArmor: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, speedPotion: 0, roastMeat: 0, key: 0 },
+        inventory: { wood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, leatherArmor: 0, ironArmor: 0, crystalArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, speedPotion: 0, roastMeat: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
             armor: '布衣',
+            shield: '无',
             attack: 1,
             range: 42,
             defense: 0,
@@ -564,6 +595,7 @@ function createResources() {
                 if (n > 0.72) add('berry', px, py, 'berry', 3, 22);
                 else if (n > 0.42) add('grass', px, py, 'fiber', 3, 18);
                 else if (n > 0.32) add(n > 0.37 ? 'herb' : 'flower', px, py, n > 0.37 ? 'herb' : 'flower', 3, 18);
+                else if (n > 0.18) add('pebble', px, py, 'stone', 2, 10);
             } else if (info.kind === 'shore') {
                 if (n > 0.32) add('reed', px, py, 'fiber', 2, 16);
             } else if (info.kind === 'swamp') {
@@ -860,6 +892,10 @@ function updateEnemies(dt, now) {
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
         const p = state.player;
         const dist = distance(e, p);
+        if (dist > 1400 && e.kind !== 'wolf' && !e.boss && e.rootedUntil <= now && !e.chargeUntil && !e.leapUntil && !e.swoopUntil) {
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
+        }
         if (e.kind === 'bat' && nightAmount() < 0.18) {
             if (distance(e, { x: e.spawnX, y: e.spawnY }) > 20) {
                 const home = normalize(e.spawnX - e.x, e.spawnY - e.y);
@@ -1442,7 +1478,7 @@ function spawnBurst(x, y, color, count = 8, speed = 120, spread = 0) {
         const angle = Math.random() * Math.PI * 2;
         const offset = Math.random() * spread;
         const velocity = speed * (0.35 + Math.random() * 0.65);
-        state.particles.push({
+        addParticle({
             x: x + Math.cos(angle) * offset,
             y: y + Math.sin(angle) * offset * 0.65,
             vx: Math.cos(angle) * velocity,
@@ -1458,7 +1494,7 @@ function spawnArcParticles(x, y, dir) {
     const base = Math.atan2(dir.y, dir.x);
     for (let i = 0; i < 9; i++) {
         const angle = base - 0.65 + i * 0.16;
-        state.particles.push({
+        addParticle({
             x: x + Math.cos(angle) * 42,
             y: y + Math.sin(angle) * 42,
             vx: Math.cos(angle) * 80,
@@ -1472,6 +1508,13 @@ function spawnArcParticles(x, y, dir) {
 
 function addFloatText(text, x, y, color) {
     state.floatTexts.push({ text, x, y, color, life: 0.85 });
+}
+
+function addParticle(particle) {
+    state.particles.push(particle);
+    if (state.particles.length > MAX_PARTICLES) {
+        state.particles.splice(0, state.particles.length - MAX_PARTICLES);
+    }
 }
 
 function canCraft(item) {
@@ -1508,6 +1551,9 @@ function useInventoryItem(key) {
         case 'stoneSpear':
             equipWeapon('石矛', 3, 86, '已装备石矛。');
             break;
+        case 'venomDagger':
+            equipWeapon('毒牙匕首', 4, 42, '已装备毒牙匕首。');
+            break;
         case 'ironSword':
             equipWeapon('铁剑', 6, 68, '已装备铁剑。');
             break;
@@ -1519,6 +1565,18 @@ function useInventoryItem(key) {
             break;
         case 'ironArmor':
             equipArmor('铁甲', 2, '已装备铁甲。');
+            break;
+        case 'crystalArmor':
+            equipArmor('魔晶甲', 3, '已装备魔晶甲。');
+            break;
+        case 'woodShield':
+            equipShield('木盾', 1, '已装备木盾。');
+            break;
+        case 'ironShield':
+            equipShield('铁盾', 2, '已装备铁盾。');
+            break;
+        case 'coalBomb':
+            useCoalBomb();
             break;
         case 'torch':
             state.equipment.utility = '火把';
@@ -1587,8 +1645,45 @@ function equipWeapon(name, attack, range, message) {
 
 function equipArmor(name, defense, message) {
     state.equipment.armor = name;
-    state.equipment.defense = defense;
+    state.equipment.defense = defense + shieldDefense();
     showToast(message);
+}
+
+function equipShield(name, defense, message) {
+    state.equipment.shield = name;
+    state.equipment.defense = armorDefense() + defense;
+    showToast(message);
+}
+
+function armorDefense() {
+    if (state.equipment.armor === '魔晶甲') return 3;
+    if (state.equipment.armor === '铁甲') return 2;
+    if (state.equipment.armor === '皮甲') return 1;
+    return 0;
+}
+
+function shieldDefense() {
+    if (state.equipment.shield === '铁盾') return 2;
+    if (state.equipment.shield === '木盾') return 1;
+    return 0;
+}
+
+function useCoalBomb() {
+    const p = state.player;
+    state.inventory.coalBomb -= 1;
+    let hitCount = 0;
+    for (const enemy of state.enemies) {
+        if (enemy.hp <= 0 || distance(enemy, p) > 150) continue;
+        enemy.hp -= 8;
+        enemy.hurtUntil = performance.now() + 220;
+        enemy.knockX += normalize(enemy.x - p.x, enemy.y - p.y).x * 260;
+        enemy.knockY += normalize(enemy.x - p.x, enemy.y - p.y).y * 260;
+        hitCount++;
+    }
+    state.cameraShake = Math.max(state.cameraShake, 16);
+    spawnBurst(p.x, p.y, '#ff9f1c', 48, 300, 120);
+    showToast(hitCount ? `煤火弹击中了 ${hitCount} 个敌人。` : '煤火弹爆炸，但没有击中敌人。');
+    renderHud();
 }
 
 function deploySnare() {
@@ -1638,7 +1733,7 @@ function renderHud() {
     document.getElementById('hp-bar').style.width = `${(state.player.hp / state.player.maxHp) * 100}%`;
     document.getElementById('attack-label').textContent = state.equipment.attack;
     document.getElementById('tool-label').textContent = state.equipment.tool;
-    document.getElementById('armor-label').textContent = state.equipment.armor;
+    document.getElementById('armor-label').textContent = state.equipment.shield === '无' ? state.equipment.armor : `${state.equipment.armor}+${state.equipment.shield}`;
     document.getElementById('time-label').textContent = nightAmount() > 0.2 ? '黑夜' : '白天';
 
     const inventory = document.getElementById('inventory');
@@ -1715,7 +1810,7 @@ function toggleInventory(force = null) {
 }
 
 function canUseInventoryItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'speedPotion', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
+    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'leatherArmor', 'ironArmor', 'crystalArmor', 'woodShield', 'ironShield', 'coalBomb', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'speedPotion', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
 }
 
 function recipeHasKnownMaterial(recipe) {
@@ -1737,20 +1832,41 @@ function worldX(x) { return Math.round(x - camera.x); }
 function worldY(y) { return Math.round(y - camera.y); }
 
 function drawTerrain() {
-    ctx.fillStyle = '#2d7141';
-    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-    const grid = 32;
-    const startX = Math.floor(camera.x / grid) * grid;
-    const startY = Math.floor(camera.y / grid) * grid;
-    for (let y = startY; y < camera.y + VIEW.height + grid; y += grid) {
-        for (let x = startX; x < camera.x + VIEW.width + grid; x += grid) {
-            const info = terrainInfoAt(x + grid / 2, y + grid / 2);
-            ctx.fillStyle = info.color;
-            ctx.fillRect(worldX(x), worldY(y), grid, grid);
-            drawTerrainDetail(x, y, grid, info);
+    const startChunkX = Math.floor(camera.x / TERRAIN_CHUNK_SIZE);
+    const endChunkX = Math.floor((camera.x + VIEW.width) / TERRAIN_CHUNK_SIZE);
+    const startChunkY = Math.floor(camera.y / TERRAIN_CHUNK_SIZE);
+    const endChunkY = Math.floor((camera.y + VIEW.height) / TERRAIN_CHUNK_SIZE);
+    for (let cy = startChunkY; cy <= endChunkY; cy++) {
+        for (let cx = startChunkX; cx <= endChunkX; cx++) {
+            const chunk = getTerrainChunk(cx, cy);
+            ctx.drawImage(chunk, Math.round(cx * TERRAIN_CHUNK_SIZE - camera.x), Math.round(cy * TERRAIN_CHUNK_SIZE - camera.y));
         }
     }
     drawWaterHighlights(performance.now());
+}
+
+function getTerrainChunk(cx, cy) {
+    const key = `${cx},${cy}`;
+    if (terrainChunkCache.has(key)) return terrainChunkCache.get(key);
+    const chunk = document.createElement('canvas');
+    chunk.width = TERRAIN_CHUNK_SIZE;
+    chunk.height = TERRAIN_CHUNK_SIZE;
+    const chunkCtx = chunk.getContext('2d');
+    const grid = 32;
+    const baseX = cx * TERRAIN_CHUNK_SIZE;
+    const baseY = cy * TERRAIN_CHUNK_SIZE;
+    for (let y = 0; y < TERRAIN_CHUNK_SIZE; y += grid) {
+        for (let x = 0; x < TERRAIN_CHUNK_SIZE; x += grid) {
+            const worldTileX = baseX + x;
+            const worldTileY = baseY + y;
+            const info = terrainInfoAt(worldTileX + grid / 2, worldTileY + grid / 2);
+            chunkCtx.fillStyle = info.color;
+            chunkCtx.fillRect(x, y, grid, grid);
+            drawTerrainDetailAt(chunkCtx, x, y, grid, info, hash2(worldTileX / grid, worldTileY / grid));
+        }
+    }
+    terrainChunkCache.set(key, chunk);
+    return chunk;
 }
 
 function terrainInfoAt(x, y) {
@@ -1887,58 +2003,62 @@ function drawTerrainDetail(x, y, grid, info) {
     const sx = worldX(x);
     const sy = worldY(y);
     const h = hash2(x / grid, y / grid);
+    drawTerrainDetailAt(ctx, sx, sy, grid, info, h);
+}
+
+function drawTerrainDetailAt(target, sx, sy, grid, info, h) {
     if (info.kind === 'water') return;
     if (info.kind === 'shore') {
-        ctx.fillStyle = h > 0.5 ? 'rgba(230, 206, 145, 0.22)' : 'rgba(70, 105, 65, 0.2)';
-        ctx.fillRect(sx + 6 + (h * 9) % 16, sy + 12, 20, 4);
+        target.fillStyle = h > 0.5 ? 'rgba(230, 206, 145, 0.22)' : 'rgba(70, 105, 65, 0.2)';
+        target.fillRect(sx + 6 + (h * 9) % 16, sy + 12, 20, 4);
         return;
     }
     if (info.kind === 'mine') {
-        ctx.fillStyle = 'rgba(20, 24, 29, 0.22)';
-        ctx.fillRect(sx + 6, sy + 8 + h * 12, 12 + h * 14, 4);
-        if (h > 0.58) ctx.fillRect(sx + 22, sy + 24, 7, 6);
+        target.fillStyle = 'rgba(20, 24, 29, 0.22)';
+        target.fillRect(sx + 6, sy + 8 + h * 12, 12 + h * 14, 4);
+        if (h > 0.58) target.fillRect(sx + 22, sy + 24, 7, 6);
         return;
     }
     if (info.kind === 'ruins') {
-        ctx.strokeStyle = 'rgba(18, 24, 34, 0.22)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(sx + 2, sy + 2, grid - 4, grid - 4);
+        target.strokeStyle = 'rgba(18, 24, 34, 0.22)';
+        target.lineWidth = 2;
+        target.strokeRect(sx + 2, sy + 2, grid - 4, grid - 4);
         if (h > 0.7) {
-            ctx.fillStyle = 'rgba(183, 125, 255, 0.12)';
-            ctx.fillRect(sx + 12, sy + 8, 8, 8);
+            target.fillStyle = 'rgba(183, 125, 255, 0.12)';
+            target.fillRect(sx + 12, sy + 8, 8, 8);
         }
         return;
     }
     if (info.kind === 'swamp') {
-        ctx.fillStyle = h > 0.5 ? 'rgba(25, 82, 68, 0.28)' : 'rgba(8, 26, 22, 0.22)';
-        ctx.fillRect(sx + 4 + (h * 11) % 12, sy + 14, 22, 6);
+        target.fillStyle = h > 0.5 ? 'rgba(25, 82, 68, 0.28)' : 'rgba(8, 26, 22, 0.22)';
+        target.fillRect(sx + 4 + (h * 11) % 12, sy + 14, 22, 6);
         if (h > 0.68) {
-            ctx.fillStyle = 'rgba(180, 120, 190, 0.22)';
-            ctx.fillRect(sx + 17, sy + 8, 6, 6);
+            target.fillStyle = 'rgba(180, 120, 190, 0.22)';
+            target.fillRect(sx + 17, sy + 8, 6, 6);
         }
         return;
     }
     if (info.kind === 'dry') {
-        ctx.fillStyle = 'rgba(90, 56, 28, 0.24)';
-        ctx.fillRect(sx + 5, sy + 12 + h * 10, 22, 3);
+        target.fillStyle = 'rgba(90, 56, 28, 0.24)';
+        target.fillRect(sx + 5, sy + 12 + h * 10, 22, 3);
         if (h > 0.62) {
-            ctx.strokeStyle = 'rgba(75, 46, 25, 0.28)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(sx + 10, sy + 22);
-            ctx.lineTo(sx + 16, sy + 18);
-            ctx.lineTo(sx + 24, sy + 25);
-            ctx.stroke();
+            target.strokeStyle = 'rgba(75, 46, 25, 0.28)';
+            target.lineWidth = 2;
+            target.beginPath();
+            target.moveTo(sx + 10, sy + 22);
+            target.lineTo(sx + 16, sy + 18);
+            target.lineTo(sx + 24, sy + 25);
+            target.stroke();
         }
         return;
     }
     if (info.kind === 'forest') {
-        ctx.fillStyle = h > 0.5 ? 'rgba(32, 22, 12, 0.18)' : 'rgba(132, 87, 43, 0.16)';
-        ctx.fillRect(sx + 7, sy + 18, 14, 5);
+        target.fillStyle = h > 0.5 ? 'rgba(32, 22, 12, 0.18)' : 'rgba(132, 87, 43, 0.16)';
+        target.fillRect(sx + 7, sy + 18, 14, 5);
         return;
     }
-    ctx.fillStyle = h > 0.5 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
-    ctx.fillRect(sx + 8, sy + 10 + h * 12, 14, 4);
+    target.fillStyle = h > 0.5 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
+    target.fillRect(sx + 8, sy + 10 + h * 12, 14, 4);
 }
 
 function drawWaterHighlights(now) {
@@ -1960,7 +2080,7 @@ function spawnWaterRipple(x, y) {
     if (Math.random() > 0.38) return;
     const angle = Math.random() * Math.PI * 2;
     const offset = Math.random() * 14;
-    state.particles.push({
+    addParticle({
         x: x + Math.cos(angle) * offset,
         y: y + Math.sin(angle) * offset * 0.45,
         vx: (Math.random() - 0.5) * 20,
@@ -1974,14 +2094,21 @@ function spawnWaterRipple(x, y) {
 function drawWorldObjects(now) {
     drawDecorations();
     const drawables = [
-        { y: state.camp.y, draw: () => drawCamp() },
-        { y: state.ruins.y, draw: () => drawRuins() },
-        ...state.resources.filter(r => r.hp > 0).map(r => ({ y: r.y, draw: () => drawResource(r) })),
-        ...state.enemies.filter(e => e.hp > 0).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
+        ...(isNearView(state.camp, 160) ? [{ y: state.camp.y, draw: () => drawCamp() }] : []),
+        ...(isNearView(state.ruins, 220) ? [{ y: state.ruins.y, draw: () => drawRuins() }] : []),
+        ...state.resources.filter(r => r.hp > 0 && isNearView(r, 180)).map(r => ({ y: r.y, draw: () => drawResource(r) })),
+        ...state.enemies.filter(e => e.hp > 0 && isNearView(e, 220)).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
         { y: state.player.y, draw: () => drawPlayer(now) },
     ];
     drawables.sort((a, b) => a.y - b.y);
     drawables.forEach(item => item.draw());
+}
+
+function isNearView(item, margin = 0) {
+    return item.x >= camera.x - margin
+        && item.x <= camera.x + VIEW.width + margin
+        && item.y >= camera.y - margin
+        && item.y <= camera.y + VIEW.height + margin;
 }
 
 function drawCamp() {
@@ -2086,6 +2213,14 @@ function drawGatherablePatch(r, x, y) {
         return;
     }
     drawShadow(x, y + 1, 28, 6);
+    if (r.kind === 'pebble') {
+        drawShadow(x, y + 1, 20, 5);
+        ctx.fillStyle = COLORS.stone2;
+        ctx.fillRect(x - 8, y - 7, 16, 8);
+        ctx.fillStyle = COLORS.stone1;
+        ctx.fillRect(x - 5, y - 9, 8, 3);
+        return;
+    }
     ctx.fillStyle = r.kind === 'berry' ? COLORS.grass2 : COLORS.grass1;
     ctx.fillRect(x - 14, y - 17, 5, 18);
     ctx.fillRect(x - 4, y - 24, 5, 25);
@@ -2558,7 +2693,7 @@ function drawGroundContact(x, y, kind) {
 }
 
 function resourceName(kind) {
-    return { tree: '树木', stump: '树桩', rock: '岩石', grass: '草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', flower: '野花', lotus: '莲花', cactus: '仙人掌', ore: '铁矿' }[kind] || '资源';
+    return { tree: '树木', stump: '树桩', rock: '岩石', pebble: '小石子', grass: '草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', flower: '野花', lotus: '莲花', cactus: '仙人掌', ore: '铁矿' }[kind] || '资源';
 }
 
 function loop(now) {
