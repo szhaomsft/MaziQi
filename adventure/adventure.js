@@ -1639,19 +1639,26 @@ function renderHud() {
     const inventory = document.getElementById('inventory');
     inventory.innerHTML = '';
     Object.entries(RESOURCE_LABELS).forEach(([key, label]) => {
+        if (!state.inventory[key]) return;
         const row = document.createElement(canUseInventoryItem(key) ? 'button' : 'div');
         row.className = 'inventory-row';
         if (row.tagName === 'BUTTON') row.type = 'button';
-        row.classList.toggle('empty', !state.inventory[key]);
         row.classList.toggle('usable', canUseInventoryItem(key));
         row.innerHTML = `<span class="inventory-icon">${RESOURCE_ICONS[key] || '•'}</span><span class="inventory-name">${label}</span><strong>${state.inventory[key] || 0}</strong>`;
         if (canUseInventoryItem(key)) row.addEventListener('click', () => useInventoryItem(key));
         inventory.appendChild(row);
     });
+    if (!inventory.children.length) {
+        const empty = document.createElement('div');
+        empty.className = 'inventory-empty';
+        empty.textContent = '暂未获得物品';
+        inventory.appendChild(empty);
+    }
 
     const recipes = document.getElementById('recipes');
     recipes.innerHTML = '';
-    const sortedRecipes = RECIPES.slice().sort((a, b) => {
+    const visibleRecipes = RECIPES.filter(recipe => recipeHasKnownMaterial(recipe));
+    const sortedRecipes = visibleRecipes.slice().sort((a, b) => {
         const aCraft = canCraft(a) ? 0 : 1;
         const bCraft = canCraft(b) ? 0 : 1;
         if (aCraft !== bCraft) return aCraft - bCraft;
@@ -1674,6 +1681,12 @@ function renderHud() {
         button.addEventListener('click', () => craft(item.id));
         recipes.appendChild(button);
     });
+    if (!recipes.children.length) {
+        const empty = document.createElement('div');
+        empty.className = 'inventory-empty';
+        empty.textContent = '获得材料后会显示相关合成方式';
+        recipes.appendChild(empty);
+    }
 
     const objective = document.getElementById('objective-text');
     if (objective) objective.textContent = questText();
@@ -1698,6 +1711,10 @@ function toggleInventory(force = null) {
 
 function canUseInventoryItem(key) {
     return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'leatherArmor', 'ironArmor', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'speedPotion', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
+}
+
+function recipeHasKnownMaterial(recipe) {
+    return Object.keys(recipe.cost).some(key => (state.inventory[key] || 0) > 0);
 }
 
 function render(now) {
