@@ -8,10 +8,11 @@ const lightCtx = lightCanvas.getContext('2d');
 
 const WORLD = { width: 6400, height: 4400 };
 const VIEW = { width: canvas.width, height: canvas.height };
+const CAMP_POSITION = { x: WORLD.width / 2, y: WORLD.height / 2 };
 const TERRAIN_CHUNK_SIZE = 256;
 const MAX_PARTICLES = 220;
 const keys = new Set();
-const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false };
+const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false, blocking: false };
 const camera = { x: 0, y: 0 };
 const terrainChunkCache = new Map();
 let toastTimer = null;
@@ -509,8 +510,8 @@ function recipe(id, name, desc, cost, apply, owned) {
 function createState() {
     return {
         player: {
-            x: 280,
-            y: 260,
+            x: CAMP_POSITION.x + 80,
+            y: CAMP_POSITION.y + 40,
             radius: 17,
             speed: 190,
             hp: 100,
@@ -518,6 +519,7 @@ function createState() {
             stamina: 100,
             knockX: 0,
             knockY: 0,
+            blocking: false,
             facing: { x: 1, y: 0 },
             attackUntil: 0,
             attackDir: { x: 1, y: 0 },
@@ -544,11 +546,12 @@ function createState() {
         },
         resources: createResources(),
         enemies: createEnemies(),
-        camp: { x: 260, y: 230, radius: 70, repaired: false },
+        camp: { x: CAMP_POSITION.x, y: CAMP_POSITION.y, radius: 70, repaired: false },
         ruins: { x: 2110, y: 330, radius: 58, opened: false },
         decorations: createDecorations(),
         particles: [],
         floatTexts: [],
+        placedTorches: [],
         cameraShake: 0,
         selectedHotbar: 0,
         inventoryOpen: false,
@@ -567,7 +570,7 @@ function resource(kind, x, y, gives, hp, radius) {
 
 function createResources() {
     const resources = [];
-    const campPoint = { x: 260, y: 230 };
+    const campPoint = CAMP_POSITION;
     const ruinsPoint = { x: 2110, y: 330 };
     const add = (kind, x, y, gives, hp, radius) => {
         const point = { x, y };
@@ -624,6 +627,7 @@ function createResources() {
         [5200, 3140, 'ore'], [5700, 3600, 'rock'], [6100, 3920, 'ore'],
         [6000, 2320, 'rock'], [6200, 2500, 'ore'], [5840, 2620, 'ore'],
         [3880, 2860, 'reed'], [4300, 3080, 'reed'],
+        [CAMP_POSITION.x + 180, CAMP_POSITION.y + 90, 'tree'], [CAMP_POSITION.x - 160, CAMP_POSITION.y + 130, 'stump'], [CAMP_POSITION.x + 220, CAMP_POSITION.y - 160, 'rock'],
     ].forEach(([x, y, kind]) => {
         const config = {
             tree: ['wood', 6, 34],
@@ -836,7 +840,9 @@ function updatePlayer(dt, now) {
         const terrain = terrainInfoAt(p.x, p.y);
         const inWater = terrain.kind === 'water';
         const boost = performance.now() < p.speedBoostUntil ? 1.32 : 1;
-        const speed = p.speed * boost * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1);
+        p.blocking = isBlocking();
+        const blockSlow = p.blocking ? 0.62 : 1;
+        const speed = p.speed * boost * blockSlow * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1);
         p.facing = dir;
         moveCircle(p, dir.x * speed * dt, dir.y * speed * dt);
         if (inWater) {
@@ -846,6 +852,7 @@ function updatePlayer(dt, now) {
         }
         p.stamina = clamp(p.stamina + (sprinting ? -38 : 24) * dt, 0, 100);
     } else {
+        p.blocking = isBlocking();
         if (terrainInfoAt(p.x, p.y).kind === 'water') {
             const current = waterCurrentAt(p.x, p.y);
             moveCircle(p, current.x * 0.55 * dt, current.y * 0.55 * dt);
@@ -862,6 +869,13 @@ function updatePlayer(dt, now) {
         p.attackQueuedUntil = 0;
         attack(now);
     }
+}
+
+function isBlocking() {
+    return !state.inventoryOpen
+        && state.equipment.shield !== '无'
+        && (keys.has('f') || mouse.blocking)
+        && state.player.stamina > 4;
 }
 
 function moveCircle(entity, dx, dy) {
@@ -890,6 +904,10 @@ function updateEnemies(dt, now) {
         if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
+        if (terrainInfoAt(e.x, e.y).kind === 'water' && e.kind !== 'bat') {
+            const current = waterCurrentAt(e.x, e.y);
+            moveEnemy(e, current.x * 0.35 * dt, current.y * 0.35 * dt);
+        }
         const p = state.player;
         const dist = distance(e, p);
         if (dist > 1400 && e.kind !== 'wolf' && !e.boss && e.rootedUntil <= now && !e.chargeUntil && !e.leapUntil && !e.swoopUntil) {
@@ -1196,14 +1214,25 @@ function separateEnemies() {
 function applyEnemyDamage(e, rawDamage, verb) {
     const p = state.player;
     if (performance.now() <= p.invincibleUntil) return;
-    const damage = Math.max(1, rawDamage - state.equipment.defense);
+    const block = getBlockResult(e, rawDamage, verb);
+    const damage = Math.max(0, block.damage - state.equipment.defense);
+    if (block.blocked) {
+        spawnBurst(p.x + p.attackDir.x * 22, p.y + p.attackDir.y * 22, '#ffd166', 10, 120, 12);
+        addFloatText('格挡', p.x, p.y - 42, '#fff3b0');
+    }
+    if (damage <= 0) {
+        p.invincibleUntil = performance.now() + 260;
+        p.stamina = Math.max(0, p.stamina - block.staminaCost);
+        renderHud();
+        return;
+    }
     p.hp = Math.max(0, p.hp - damage);
     p.invincibleUntil = performance.now() + 620;
     const dir = normalize(p.x - e.x, p.y - e.y);
     const force = e.kind === 'boar' ? 430 : (e.kind === 'golem' ? 330 : 260);
     p.knockX += dir.x * force;
     p.knockY += dir.y * force;
-    p.stamina = Math.max(0, p.stamina - (e.kind === 'boar' ? 18 : 10));
+    p.stamina = Math.max(0, p.stamina - (e.kind === 'boar' ? 18 : 10) - block.staminaCost);
     state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
     spawnBurst(p.x, p.y, '#ff6b6b', 10, 170, p.radius * 0.55);
     addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
@@ -1213,6 +1242,18 @@ function applyEnemyDamage(e, rawDamage, verb) {
         showToast('你倒下了。回到营地重新准备吧。');
     }
     renderHud();
+}
+
+function getBlockResult(e, rawDamage, verb) {
+    if (!state.player.blocking || state.equipment.shield === '无') return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    if (verb === '震地' && state.equipment.shield !== '铁盾') return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    const toEnemy = normalize(e.x - state.player.x, e.y - state.player.y);
+    const dot = toEnemy.x * state.player.attackDir.x + toEnemy.y * state.player.attackDir.y;
+    if (dot < 0.25) return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    const reduction = state.equipment.shield === '铁盾' ? 0.7 : 0.5;
+    const staminaCost = state.equipment.shield === '铁盾' ? 10 : 12;
+    if (state.player.stamina < staminaCost) return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    return { damage: rawDamage * (1 - reduction), blocked: true, staminaCost };
 }
 
 function moveEnemy(e, dx, dy) {
@@ -1524,7 +1565,16 @@ function addParticle(particle) {
 
 function canCraft(item) {
     if (item.owned(state)) return false;
+    if (requiresCamp(item) && !isNearCamp()) return false;
     return Object.entries(item.cost).every(([key, amount]) => state.inventory[key] >= amount);
+}
+
+function requiresCamp(item) {
+    return ['ironArmor', 'crystalBlade', 'key', 'coalBomb', 'campCharm', 'snare', 'ironShield'].includes(item.id);
+}
+
+function isNearCamp() {
+    return distance(state.player, state.camp) <= state.camp.radius + 95;
 }
 
 function craft(id) {
@@ -1584,8 +1634,15 @@ function useInventoryItem(key) {
             useCoalBomb();
             break;
         case 'torch':
-            state.equipment.utility = '火把';
-            showToast('已点燃火把，夜晚视野扩大。');
+            if (state.equipment.utility !== '火把') {
+                state.equipment.utility = '火把';
+                showToast('已手持火把，夜晚视野扩大。再次使用可放置。');
+            } else {
+                state.placedTorches.push({ x: p.x + p.facing.x * 34, y: p.y + p.facing.y * 34 });
+                state.inventory.torch -= 1;
+                if (state.inventory.torch <= 0) state.equipment.utility = '无';
+                showToast('已放置火把。');
+            }
             break;
         case 'bedroll':
             if (distance(state.player, state.camp) > state.camp.radius + 60) {
@@ -1781,7 +1838,7 @@ function renderHud() {
             .join('');
         button.innerHTML = `
             <div class="recipe-title"><span>${item.name}</span><small>${item.desc}</small></div>
-            <div class="recipe-cost"><span class="recipe-cost-list">${cost}</span><span>${item.owned(state) ? '已拥有' : (button.disabled ? '材料不足' : '可合成')}</span></div>
+            <div class="recipe-cost"><span class="recipe-cost-list">${cost}</span><span>${item.owned(state) ? '已拥有' : (requiresCamp(item) && !isNearCamp() ? '需在营地' : (button.disabled ? '材料不足' : '可合成'))}</span></div>
         `;
         button.addEventListener('click', () => craft(item.id));
         recipes.appendChild(button);
@@ -2101,12 +2158,25 @@ function drawWorldObjects(now) {
     const drawables = [
         ...(isNearView(state.camp, 160) ? [{ y: state.camp.y, draw: () => drawCamp() }] : []),
         ...(isNearView(state.ruins, 220) ? [{ y: state.ruins.y, draw: () => drawRuins() }] : []),
+        ...state.placedTorches.filter(t => isNearView(t, 120)).map(t => ({ y: t.y, draw: () => drawPlacedTorch(t) })),
         ...state.resources.filter(r => r.hp > 0 && isNearView(r, 180)).map(r => ({ y: r.y, draw: () => drawResource(r) })),
         ...state.enemies.filter(e => e.hp > 0 && isNearView(e, 220)).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
         { y: state.player.y, draw: () => drawPlayer(now) },
     ];
     drawables.sort((a, b) => a.y - b.y);
     drawables.forEach(item => item.draw());
+}
+
+function drawPlacedTorch(torch) {
+    const x = worldX(torch.x);
+    const y = worldY(torch.y);
+    drawShadow(x, y + 1, 18, 5);
+    ctx.fillStyle = COLORS.trunk;
+    ctx.fillRect(x - 3, y - 24, 6, 25);
+    ctx.fillStyle = COLORS.fire1;
+    ctx.fillRect(x - 5, y - 34, 10, 10);
+    ctx.fillStyle = COLORS.fire2;
+    ctx.fillRect(x - 2, y - 38, 5, 10);
 }
 
 function isNearView(item, margin = 0) {
@@ -2371,6 +2441,16 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
     const handY = y - 31 + dir.y * 8 + (keys.size ? Math.sin(now / 90) * 1.5 : 0);
     ctx.fillStyle = COLORS.skin;
     ctx.fillRect(handX - 4, handY - 4, 8, 8);
+    if (p.blocking && state.equipment.shield !== '无') {
+        ctx.fillStyle = state.equipment.shield === '铁盾' ? '#c5d6df' : '#8a5a32';
+        ctx.strokeStyle = '#101820';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(handX + dir.x * 12, handY + dir.y * 12, 12, 16, Math.atan2(dir.y, dir.x), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        return;
+    }
     const weaponLength = Math.max(20, state.equipment.range * 0.58);
     ctx.strokeStyle = state.equipment.weapon === '铁剑' ? '#d8e5f2' : (state.equipment.weapon === '石矛' ? '#a8b3bd' : COLORS.trunk);
     ctx.lineWidth = state.equipment.weapon === '石矛' ? 3 : 5;
