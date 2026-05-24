@@ -17,6 +17,7 @@ const camera = { x: 0, y: 0 };
 const terrainChunkCache = new Map();
 let toastTimer = null;
 let lastTime = performance.now();
+let worldSeed = createWorldSeed();
 let state = createState();
 
 const RESOURCE_LABELS = {
@@ -564,6 +565,10 @@ function createState() {
     };
 }
 
+function createWorldSeed() {
+    return Math.random() * 10000;
+}
+
 function resource(kind, x, y, gives, hp, radius) {
     return { kind, x, y, gives, hp, maxHp: hp, radius };
 }
@@ -678,7 +683,7 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
 
 function createEnemies() {
     const enemies = [];
-    const campPoint = { x: 260, y: 230 };
+    const campPoint = CAMP_POSITION;
     const ruinsPoint = { x: 2110, y: 330 };
     const add = item => {
         if (terrainInfoAt(item.x, item.y).kind === 'water') return;
@@ -1948,7 +1953,7 @@ function terrainInfoAt(x, y) {
     const swamp = Math.max(naturalRegionWeight(x, y, 3380, 2760, 720, 6.2), naturalRegionWeight(x, y, 1180, 3860, 520, 7.0));
     const dry = Math.max(naturalRegionWeight(x, y, 5700, 1280, 760, 8.4), naturalRegionWeight(x, y, 6150, 3650, 620, 9.3));
     const forest = Math.max(naturalRegionWeight(x, y, 780, 340, 620, 10.2), naturalRegionWeight(x, y, 520, 1720, 620, 11.1), naturalRegionWeight(x, y, 2500, 1450, 460, 12.4), naturalRegionWeight(x, y, 4550, 1060, 760, 13.3), naturalRegionWeight(x, y, 4200, 3100, 680, 14.6));
-    const camp = naturalRegionWeight(x, y, 250, 230, 360, 15.5);
+    const camp = naturalRegionWeight(x, y, CAMP_POSITION.x, CAMP_POSITION.y, 430, 15.5);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
     if (ruins + shapeNoise * 0.04 > 0.54) return { kind: 'ruins', color: mixMany([['#38414d', ruins], ['#4f5964', 0.32], ['#2f6b3d', Math.max(0, 1 - ruins)]], noise) };
@@ -2012,7 +2017,7 @@ function biomeShapeNoise(x, y) {
 }
 
 function hash2(x, y) {
-    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    const n = Math.sin((x + worldSeed) * 127.1 + (y - worldSeed) * 311.7) * 43758.5453;
     return n - Math.floor(n);
 }
 
@@ -2851,8 +2856,10 @@ canvas.addEventListener('mouseup', () => {
 });
 
 document.getElementById('restart-btn').addEventListener('click', () => {
+    worldSeed = createWorldSeed();
+    terrainChunkCache.clear();
     state = createState();
-    showToast('新的冒险开始了。先收集木头和石头修复营地。');
+    showToast('新的随机地图开始了。先收集木头和石头修复营地。');
     renderHud();
 });
 
