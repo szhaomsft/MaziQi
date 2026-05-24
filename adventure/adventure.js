@@ -11,10 +11,19 @@ const VIEW = { width: canvas.width, height: canvas.height };
 const CAMP_POSITION = { x: WORLD.width / 2, y: WORLD.height / 2 };
 const TERRAIN_CHUNK_SIZE = 256;
 const MAX_PARTICLES = 220;
+const COVER_GRID_SIZE = 160;
+const MAX_ENEMIES = 80;
+const MAX_NEARBY_ENEMIES = 14;
+const DYNAMIC_SPAWN_MIN_DISTANCE = 560;
+const DYNAMIC_SPAWN_MAX_DISTANCE = 940;
 const keys = new Set();
 const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false, blocking: false };
 const camera = { x: 0, y: 0 };
 const terrainChunkCache = new Map();
+const vegetationSpriteCache = {
+    tallGrass: new Map(),
+    bamboo: new Map(),
+};
 let toastTimer = null;
 let lastTime = performance.now();
 let worldSeed = createWorldSeed();
@@ -22,6 +31,7 @@ let state = createState();
 
 const RESOURCE_LABELS = {
     wood: '木头',
+    bamboo: '竹材',
     stone: '石头',
     fiber: '纤维',
     pebble: '小石子',
@@ -31,6 +41,7 @@ const RESOURCE_LABELS = {
     flower: '野花',
     lotus: '莲花',
     cactusFruit: '仙人掌果',
+    mud: '泥块',
     ore: '铁矿',
     coal: '煤块',
     hide: '兽皮',
@@ -42,6 +53,7 @@ const RESOURCE_LABELS = {
     stoneAxe: '石斧',
     stonePickaxe: '石镐',
     stoneSpear: '石矛',
+    bambooSpear: '竹矛',
     ironSword: '铁剑',
     crystalBlade: '魔晶剑',
     venomDagger: '毒牙匕首',
@@ -55,17 +67,26 @@ const RESOURCE_LABELS = {
     bedroll: '睡袋',
     campCharm: '营地护符',
     snare: '捕兽夹',
+    bambooFence: '竹栅栏',
+    bambooTrap: '竹刺陷阱',
+    potionTable: '药水台',
+    workbench: '工作台',
+    forge: '锻造台',
     campFlag: '营地旗帜',
     potion: '治疗药水',
     stew: '蘑菇汤',
     salve: '黏液药膏',
+    antidote: '解毒药',
     speedPotion: '迅捷药水',
+    regenPotion: '再生药水',
+    ironSkinPotion: '硬皮药水',
     roastMeat: '烤肉',
     key: '废墟钥匙',
 };
 
 const RESOURCE_ICONS = {
     wood: '🪵',
+    bamboo: '🎋',
     stone: '🪨',
     fiber: '🌾',
     pebble: '▫',
@@ -75,6 +96,7 @@ const RESOURCE_ICONS = {
     flower: '🌼',
     lotus: '🪷',
     cactusFruit: '🌵',
+    mud: '🟤',
     ore: '⛏',
     coal: '◼',
     hide: '🟫',
@@ -86,6 +108,7 @@ const RESOURCE_ICONS = {
     stoneAxe: '🪓',
     stonePickaxe: '⛏',
     stoneSpear: '🔱',
+    bambooSpear: '🎋',
     ironSword: '⚔',
     crystalBlade: '🗡',
     venomDagger: '🔪',
@@ -99,16 +122,52 @@ const RESOURCE_ICONS = {
     bedroll: '🛏',
     campCharm: '✨',
     snare: '🪤',
+    bambooFence: '▥',
+    bambooTrap: '╳',
+    potionTable: '▣',
+    workbench: '▤',
+    forge: '▧',
     campFlag: '🚩',
     potion: '🧪',
     stew: '🍲',
     salve: '💚',
+    antidote: '🧴',
     speedPotion: '⚡',
+    regenPotion: '✚',
+    ironSkinPotion: '◆',
     roastMeat: '🍖',
     key: '🗝',
 };
 
 const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'torch', 'potion', 'speedPotion', 'bedroll'];
+const POOR_SWIMMERS = new Set(['boar', 'wolf', 'scorpion', 'golem']);
+const ITEM_ICON_TYPES = {
+    wood: 'wood', bamboo: 'bamboo', stone: 'stone', pebble: 'stone', ore: 'ore', coal: 'coal', crystal: 'crystal', mud: 'mud',
+    fiber: 'grass', herb: 'herb', flower: 'flower', berry: 'berry', mushroom: 'mushroom', lotus: 'lotus', cactusFruit: 'cactus',
+    hide: 'hide', meat: 'meat', slimeGel: 'gel', fang: 'fang', venom: 'venom',
+    stoneAxe: 'axe', stonePickaxe: 'pickaxe', stoneSpear: 'spear', bambooSpear: 'spear', ironSword: 'sword', crystalBlade: 'blade', venomDagger: 'dagger',
+    leatherArmor: 'armor', ironArmor: 'armor', crystalArmor: 'armor', woodShield: 'shield', ironShield: 'shield',
+    coalBomb: 'bomb', torch: 'torch', bedroll: 'bedroll', campCharm: 'charm', snare: 'trap', bambooFence: 'fence', bambooTrap: 'trap',
+    potionTable: 'stationPotion', workbench: 'stationWorkbench', forge: 'stationForge', campFlag: 'flag',
+    potion: 'potion', stew: 'stew', salve: 'salve', antidote: 'antidote', speedPotion: 'speed', regenPotion: 'potion', ironSkinPotion: 'armorPotion', roastMeat: 'meat', key: 'key',
+};
+const PIXEL_ICON_PALETTES = {
+    wood: ['#5a341d', '#9a6436', '#d49a5a'], bamboo: ['#1f5f34', '#70bf55', '#d7f28a'], stone: ['#48515a', '#8c98a4', '#d8e5f2'],
+    ore: ['#48515a', '#7dcbe8', '#e8fbff'], coal: ['#121820', '#303946', '#7b8794'], crystal: ['#512b9a', '#b77dff', '#f2ddff'],
+    mud: ['#3b2a1b', '#6d5438', '#a38350'], grass: ['#1f5f34', '#5fbf55', '#cde77b'], herb: ['#17613a', '#69e08e', '#d5ffd8'],
+    flower: ['#2e7d43', '#ffd166', '#ff6b9a'], berry: ['#245d34', '#d93f68', '#ff9ab0'], mushroom: ['#efe3c0', '#d94b5f', '#ffffff'],
+    lotus: ['#1f6b52', '#f4a6d7', '#ffd166'], cactus: ['#1d6b47', '#58c47a', '#ff6b9a'], hide: ['#4b2d1d', '#9a5f3f', '#d6a06a'],
+    meat: ['#7f2630', '#d94b5f', '#ffd0b8'], gel: ['#125f4c', '#5ee089', '#c8ffd8'], fang: ['#5d4934', '#f8fbff', '#c9d6dd'],
+    venom: ['#213c1e', '#8cff66', '#d6ff9c'], axe: ['#5a341d', '#a8b3bd', '#f8fbff'], pickaxe: ['#5a341d', '#66737f', '#d8e5f2'],
+    spear: ['#5a341d', '#d8e5f2', '#d7f28a'], sword: ['#38414d', '#c5d6df', '#ffffff'], blade: ['#512b9a', '#b77dff', '#ffffff'],
+    dagger: ['#203020', '#8cff66', '#f8fbff'], armor: ['#4a3a2a', '#9fb3c8', '#ffffff'], shield: ['#5a341d', '#c5d6df', '#ffd166'],
+    bomb: ['#161b22', '#ff9f1c', '#ffd166'], torch: ['#5a341d', '#ff9f1c', '#ffd166'], bedroll: ['#27364a', '#8fb8ff', '#f8fbff'],
+    charm: ['#5d2ea6', '#ffd166', '#ffffff'], trap: ['#5a341d', '#d8e5f2', '#ffd166'], fence: ['#1f5f34', '#d7f28a', '#9bd86a'],
+    flag: ['#5a341d', '#ff6b6b', '#ffffff'], potion: ['#2d4b6b', '#7dcbe8', '#ffffff'], stew: ['#5a341d', '#d68a43', '#ffd166'],
+    salve: ['#125f4c', '#5ee089', '#ffffff'], antidote: ['#213c1e', '#8cff66', '#ffffff'], speed: ['#27364a', '#ffd166', '#ffffff'],
+    stationPotion: ['#3a2454', '#7dcbe8', '#ffd166'], stationWorkbench: ['#4a2b17', '#9a6436', '#d49a5a'], stationForge: ['#2f3945', '#ff9f1c', '#d8e5f2'],
+    armorPotion: ['#26384d', '#c5d6df', '#ffffff'], key: ['#5a3c13', '#ffd166', '#fff3b0'], default: ['#26384d', '#9fb3c8', '#ffffff'],
+};
 
 const RECIPES = [
     recipe('axe', '石斧', '砍树更快', { wood: 4, stone: 3 }, game => {
@@ -117,9 +176,21 @@ const RECIPES = [
     recipe('pickaxe', '石镐', '挖石和采矿', { wood: 3, stone: 5, fiber: 2 }, game => {
         game.inventory.stonePickaxe += 1;
     }, game => game.inventory.stonePickaxe > 0 || game.equipment.tool === '石镐'),
+    recipe('workbench', '工作台', '放置后制作复杂物品', { wood: 8, stone: 2 }, game => {
+        game.inventory.workbench += 1;
+    }, () => false),
+    recipe('potionTable', '药水台', '放置后制作高级药水', { wood: 3, stone: 4, lotus: 1 }, game => {
+        game.inventory.potionTable += 1;
+    }, () => false),
+    recipe('forge', '锻造台', '放置后锻造高级装备', { stone: 8, mud: 4, coal: 3, ore: 2 }, game => {
+        game.inventory.forge += 1;
+    }, () => false),
     recipe('spear', '石矛', '近战伤害 +2', { wood: 3, stone: 3, fiber: 2 }, game => {
         game.inventory.stoneSpear += 1;
     }, game => game.inventory.stoneSpear > 0 || game.equipment.weapon === '石矛'),
+    recipe('bambooSpear', '竹矛', '攻击距离很长，适合隔开野兽', { bamboo: 4, fiber: 2, stone: 1 }, game => {
+        game.inventory.bambooSpear += 1;
+    }, game => game.inventory.bambooSpear > 0 || game.equipment.weapon === '竹矛'),
     recipe('sword', '铁剑', '可以挑战守门石像', { wood: 2, ore: 6, hide: 2 }, game => {
         game.inventory.ironSword += 1;
     }, game => game.inventory.ironSword > 0 || game.equipment.weapon === '铁剑'),
@@ -135,8 +206,17 @@ const RECIPES = [
     recipe('salve', '黏液药膏', '恢复 45 生命', { slimeGel: 2, herb: 2, flower: 1 }, game => {
         game.inventory.salve += 1;
     }, () => false),
+    recipe('antidote', '解毒药', '解除中毒并恢复 15 生命', { herb: 1, lotus: 1, mushroom: 1 }, game => {
+        game.inventory.antidote += 1;
+    }, () => false),
     recipe('speedPotion', '迅捷药水', '短时间加速', { cactusFruit: 2, slimeGel: 1, lotus: 1 }, game => {
         game.inventory.speedPotion += 1;
+    }, () => false),
+    recipe('regenPotion', '再生药水', '持续恢复生命', { herb: 2, lotus: 2, slimeGel: 1 }, game => {
+        game.inventory.regenPotion += 1;
+    }, () => false),
+    recipe('ironSkinPotion', '硬皮药水', '短时间降低受到的伤害', { cactusFruit: 1, mud: 2, coal: 1 }, game => {
+        game.inventory.ironSkinPotion += 1;
     }, () => false),
     recipe('ironArmor', '铁甲', '防御大幅提升', { ore: 8, coal: 2, hide: 2 }, game => {
         game.inventory.ironArmor += 1;
@@ -152,6 +232,12 @@ const RECIPES = [
     }, game => game.inventory.campCharm > 0),
     recipe('snare', '捕兽夹', '短暂定住野兽', { fang: 2, fiber: 3, ore: 1 }, game => {
         game.inventory.snare += 1;
+    }, () => false),
+    recipe('bambooFence', '竹栅栏', '放置后阻挡小怪', { bamboo: 3, fiber: 1 }, game => {
+        game.inventory.bambooFence += 2;
+    }, () => false),
+    recipe('bambooTrap', '竹刺陷阱', '放置后伤害并减速怪物', { bamboo: 3, fiber: 2, fang: 1 }, game => {
+        game.inventory.bambooTrap += 1;
     }, () => false),
     recipe('campFlag', '营地旗帜', '回到营地附近', { wood: 3, fiber: 2, flower: 1 }, game => {
         game.inventory.campFlag += 1;
@@ -509,6 +595,8 @@ function recipe(id, name, desc, cost, apply, owned) {
 }
 
 function createState() {
+    const resources = createResources();
+    const spawnDens = createSpawnDens();
     return {
         player: {
             x: CAMP_POSITION.x + 80,
@@ -530,8 +618,13 @@ function createState() {
             harvestTarget: null,
             harvestBlockedAt: 0,
             speedBoostUntil: 0,
+            poisonUntil: 0,
+            poisonTickAt: 0,
+            regenUntil: 0,
+            regenTickAt: 0,
+            ironSkinUntil: 0,
         },
-        inventory: { wood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, leatherArmor: 0, ironArmor: 0, crystalArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, speedPotion: 0, roastMeat: 0, key: 0 },
+        inventory: { wood: 0, bamboo: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSpear: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, leatherArmor: 0, ironArmor: 0, crystalArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, torch: 0, bedroll: 0, campCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, roastMeat: 0, key: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -545,14 +638,23 @@ function createState() {
             orePower: 1,
             utility: '无',
         },
-        resources: createResources(),
-        enemies: createEnemies(),
+        resources,
+        tallGrassGrid: buildTallGrassGrid(resources),
+        spawnDens,
+        enemies: createEnemies(spawnDens),
         camp: { x: CAMP_POSITION.x, y: CAMP_POSITION.y, radius: 70, repaired: false },
         ruins: { x: 2110, y: 330, radius: 58, opened: false },
         decorations: createDecorations(),
         particles: [],
         floatTexts: [],
         placedTorches: [],
+        placedFences: [],
+        placedStations: [],
+        bambooTraps: [],
+        hotbarItems: Array(9).fill(null),
+        draggedInventoryItem: null,
+        nextDynamicSpawnAt: 0,
+        spawnCooldowns: new Map(),
         cameraShake: 0,
         selectedHotbar: 0,
         inventoryOpen: false,
@@ -581,9 +683,10 @@ function createResources() {
         const point = { x, y };
         const terrain = terrainInfoAt(x, y);
         if (terrain.kind === 'water' || terrain.kind === 'ruins') return;
-        if (distance(point, campPoint) < 95 && kind !== 'grass') return;
+        if (distance(point, campPoint) < 95 && kind !== 'grass' && kind !== 'tallGrass') return;
         if (distance(point, ruinsPoint) < 230) return;
-        if (resources.some(item => distance(item, point) < item.radius + radius + (kind === 'grass' ? 8 : 24))) return;
+        const spacing = kind === 'tallGrass' ? -42 : (kind === 'grass' ? 8 : 24);
+        if (resources.some(item => distance(item, point) < item.radius + radius + spacing)) return;
         resources.push(resource(kind, x, y, gives, hp, radius));
     };
 
@@ -595,10 +698,30 @@ function createResources() {
             const py = y + jitterY;
             const info = terrainInfoAt(px, py);
             const n = valueNoise(px * 0.014, py * 0.014);
-            if (info.kind === 'forest') {
+            if (info.kind === 'bamboo') {
+                if (n > 0.2) add('bamboo', px, py, 'bamboo', 5, 18);
+                else add('grass', px, py, 'fiber', 3, 18);
+            } else if (info.kind === 'forest') {
                 if (n > 0.38) add('tree', px, py, 'wood', 6, 34);
                 else if (n > 0.22) add('stump', px, py, 'wood', 3, 20);
                 else add(n > 0.1 ? 'mushroom' : 'berry', px, py, n > 0.1 ? 'mushroom' : 'berry', 3, 20);
+            } else if (info.kind === 'tallgrass') {
+                add('tallGrass', px, py, 'fiber', 4, 18);
+                [
+                    [-28, -18, 0.18],
+                    [30, 12, 0.28],
+                    [-8, 32, 0.42],
+                    [18, -34, 0.32],
+                    [-36, 18, 0.36],
+                ].forEach(([ox, oy, threshold], index) => {
+                    const gx = px + ox + (hash2(px * 0.03 + index, py * 0.03) - 0.5) * 14;
+                    const gy = py + oy + (hash2(px * 0.03 - index, py * 0.03 + 4) - 0.5) * 14;
+                    if (terrainInfoAt(gx, gy).kind === 'tallgrass' && hash2(gx * 0.05, gy * 0.05) > threshold) {
+                        add('tallGrass', gx, gy, 'fiber', 4, 18);
+                    }
+                });
+                if (n > 0.78) add('herb', px + 24, py - 18, 'herb', 3, 18);
+                else if (n < 0.18) add('flower', px - 22, py + 16, 'flower', 3, 18);
             } else if (info.kind === 'grass' || info.kind === 'camp') {
                 if (n > 0.72) add('berry', px, py, 'berry', 3, 22);
                 else if (n > 0.42) add('grass', px, py, 'fiber', 3, 18);
@@ -606,6 +729,10 @@ function createResources() {
                 else if (n > 0.18) add('pebble', px, py, 'stone', 2, 10);
             } else if (info.kind === 'shore') {
                 if (n > 0.32) add('reed', px, py, 'fiber', 2, 16);
+            } else if (info.kind === 'mud') {
+                if (n > 0.66) add('lotus', px, py, 'lotus', 3, 18);
+                else if (n > 0.36) add('reed', px, py, 'fiber', 2, 16);
+                else add('mudClump', px, py, 'mud', 3, 14);
             } else if (info.kind === 'swamp') {
                 if (n > 0.62) add('lotus', px, py, 'lotus', 3, 18);
                 else if (n > 0.28) add('reed', px, py, 'fiber', 2, 16);
@@ -647,6 +774,21 @@ function createResources() {
     return resources.filter(item => terrainInfoAt(item.x, item.y).kind !== 'water');
 }
 
+function buildTallGrassGrid(resources) {
+    const grid = new Map();
+    for (const item of resources) {
+        if (item.kind !== 'tallGrass' || item.hp <= 0) continue;
+        const key = coverGridKey(item.x, item.y);
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key).push(item);
+    }
+    return grid;
+}
+
+function coverGridKey(x, y) {
+    return `${Math.floor(x / COVER_GRID_SIZE)},${Math.floor(y / COVER_GRID_SIZE)}`;
+}
+
 function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmount, boss = false) {
     return {
         kind, name, x, y, spawnX: x, spawnY: y, radius, hp, maxHp: hp, attack, speed, range, drop, dropAmount, boss,
@@ -669,6 +811,10 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
         leapTargetX: x,
         leapTargetY: y,
         leapHit: false,
+        leapDamage: true,
+        tongueUntil: 0,
+        tongueTargetX: x,
+        tongueTargetY: y,
         swoopUntil: 0,
         swoopStartAt: 0,
         swoopStartX: x,
@@ -681,12 +827,28 @@ function enemy(kind, name, x, y, radius, hp, attack, speed, range, drop, dropAmo
     };
 }
 
-function createEnemies() {
+function makeEnemy(kind, x, y, boss = false) {
+    const configs = {
+        slime: ['史莱姆', 18, 16, 2, 92, 42, { slimeGel: 2, fiber: 1 }, 1],
+        frog: ['沼泽蛙', 16, 18, 1, 130, 58, { slimeGel: 1, lotus: 1 }, 1],
+        scorpion: ['沙蝎', 15, 20, 2, 120, 54, { venom: 1, fang: 1 }, 1],
+        boar: ['野猪', 22, 28, 5, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1],
+        wolf: ['荒狼', 18, 22, 4, 148, 64, { fang: 1, hide: 1, meat: 1 }, 1],
+        bat: ['夜蝠', 12, 12, 2, 210, 96, { fang: 1, slimeGel: 1 }, 1],
+        golem: [boss ? '守门石像' : '石像守卫', boss ? 28 : 26, boss ? 55 : 42, boss ? 9 : 7, boss ? 78 : 70, boss ? 92 : 78, boss ? { crystal: 3, stone: 4, coal: 2 } : { crystal: 1, stone: 2, coal: 1 }, 1],
+    };
+    const config = configs[kind];
+    if (!config) return null;
+    return enemy(kind, config[0], x, y, config[1], config[2], config[3], config[4], config[5], config[6], config[7], boss);
+}
+
+function createEnemies(spawnDens = []) {
     const enemies = [];
     const campPoint = CAMP_POSITION;
     const ruinsPoint = { x: 2110, y: 330 };
     const add = item => {
-        if (terrainInfoAt(item.x, item.y).kind === 'water') return;
+        if (!item || !canSpawnEnemyAt(item.kind, item.x, item.y, enemies)) return;
+        if (enemies.length >= 58 && item.kind !== 'wolf' && !item.boss) return;
         if (distance(item, campPoint) < 260) return;
         if (item.kind !== 'golem' && distance(item, ruinsPoint) < 180) return;
         if (enemies.some(enemyItem => distance(enemyItem, item) < enemyItem.radius + item.radius + 110)) return;
@@ -698,27 +860,63 @@ function createEnemies() {
             const py = y + (hash2(x * 0.04 + 6, y * 0.04 - 4) - 0.5) * 95;
             const info = terrainInfoAt(px, py);
             const n = valueNoise(px * 0.01 + 4, py * 0.01 - 3);
-            if ((info.kind === 'grass' || info.kind === 'shore' || info.kind === 'camp') && n > 0.76) {
-                add(enemy('slime', '史莱姆', px, py, 18, 16, 1, 92, 42, { slimeGel: 2, fiber: 1 }, 1));
-            } else if (info.kind === 'swamp' && n > 0.55) {
-                add(enemy('frog', '沼泽蛙', px, py, 16, 18, 2, 130, 58, { slimeGel: 1, lotus: 1 }, 1));
-            } else if (info.kind === 'dry' && n > 0.55) {
-                add(enemy('scorpion', '沙蝎', px, py, 15, 20, 3, 120, 54, { venom: 1, fang: 1 }, 1));
-            } else if (info.kind === 'forest' && n > 0.64) {
-                add(enemy('boar', '野猪', px, py, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
-            } else if ((info.kind === 'shore' || info.kind === 'grass') && n > 0.86) {
-                add(enemy('bat', '夜蝠', px, py, 12, 12, 2, 210, 96, { fang: 1, slimeGel: 1 }, 1));
-            } else if ((info.kind === 'mine' || info.kind === 'ruins') && n > 0.72) {
-                add(enemy('golem', '石像守卫', px, py, 26, 42, 4, 70, 78, { crystal: 1, stone: 2, coal: 1 }, 1));
-            }
+            const kind = chooseInitialSpawnKind(info.kind, px, py, n);
+            if (kind) add(makeEnemy(kind, px, py));
         }
     }
-    add(enemy('golem', '守门石像', 1980, 520, 28, 55, 5, 78, 92, { crystal: 3, stone: 4, coal: 2 }, 1, true));
+    spawnDens.forEach(den => {
+        if (hash2(den.x * 0.011, den.y * 0.011) > 0.58) add(makeEnemy(den.kind, den.x + 45, den.y + 20));
+    });
+    add(makeEnemy('golem', 1980, 520, true));
     if (!enemies.some(item => item.kind === 'boar' && item.x < 800 && item.y > 1050)) {
-        add(enemy('boar', '野猪', 560, 1260, 22, 28, 3, 135, 68, { hide: 2, meat: 1, fang: 1 }, 1));
+        add(makeEnemy('boar', 560, 1260));
     }
     createWolfPacks().forEach(add);
     return enemies;
+}
+
+function chooseInitialSpawnKind(terrainKind, x, y, n) {
+    const danger = dangerLevelAt(x, y);
+    if (danger < 0.08) return '';
+    if ((terrainKind === 'grass' || terrainKind === 'shore') && n > 0.82) return danger > 0.34 && n > 0.91 ? 'bat' : 'slime';
+    if ((terrainKind === 'swamp' || terrainKind === 'mud' || terrainKind === 'shore') && n > 0.62) return 'frog';
+    if (terrainKind === 'dry' && n > 0.62) return 'scorpion';
+    if ((terrainKind === 'forest' || terrainKind === 'bamboo') && n > 0.7) return danger > 0.45 && n > 0.88 ? 'wolf' : 'boar';
+    if (terrainKind === 'tallgrass' && n > 0.68) return 'wolf';
+    if ((terrainKind === 'mine' || terrainKind === 'ruins') && n > 0.8) return n > 0.9 ? 'golem' : 'bat';
+    return '';
+}
+
+function dangerLevelAt(x, y) {
+    return clamp((distance({ x, y }, CAMP_POSITION) - 420) / 2200, 0, 1);
+}
+
+function canSpawnEnemyAt(kind, x, y, existing = state?.enemies || []) {
+    const terrain = terrainInfoAt(x, y);
+    if (terrain.kind === 'water' && kind !== 'bat') return false;
+    if (distance({ x, y }, CAMP_POSITION) < 360 && kind !== 'slime') return false;
+    if (distance({ x, y }, CAMP_POSITION) < 260) return false;
+    if (isPoorSwimmer(kind) && isNearWater(x, y, 72)) return false;
+    if (kind === 'scorpion' && (terrain.kind !== 'dry' || isNearWater(x, y, 180))) return false;
+    if (kind === 'frog' && !['swamp', 'mud', 'shore'].includes(terrain.kind)) return false;
+    if (kind === 'boar' && !['forest', 'bamboo', 'grass', 'shore'].includes(terrain.kind)) return false;
+    if (kind === 'wolf' && !['tallgrass', 'forest', 'bamboo', 'grass'].includes(terrain.kind)) return false;
+    if (kind === 'bat' && !['mine', 'ruins', 'forest', 'shore', 'grass'].includes(terrain.kind)) return false;
+    const localSame = existing.filter(enemyItem => enemyItem.hp > 0 && enemyItem.kind === kind && distance(enemyItem, { x, y }) < 520).length;
+    const speciesCap = kind === 'wolf' ? 4 : (kind === 'scorpion' ? 5 : 6);
+    return localSame < speciesCap;
+}
+
+function isNearWater(x, y, radius) {
+    return terrainInfoAt(x, y).kind === 'water'
+        || terrainInfoAt(x + radius, y).kind === 'water'
+        || terrainInfoAt(x - radius, y).kind === 'water'
+        || terrainInfoAt(x, y + radius).kind === 'water'
+        || terrainInfoAt(x, y - radius).kind === 'water';
+}
+
+function isPoorSwimmer(kind) {
+    return ['boar', 'wolf', 'scorpion', 'golem'].includes(kind);
 }
 
 function createWolfPackStates() {
@@ -743,10 +941,10 @@ function createWolfPacks() {
 
 function createWolfPack(packId, x, y, leaderName) {
     const pack = [
-        enemy('wolf', leaderName, x, y, 21, 30, 4, 178, 72, { hide: 1, meat: 1, fang: 2 }, 1),
-        enemy('wolf', '荒狼', x - 60, y + 60, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
-        enemy('wolf', '荒狼', x + 90, y + 70, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
-        enemy('wolf', '荒狼', x + 20, y + 150, 20, 24, 3, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', leaderName, x, y, 21, 30, 5, 178, 72, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', x - 60, y + 60, 20, 24, 4, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', x + 90, y + 70, 20, 24, 4, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
+        enemy('wolf', '荒狼', x + 20, y + 150, 20, 24, 4, 170, 62, { hide: 1, meat: 1, fang: 2 }, 1),
     ];
     ['leader', 'left', 'right', 'rear'].forEach((role, index) => {
         pack[index].packId = packId;
@@ -767,6 +965,45 @@ function createDecorations() {
         [1120, 1010], [1300, 910], [1660, 1190], [1910, 1040], [2040, 790],
     ].forEach(([x, y], index) => add(index % 2 ? 'pebbles' : 'crack', x, y, 1));
     return items;
+}
+
+function createSpawnDens() {
+    const dens = [];
+    const caps = { frog: 8, scorpion: 8, bat: 7, wolf: 5, slime: 6 };
+    const counts = { frog: 0, scorpion: 0, bat: 0, wolf: 0, slime: 0 };
+    const add = (kind, x, y) => {
+        if (counts[kind] >= caps[kind]) return;
+        if (!canDenExistAt(kind, x, y)) return;
+        if (dens.some(den => distance(den, { x, y }) < 620)) return;
+        dens.push({ kind, x, y, radius: 34, nextSpawnAt: 0 });
+        counts[kind]++;
+    };
+    for (let y = 260; y < WORLD.height - 220; y += 240) {
+        for (let x = 260; x < WORLD.width - 220; x += 260) {
+            const px = x + (hash2(x * 0.019, y * 0.019) - 0.5) * 140;
+            const py = y + (hash2(x * 0.017 + 5, y * 0.017 - 7) - 0.5) * 140;
+            const terrain = terrainInfoAt(px, py).kind;
+            const n = valueNoise(px * 0.006 + 21, py * 0.006 - 12);
+            if ((terrain === 'swamp' || terrain === 'mud' || terrain === 'shore') && n > 0.62) add('frog', px, py);
+            else if (terrain === 'dry' && n > 0.62) add('scorpion', px, py);
+            else if ((terrain === 'mine' || terrain === 'ruins') && n > 0.58) add('bat', px, py);
+            else if ((terrain === 'tallgrass' || terrain === 'forest') && n > 0.72) add('wolf', px, py);
+            else if ((terrain === 'grass' || terrain === 'shore') && n > 0.78) add('slime', px, py);
+        }
+    }
+    return dens;
+}
+
+function canDenExistAt(kind, x, y) {
+    if (distance({ x, y }, CAMP_POSITION) < 520) return false;
+    const terrain = terrainInfoAt(x, y).kind;
+    if (terrain === 'water') return false;
+    if (kind === 'frog') return ['swamp', 'mud', 'shore'].includes(terrain);
+    if (kind === 'scorpion') return terrain === 'dry' && !isNearWater(x, y, 180);
+    if (kind === 'bat') return terrain === 'mine' || terrain === 'ruins';
+    if (kind === 'wolf') return terrain === 'tallgrass' || terrain === 'forest';
+    if (kind === 'slime') return terrain === 'grass' || terrain === 'shore';
+    return false;
 }
 
 function clamp(value, min, max) {
@@ -807,7 +1044,9 @@ function update(dt, now) {
     if (!state.inventoryOpen && !state.win && !state.lose) {
         updatePlayer(dt, now);
         updateHarvestHold(dt);
+        updateBambooTraps(now);
         updateEnemies(dt, now);
+        updateDynamicSpawns(now);
         updateQuest();
     }
     updateParticles(dt);
@@ -827,6 +1066,8 @@ function updateTimeLabel() {
 
 function updatePlayer(dt, now) {
     const p = state.player;
+    updatePoison(dt, now);
+    updatePotionEffects(now);
     if (Math.abs(p.knockX) > 1 || Math.abs(p.knockY) > 1) {
         moveCircle(p, p.knockX * dt, p.knockY * dt);
         p.knockX *= Math.pow(0.025, dt);
@@ -844,10 +1085,13 @@ function updatePlayer(dt, now) {
         const sprinting = keys.has('Shift') && p.stamina > 0;
         const terrain = terrainInfoAt(p.x, p.y);
         const inWater = terrain.kind === 'water';
+        const inMud = terrain.kind === 'mud';
+        const inBamboo = terrain.kind === 'bamboo';
         const boost = performance.now() < p.speedBoostUntil ? 1.32 : 1;
         p.blocking = isBlocking();
         const blockSlow = p.blocking ? 0.62 : 1;
-        const speed = p.speed * boost * blockSlow * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1);
+        const armorMudSlow = inMud && (state.equipment.armor === '铁甲' || state.equipment.armor === '魔晶甲') ? 0.76 : 1;
+        const speed = p.speed * boost * blockSlow * (sprinting ? 1.55 : 1) * (inWater ? 0.58 : 1) * (inMud ? 0.58 : 1) * (inBamboo ? 0.9 : 1) * armorMudSlow;
         p.facing = dir;
         moveCircle(p, dir.x * speed * dt, dir.y * speed * dt);
         if (inWater) {
@@ -855,7 +1099,8 @@ function updatePlayer(dt, now) {
             moveCircle(p, current.x * dt, current.y * dt);
             spawnWaterRipple(p.x, p.y + 12);
         }
-        p.stamina = clamp(p.stamina + (sprinting ? -38 : 24) * dt, 0, 100);
+        const sprintCost = inMud ? -56 : -38;
+        p.stamina = clamp(p.stamina + (sprinting ? sprintCost : 24) * dt, 0, 100);
     } else {
         p.blocking = isBlocking();
         if (terrainInfoAt(p.x, p.y).kind === 'water') {
@@ -876,6 +1121,31 @@ function updatePlayer(dt, now) {
     }
 }
 
+function updatePotionEffects(now) {
+    const p = state.player;
+    if (p.regenUntil <= now || now < p.regenTickAt) return;
+    p.regenTickAt = now + 1200;
+    p.hp = Math.min(p.maxHp, p.hp + 3);
+    addFloatText('+3', p.x, p.y - 50, '#9cffb7');
+    renderHud();
+}
+
+function updatePoison(dt, now) {
+    const p = state.player;
+    if (p.poisonUntil <= now) return;
+    p.stamina = Math.max(0, p.stamina - 7 * dt);
+    if (Math.random() < 0.18) spawnBurst(p.x, p.y - 12, '#8cff66', 1, 45, p.radius * 0.4);
+    if (now < p.poisonTickAt) return;
+    p.poisonTickAt = now + 1000;
+    p.hp = Math.max(0, p.hp - 1);
+    addFloatText('-1 毒', p.x, p.y - 46, '#9cff7a');
+    if (p.hp <= 0) {
+        state.lose = true;
+        showToast('毒素耗尽了你的生命。');
+    }
+    renderHud();
+}
+
 function isBlocking() {
     return !state.inventoryOpen
         && state.equipment.shield !== '无'
@@ -893,24 +1163,85 @@ function moveCircle(entity, dx, dy) {
 function collides(entity) {
     for (const r of state.resources) {
         if (!isSolidResource(r)) continue;
-        if (r.hp > 0 && distance(entity, r) < entity.radius + r.radius * (r.kind === 'tree' ? 0.42 : 0.72)) return true;
+        if (r.hp > 0 && distance(entity, r) < entity.radius + r.radius * (r.kind === 'tree' ? 0.42 : (r.kind === 'bamboo' ? 0.34 : 0.72))) return true;
+    }
+    for (const fence of state.placedFences) {
+        if (distance(entity, fence) < entity.radius + fence.radius) return true;
+    }
+    for (const station of state.placedStations) {
+        if (distance(entity, station) < entity.radius + station.radius * 0.75) return true;
     }
     if (distance(entity, state.ruins) < entity.radius + state.ruins.radius && !state.ruins.opened) return true;
     return false;
 }
 
 function isSolidResource(item) {
-    return item.kind === 'tree' || item.kind === 'rock' || item.kind === 'ore';
+    return item.kind === 'tree' || item.kind === 'rock' || item.kind === 'ore' || item.kind === 'bamboo';
+}
+
+function updateBambooTraps(now) {
+    for (const trap of state.bambooTraps) {
+        if (trap.used) continue;
+        const target = state.enemies.find(enemy => enemy.hp > 0 && distance(enemy, trap) < enemy.radius + trap.radius);
+        if (!target) continue;
+        trap.used = true;
+        target.hp -= 5;
+        target.hurtUntil = now + 220;
+        target.rootedUntil = Math.max(target.rootedUntil, now + 1700);
+        target.attackCooldown = Math.max(target.attackCooldown, 0.8);
+        spawnBurst(target.x, target.y, '#d7f28a', 16, 130, target.radius);
+        addFloatText('竹刺', target.x, target.y - 42, '#eaffad');
+        if (target.hp <= 0) {
+            markSpawnAreaCleared(target.x, target.y, now);
+            const drops = grantEnemyDrops(target);
+            addFloatText(drops.floatText, target.x, target.y - 56, '#9cffb7');
+            showToast(`竹刺陷阱击败 ${target.name}，获得 ${drops.toastText}`);
+            renderHud();
+        }
+    }
+}
+
+function tallGrassCoverAt(entity) {
+    const now = performance.now();
+    if (entity.tallGrassCoverCheckAt && entity.tallGrassCoverCheckAt > now) return !!entity.tallGrassCovered;
+    entity.tallGrassCoverCheckAt = now + 180;
+    entity.tallGrassCovered = getNearbyTallGrass(entity, entity.radius + 46).some(item => distance(entity, item) < entity.radius + item.radius + 18);
+    return entity.tallGrassCovered;
+}
+
+function getNearbyTallGrass(entity, radius) {
+    if (!state || !state.tallGrassGrid) return [];
+    const minX = Math.floor((entity.x - radius) / COVER_GRID_SIZE);
+    const maxX = Math.floor((entity.x + radius) / COVER_GRID_SIZE);
+    const minY = Math.floor((entity.y - radius) / COVER_GRID_SIZE);
+    const maxY = Math.floor((entity.y + radius) / COVER_GRID_SIZE);
+    const items = [];
+    for (let gy = minY; gy <= maxY; gy++) {
+        for (let gx = minX; gx <= maxX; gx++) {
+            const cell = state.tallGrassGrid.get(`${gx},${gy}`);
+            if (!cell) continue;
+            for (const item of cell) {
+                if (item.hp > 0 && distance(entity, item) <= radius + item.radius) items.push(item);
+            }
+        }
+    }
+    return items;
 }
 
 function updateEnemies(dt, now) {
     updateWolfPackRoaming(now);
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
+        updateEnemyPoison(e, dt, now);
+        if (e.hp <= 0) continue;
         if (e.attackCooldown > 0) e.attackCooldown -= dt;
         if (e.contactCooldown > 0) e.contactCooldown -= dt;
         const p = state.player;
         const dist = distance(e, p);
+        const enemyTerrain = terrainInfoAt(e.x, e.y);
+        const playerTerrain = terrainInfoAt(p.x, p.y);
+        const ambushing = tallGrassCoverAt(e) && (e.kind === 'wolf' || e.kind === 'scorpion');
+        const frogInMud = e.kind === 'frog' && enemyTerrain.kind === 'mud';
         if (dist > 1400 && e.kind !== 'wolf' && !e.boss && e.rootedUntil <= now && !e.chargeUntil && !e.leapUntil && !e.swoopUntil) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
@@ -943,7 +1274,7 @@ function updateEnemies(dt, now) {
             const arc = Math.sin(progress * Math.PI);
             e.x = lerp(e.leapStartX, e.leapTargetX, progress);
             e.y = lerp(e.leapStartY, e.leapTargetY, progress) - arc * 10;
-            if (!e.leapHit && progress > 0.55 && distance(e, state.player) < e.radius + state.player.radius + 18) {
+            if (e.leapDamage !== false && !e.leapHit && progress > 0.55 && distance(e, state.player) < e.radius + state.player.radius + 18) {
                 applyEnemyDamage(e, e.attack, '跳扑');
                 e.leapHit = true;
             }
@@ -953,6 +1284,7 @@ function updateEnemies(dt, now) {
             e.x = e.leapTargetX;
             e.y = e.leapTargetY;
             e.leapUntil = 0;
+            e.leapDamage = true;
             spawnBurst(e.x, e.y, '#5ee089', 10, 110, e.radius);
         }
         if (e.chargeUntil > now) {
@@ -997,8 +1329,9 @@ function updateEnemies(dt, now) {
             resolveEnemyAttack(e, now);
         }
 
-        const aggroRange = 330 + nightAmount() * (e.kind === 'bat' ? 190 : 90);
+        const aggroRange = 330 + nightAmount() * (e.kind === 'bat' ? 190 : 90) + (ambushing ? 120 : 0) + (frogInMud ? 70 : 0);
         const nightSpeed = 1 + nightAmount() * (e.kind === 'bat' ? 0.35 : 0.16);
+        const biomeSpeed = (ambushing ? 1.16 : 1) * (frogInMud ? 1.22 : 1);
         if (!e.windupUntil && dist < aggroRange) {
             let dir = normalize(p.x - e.x, p.y - e.y);
             if (e.kind === 'wolf' && dist < 170 && e.attackCooldown > 0.25) {
@@ -1006,19 +1339,122 @@ function updateEnemies(dt, now) {
                 dir = normalize(tangent.x * 0.82 + dir.x * 0.18, tangent.y * 0.82 + dir.y * 0.18);
                 e.circleDir = dir;
             }
-            moveEnemy(e, dir.x * e.speed * nightSpeed * dt, dir.y * e.speed * nightSpeed * dt);
+            moveEnemy(e, dir.x * e.speed * nightSpeed * biomeSpeed * dt, dir.y * e.speed * nightSpeed * biomeSpeed * dt);
         } else if (!e.windupUntil && distance(e, { x: e.spawnX, y: e.spawnY }) > 18) {
             const dir = normalize(e.spawnX - e.x, e.spawnY - e.y);
             moveEnemy(e, dir.x * e.speed * 0.42 * dt, dir.y * e.speed * 0.42 * dt);
         }
 
         if (!e.windupUntil && dist < e.radius + p.radius + e.range && e.attackCooldown <= 0) {
+            if (ambushing || frogInMud || playerTerrain.kind === 'mud') e.attackCooldown = -0.01;
             startEnemyAttack(e, now);
         }
 
         if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
     }
     separateEnemies();
+}
+
+function updateDynamicSpawns(now) {
+    if (state.win || state.lose || now < state.nextDynamicSpawnAt) return;
+    state.nextDynamicSpawnAt = now + (nightAmount() > 0.2 ? 1800 : 2800);
+    const alive = state.enemies.filter(enemyItem => enemyItem.hp > 0);
+    if (alive.length >= MAX_ENEMIES) return;
+    const nearby = alive.filter(enemyItem => distance(enemyItem, state.player) < 850);
+    if (nearby.length >= MAX_NEARBY_ENEMIES) return;
+
+    if (trySpawnFromDen(now, alive)) return;
+    trySpawnAroundPlayer(now, alive);
+}
+
+function trySpawnFromDen(now, alive) {
+    const candidates = state.spawnDens
+        .filter(den => den.nextSpawnAt <= now)
+        .filter(den => distance(den, state.player) > DYNAMIC_SPAWN_MIN_DISTANCE && distance(den, state.player) < 1250)
+        .filter(den => !isSpawnAreaCooling(den.x, den.y, now))
+        .sort((a, b) => distance(a, state.player) - distance(b, state.player));
+    for (const den of candidates.slice(0, 4)) {
+        const kind = denSpawnKind(den);
+        if (!kind) continue;
+        const angle = hash2(den.x * 0.04 + now * 0.0001, den.y * 0.04) * Math.PI * 2;
+        const point = { x: den.x + Math.cos(angle) * 70, y: den.y + Math.sin(angle) * 70 };
+        if (!canDynamicSpawn(kind, point.x, point.y, alive)) continue;
+        state.enemies.push(makeEnemy(kind, point.x, point.y));
+        den.nextSpawnAt = now + (nightAmount() > 0.2 ? 14000 : 24000);
+        return true;
+    }
+    return false;
+}
+
+function denSpawnKind(den) {
+    if (den.kind === 'bat' && nightAmount() < 0.15) return '';
+    if (den.kind === 'scorpion' && nightAmount() > 0.2) return 'scorpion';
+    return den.kind;
+}
+
+function trySpawnAroundPlayer(now, alive) {
+    const night = nightAmount();
+    for (let i = 0; i < 10; i++) {
+        const angle = hash2(now * 0.0002 + i, state.player.x * 0.004 - i) * Math.PI * 2;
+        const radius = DYNAMIC_SPAWN_MIN_DISTANCE + hash2(state.player.y * 0.004 + i, now * 0.0003) * (DYNAMIC_SPAWN_MAX_DISTANCE - DYNAMIC_SPAWN_MIN_DISTANCE);
+        const x = clamp(state.player.x + Math.cos(angle) * radius, 80, WORLD.width - 80);
+        const y = clamp(state.player.y + Math.sin(angle) * radius, 80, WORLD.height - 80);
+        if (isSpawnAreaCooling(x, y, now)) continue;
+        const kind = chooseDynamicSpawnKind(x, y, night);
+        if (!kind || !canDynamicSpawn(kind, x, y, alive)) continue;
+        state.enemies.push(makeEnemy(kind, x, y));
+        return true;
+    }
+    return false;
+}
+
+function chooseDynamicSpawnKind(x, y, night) {
+    const terrain = terrainInfoAt(x, y).kind;
+    const danger = dangerLevelAt(x, y);
+    const n = valueNoise(x * 0.012 + night * 9, y * 0.012 - 3);
+    if (danger < 0.08) return '';
+    if (terrain === 'mud' || terrain === 'swamp' || terrain === 'shore') return n > 0.35 ? 'frog' : 'slime';
+    if (terrain === 'dry') return night > 0.15 || n > 0.45 ? 'scorpion' : '';
+    if (terrain === 'mine' || terrain === 'ruins') return night > 0.08 || n > 0.52 ? 'bat' : (danger > 0.55 && n > 0.78 ? 'golem' : '');
+    if (terrain === 'tallgrass') return night > 0.12 || n > 0.4 ? 'wolf' : 'slime';
+    if (terrain === 'forest' || terrain === 'bamboo') return night > 0.2 && n > 0.35 ? 'wolf' : (n > 0.55 ? 'boar' : '');
+    if (terrain === 'grass') return night > 0.25 && n > 0.68 ? 'bat' : (n > 0.45 ? 'slime' : '');
+    return '';
+}
+
+function canDynamicSpawn(kind, x, y, alive) {
+    if (!canSpawnEnemyAt(kind, x, y, alive)) return false;
+    if (distance({ x, y }, state.player) < DYNAMIC_SPAWN_MIN_DISTANCE || distance({ x, y }, state.player) > DYNAMIC_SPAWN_MAX_DISTANCE + 360) return false;
+    const localAll = alive.filter(enemyItem => distance(enemyItem, { x, y }) < 420).length;
+    return localAll < 5;
+}
+
+function spawnCooldownKey(x, y) {
+    return `${Math.floor(x / 360)},${Math.floor(y / 360)}`;
+}
+
+function isSpawnAreaCooling(x, y, now) {
+    return (state.spawnCooldowns.get(spawnCooldownKey(x, y)) || 0) > now;
+}
+
+function markSpawnAreaCleared(x, y, now = performance.now()) {
+    state.spawnCooldowns.set(spawnCooldownKey(x, y), now + (nightAmount() > 0.2 ? 18000 : 30000));
+}
+
+function updateEnemyPoison(e, dt, now) {
+    if (!e.poisonUntil || e.poisonUntil <= now) return;
+    if (Math.random() < 0.1) spawnBurst(e.x, e.y - 8, '#8cff66', 1, 42, e.radius * 0.35);
+    if (now < (e.poisonTickAt || 0)) return;
+    e.poisonTickAt = now + 1000;
+    e.hp -= 1;
+    addFloatText('-1 毒', e.x, e.y - 46, '#9cff7a');
+    if (e.hp <= 0) {
+        markSpawnAreaCleared(e.x, e.y, now);
+        const drops = grantEnemyDrops(e);
+        addFloatText(drops.floatText, e.x, e.y - 56, '#9cffb7');
+        showToast(`毒素击败 ${e.name}，获得 ${drops.toastText}`);
+        renderHud();
+    }
 }
 
 function updateWolfPackMember(e, dt, now, dist) {
@@ -1099,21 +1535,24 @@ function wolfRoleTarget(e) {
 function startEnemyAttack(e, now) {
     e.attackDir = normalize(state.player.x - e.x, state.player.y - e.y);
     e.chargeHit = false;
+    const terrain = terrainInfoAt(e.x, e.y);
+    const ambush = tallGrassCoverAt(e) && (e.kind === 'wolf' || e.kind === 'scorpion');
+    const mudFrog = terrain.kind === 'mud' && e.kind === 'frog';
     if (e.kind === 'slime') {
         e.windupUntil = now + 460;
         e.strikeAt = now + 360;
     } else if (e.kind === 'frog') {
-        e.windupUntil = now + 380;
-        e.strikeAt = now + 300;
+        e.windupUntil = now + (mudFrog ? 400 : 520);
+        e.strikeAt = now + (mudFrog ? 310 : 410);
     } else if (e.kind === 'scorpion') {
-        e.windupUntil = now + 260;
-        e.strikeAt = now + 190;
+        e.windupUntil = now + (ambush ? 180 : 260);
+        e.strikeAt = now + (ambush ? 130 : 190);
     } else if (e.kind === 'boar') {
         e.windupUntil = now + 560;
         e.strikeAt = now + 420;
     } else if (e.kind === 'wolf') {
-        e.windupUntil = now + 440;
-        e.strikeAt = now + 320;
+        e.windupUntil = now + (ambush ? 320 : 440);
+        e.strikeAt = now + (ambush ? 230 : 320);
     } else if (e.kind === 'bat') {
         e.windupUntil = now + 300;
         e.strikeAt = now + 220;
@@ -1134,24 +1573,50 @@ function resolveEnemyAttack(e, now) {
         e.leapTargetX = clamp(e.x + e.attackDir.x * 125, e.radius, WORLD.width - e.radius);
         e.leapTargetY = clamp(e.y + e.attackDir.y * 125, e.radius, WORLD.height - e.radius);
         e.leapHit = false;
+        e.leapDamage = true;
         e.attackCooldown = 2.8;
     } else if (e.kind === 'frog') {
+        const tongueReach = 132;
+        const tongueEnd = { x: e.x + e.attackDir.x * tongueReach, y: e.y + e.attackDir.y * tongueReach };
+        e.tongueUntil = now + 260;
+        e.tongueTargetX = tongueEnd.x;
+        e.tongueTargetY = tongueEnd.y;
+        const toPlayer = normalize(e.x - p.x, e.y - p.y);
+        const playerForward = (p.x - e.x) * e.attackDir.x + (p.y - e.y) * e.attackDir.y;
+        const playerSide = Math.abs((p.x - e.x) * -e.attackDir.y + (p.y - e.y) * e.attackDir.x);
+        if (playerForward > 0 && playerForward < tongueReach && playerSide < p.radius + 13) {
+            const hit = applyEnemyDamage(e, e.attack, '舌头卷住');
+            if (hit) {
+                p.knockX += toPlayer.x * 520;
+                p.knockY += toPlayer.y * 520;
+                p.stamina = Math.max(0, p.stamina - 14);
+                addFloatText('被拉住', p.x, p.y - 54, '#9cffb7');
+            }
+        }
         e.leapStartAt = now;
-        e.leapUntil = now + 360;
+        e.leapUntil = now + 380;
         e.leapStartX = e.x;
         e.leapStartY = e.y;
-        e.leapTargetX = clamp(e.x + e.attackDir.x * 110, e.radius, WORLD.width - e.radius);
-        e.leapTargetY = clamp(e.y + e.attackDir.y * 110, e.radius, WORLD.height - e.radius);
+        const side = hash2(e.x * 0.03 + now * 0.0001, e.y * 0.03) > 0.5 ? 1 : -1;
+        const jumpAway = normalize(-e.attackDir.x * 0.9 + -e.attackDir.y * side * 0.45, -e.attackDir.y * 0.9 + e.attackDir.x * side * 0.45);
+        e.leapTargetX = clamp(e.x + jumpAway.x * 105, e.radius, WORLD.width - e.radius);
+        e.leapTargetY = clamp(e.y + jumpAway.y * 105, e.radius, WORLD.height - e.radius);
         e.leapHit = false;
-        e.attackCooldown = 2.0;
+        e.leapDamage = false;
+        e.attackCooldown = terrainInfoAt(e.x, e.y).kind === 'mud' ? 1.45 : 2.25;
+        spawnBurst(e.x, e.y - 6, '#ff8fc7', 7, 130, e.radius * 0.55);
     } else if (e.kind === 'scorpion') {
         moveEnemy(e, e.attackDir.x * 48, e.attackDir.y * 48);
         if (distance(e, p) < e.radius + p.radius + 18) {
-            applyEnemyDamage(e, e.attack, '毒刺');
-            p.stamina = Math.max(0, p.stamina - 16);
+            const hit = applyEnemyDamage(e, e.attack, '毒刺');
+            if (hit) {
+                poisonPlayer(now, 5200);
+                p.stamina = Math.max(0, p.stamina - 16);
+            }
         }
         e.attackCooldown = 1.25;
-        spawnBurst(e.x, e.y, '#c58a43', 8, 120, e.radius * 0.6);
+        e.retreatUntil = now + 360;
+        spawnBurst(e.x, e.y, '#8cff66', 10, 135, e.radius * 0.6);
     } else if (e.kind === 'boar') {
         e.chargeUntil = now + 430;
         e.chargeHit = false;
@@ -1214,9 +1679,9 @@ function separateEnemies() {
 
 function applyEnemyDamage(e, rawDamage, verb) {
     const p = state.player;
-    if (performance.now() <= p.invincibleUntil) return;
+    if (performance.now() <= p.invincibleUntil) return false;
     const block = getBlockResult(e, rawDamage, verb);
-    const damage = Math.max(0, block.damage - state.equipment.defense);
+    const damage = incomingDamageAfterArmor(block.damage, block.blocked);
     if (block.blocked) {
         spawnBurst(p.x + p.attackDir.x * 22, p.y + p.attackDir.y * 22, '#ffd166', 10, 120, 12);
         addFloatText('格挡', p.x, p.y - 42, '#fff3b0');
@@ -1225,7 +1690,7 @@ function applyEnemyDamage(e, rawDamage, verb) {
         p.invincibleUntil = performance.now() + 260;
         p.stamina = Math.max(0, p.stamina - block.staminaCost);
         renderHud();
-        return;
+        return false;
     }
     p.hp = Math.max(0, p.hp - damage);
     p.invincibleUntil = performance.now() + 620;
@@ -1243,6 +1708,38 @@ function applyEnemyDamage(e, rawDamage, verb) {
         showToast('你倒下了。回到营地重新准备吧。');
     }
     renderHud();
+    return true;
+}
+
+function incomingDamageAfterArmor(rawDamage, blocked) {
+    if (rawDamage <= 0) return 0;
+    if (blocked && rawDamage < 1) return 0;
+    const reduction = armorReduction() + passiveShieldReduction();
+    return Math.max(1, Math.round(rawDamage * (1 - reduction)));
+}
+
+function armorReduction() {
+    const boost = performance.now() < state.player.ironSkinUntil ? 0.18 : 0;
+    const base = state.equipment.armor === '魔晶甲' ? 0.45
+        : (state.equipment.armor === '铁甲' ? 0.32
+            : (state.equipment.armor === '皮甲' ? 0.18 : 0));
+    return Math.min(0.62, base + boost);
+}
+
+function passiveShieldReduction() {
+    if (state.equipment.shield === '铁盾') return 0.12;
+    if (state.equipment.shield === '木盾') return 0.08;
+    return 0;
+}
+
+function poisonPlayer(now, duration) {
+    const p = state.player;
+    p.poisonUntil = Math.max(p.poisonUntil, now + duration);
+    p.poisonTickAt = Math.min(p.poisonTickAt || now + 700, now + 700);
+    spawnBurst(p.x, p.y - 10, '#8cff66', 14, 120, p.radius * 0.65);
+    addFloatText('中毒', p.x, p.y - 58, '#9cff7a');
+    showToast('沙蝎毒刺让你中毒了，持续掉血并消耗体力。');
+    renderHud();
 }
 
 function getBlockResult(e, rawDamage, verb) {
@@ -1258,11 +1755,27 @@ function getBlockResult(e, rawDamage, verb) {
 }
 
 function moveEnemy(e, dx, dy) {
-    if (e.kind !== 'bat' && terrainInfoAt(e.x, e.y).kind === 'water') {
+    const terrain = terrainInfoAt(e.x, e.y);
+    if (e.kind !== 'bat' && terrain.kind === 'water') {
         const current = waterCurrentAt(e.x, e.y);
         dx = dx * 0.45 + (current.x / 60) * 1.6;
         dy = dy * 0.45 + (current.y / 60) * 1.6;
         if (Math.random() < 0.25) spawnWaterRipple(e.x, e.y + e.radius * 0.5);
+    } else if (terrain.kind === 'mud' && e.kind !== 'frog' && e.kind !== 'bat') {
+        dx *= 0.62;
+        dy *= 0.62;
+    } else if (terrain.kind === 'bamboo' && e.kind !== 'bat') {
+        dx *= 0.88;
+        dy *= 0.88;
+    } else if (isPoorSwimmer(e.kind) && terrainInfoAt(e.x + dx, e.y + dy).kind === 'water') {
+        const slideX = terrainInfoAt(e.x + dx, e.y).kind !== 'water';
+        const slideY = terrainInfoAt(e.x, e.y + dy).kind !== 'water';
+        if (slideX) dy = 0;
+        else if (slideY) dx = 0;
+        else {
+            dx = -dx * 0.35;
+            dy = -dy * 0.35;
+        }
     }
     e.x = clamp(e.x + dx, e.radius, WORLD.width - e.radius);
     e.y = clamp(e.y + dy, e.radius, WORLD.height - e.radius);
@@ -1351,7 +1864,7 @@ function updateHarvestHold(dt) {
     node.lastHarvestAt = performance.now();
     node.shakeUntil = performance.now() + 120;
     if (Math.random() < 0.28) {
-        spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 2, 55, node.radius * 0.55);
+        spawnBurst(node.x, node.y, harvestParticleColor(node), 2, 55, node.radius * 0.55);
     }
     harvest(node, dt);
     if (node.hp <= 0) resetHarvestHold();
@@ -1366,16 +1879,22 @@ function harvest(node, dt = 0) {
     node.lastHarvestAt = performance.now();
     node.hp -= power;
     node.shakeUntil = performance.now() + 220;
-    spawnBurst(node.x, node.y, node.gives === 'wood' ? '#8bd76e' : (node.gives === 'ore' ? '#94e3ff' : '#d7d7d7'), 8, 110, node.radius * 0.65);
+    spawnBurst(node.x, node.y, harvestParticleColor(node), 8, 110, node.radius * 0.65);
     if (node.hp <= 0) {
-        const amount = ({ wood: 4, stone: 4, fiber: 3, berry: 3, herb: 2, mushroom: 2, ore: 4 }[node.gives] || 1);
+        const amount = harvestAmount(node);
         state.inventory[node.gives] += amount;
+        if (node.kind === 'tallGrass') state.tallGrassGrid = buildTallGrassGrid(state.resources);
         addFloatText(`+${amount} ${RESOURCE_LABELS[node.gives]}`, node.x, node.y - 30, '#fff3b0');
         showToast(`采集成功：${RESOURCE_LABELS[node.gives]} x${amount}`);
     } else {
         showToast(`${resourceName(node.kind)} 剩余 ${Math.ceil(Math.max(0, node.hp))}/${node.maxHp}`);
     }
     renderHud();
+}
+
+function harvestAmount(node) {
+    if (node.kind === 'pebble') return hash2(node.x * 0.13, node.y * 0.13) > 0.5 ? 3 : 2;
+    return ({ wood: 4, bamboo: 4, stone: 4, fiber: 3, berry: 3, herb: 2, mushroom: 2, flower: 2, lotus: 2, cactusFruit: 2, mud: 3, ore: 4, coal: 3 }[node.gives] || 1);
 }
 
 function harvestBlockReason(node) {
@@ -1385,12 +1904,20 @@ function harvestBlockReason(node) {
 }
 
 function harvestPower(node) {
-    if (node.kind === 'grass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb' || node.kind === 'mushroom' || node.kind === 'flower') return 2.2;
+    if (node.kind === 'grass' || node.kind === 'tallGrass' || node.kind === 'reed' || node.kind === 'berry' || node.kind === 'herb' || node.kind === 'mushroom' || node.kind === 'flower' || node.kind === 'mudClump') return 2.2;
+    if (node.kind === 'bamboo') return 1.35 + state.equipment.woodPower * 0.55;
     if (node.kind === 'stump') return 0.9 + state.equipment.woodPower * 0.45;
     if (node.gives === 'wood') return state.equipment.woodPower * 0.95;
     if (node.gives === 'stone') return state.equipment.stonePower * 0.9;
     if (node.gives === 'ore') return state.equipment.orePower * 0.8;
     return 1;
+}
+
+function harvestParticleColor(node) {
+    if (node.gives === 'wood' || node.gives === 'bamboo' || node.gives === 'fiber') return '#8bd76e';
+    if (node.gives === 'ore') return '#94e3ff';
+    if (node.gives === 'mud') return '#6d5438';
+    return '#d7d7d7';
 }
 
 function useCamp() {
@@ -1483,7 +2010,13 @@ function damageEnemy(hit, now) {
     state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
     spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
     addFloatText(`-${state.equipment.attack}`, hit.x, hit.y - 36, '#fff3b0');
+    if (state.equipment.weapon === '毒牙匕首' && hit.kind !== 'golem') {
+        hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + 4200);
+        hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 900, now + 900);
+        spawnBurst(hit.x, hit.y - 8, '#8cff66', 6, 90, hit.radius * 0.45);
+    }
     if (hit.hp <= 0) {
+        markSpawnAreaCleared(hit.x, hit.y, now);
         const drops = grantEnemyDrops(hit);
         spawnBurst(hit.x, hit.y, '#ffffff', 24, 260, hit.radius);
         addFloatText(drops.floatText, hit.x, hit.y - 52, '#9cffb7');
@@ -1510,18 +2043,21 @@ function grantEnemyDrops(hit) {
 
 function weaponCooldown() {
     if (state.equipment.weapon === '铁剑') return 0.42;
+    if (state.equipment.weapon === '竹矛') return 0.54;
     if (state.equipment.weapon === '石矛') return 0.48;
     return 0.34;
 }
 
 function weaponStaminaCost() {
     if (state.equipment.weapon === '铁剑') return 18;
+    if (state.equipment.weapon === '竹矛') return 13;
     if (state.equipment.weapon === '石矛') return 14;
     return 10;
 }
 
 function weaponArcDot() {
     if (state.equipment.weapon === '铁剑') return 0.08;
+    if (state.equipment.weapon === '竹矛') return 0.34;
     if (state.equipment.weapon === '石矛') return 0.28;
     return 0.18;
 }
@@ -1573,11 +2109,34 @@ function addParticle(particle) {
 function canCraft(item) {
     if (item.owned(state)) return false;
     if (requiresCamp(item) && !isNearCamp()) return false;
+    if (!hasRequiredStation(item)) return false;
     return Object.entries(item.cost).every(([key, amount]) => state.inventory[key] >= amount);
 }
 
 function requiresCamp(item) {
     return ['ironArmor', 'crystalBlade', 'key', 'coalBomb', 'campCharm', 'snare', 'ironShield'].includes(item.id);
+}
+
+function stationRequirement(item) {
+    if (['potion', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion'].includes(item.id)) return 'potionTable';
+    if (['potionTable', 'forge', 'bedroll', 'snare', 'bambooFence', 'bambooTrap', 'coalBomb', 'campFlag'].includes(item.id)) return 'workbench';
+    if (['sword', 'ironArmor', 'ironShield', 'crystalBlade', 'crystalArmor', 'venomDagger', 'key'].includes(item.id)) return 'forge';
+    return '';
+}
+
+function hasRequiredStation(item) {
+    const station = stationRequirement(item);
+    return !station || isNearStation(station);
+}
+
+function isNearStation(kind) {
+    return state.placedStations.some(station => station.kind === kind && distance(state.player, station) <= station.radius + 90);
+}
+
+function stationRequirementText(item) {
+    const station = stationRequirement(item);
+    if (!station || isNearStation(station)) return '';
+    return `需靠近${RESOURCE_LABELS[station]}`;
 }
 
 function isNearCamp() {
@@ -1586,7 +2145,17 @@ function isNearCamp() {
 
 function craft(id) {
     const item = RECIPES.find(recipe => recipe.id === id);
-    if (!item || !canCraft(item)) return;
+    if (!item) return;
+    if (requiresCamp(item) && !isNearCamp()) {
+        showToast('这个合成需要在营地附近完成。');
+        return;
+    }
+    const stationText = stationRequirementText(item);
+    if (stationText) {
+        showToast(stationText);
+        return;
+    }
+    if (!canCraft(item)) return;
     Object.entries(item.cost).forEach(([key, amount]) => {
         state.inventory[key] -= amount;
     });
@@ -1611,10 +2180,13 @@ function useInventoryItem(key) {
             showToast('已装备石镐。');
             break;
         case 'stoneSpear':
-            equipWeapon('石矛', 3, 86, '已装备石矛。');
+            equipWeapon('石矛', 4, 88, '已装备石矛。');
+            break;
+        case 'bambooSpear':
+            equipWeapon('竹矛', 3, 106, '已装备竹矛，攻击距离更长。');
             break;
         case 'venomDagger':
-            equipWeapon('毒牙匕首', 4, 42, '已装备毒牙匕首。');
+            equipWeapon('毒牙匕首', 3, 42, '已装备毒牙匕首。');
             break;
         case 'ironSword':
             equipWeapon('铁剑', 6, 68, '已装备铁剑。');
@@ -1669,6 +2241,17 @@ function useInventoryItem(key) {
         case 'snare':
             deploySnare();
             break;
+        case 'bambooFence':
+            placeBambooFence();
+            break;
+        case 'bambooTrap':
+            placeBambooTrap();
+            break;
+        case 'potionTable':
+        case 'workbench':
+        case 'forge':
+            placeStation(key);
+            break;
         case 'campFlag':
             state.player.x = state.camp.x + 85;
             state.player.y = state.camp.y + 42;
@@ -1686,13 +2269,33 @@ function useInventoryItem(key) {
             break;
         case 'salve':
             p.hp = Math.min(p.maxHp, p.hp + 45);
+            p.poisonUntil = 0;
+            p.poisonTickAt = 0;
             state.inventory.salve -= 1;
-            showToast('使用黏液药膏，恢复 45 生命。');
+            showToast('使用黏液药膏，恢复 45 生命并清除中毒。');
+            break;
+        case 'antidote':
+            p.poisonUntil = 0;
+            p.poisonTickAt = 0;
+            p.hp = Math.min(p.maxHp, p.hp + 15);
+            state.inventory.antidote -= 1;
+            showToast('服下解毒药，中毒已解除。');
             break;
         case 'speedPotion':
             p.speedBoostUntil = performance.now() + 12000;
             state.inventory.speedPotion -= 1;
             showToast('饮下迅捷药水，移动速度暂时提高。');
+            break;
+        case 'regenPotion':
+            p.regenUntil = performance.now() + 12000;
+            p.regenTickAt = performance.now() + 400;
+            state.inventory.regenPotion -= 1;
+            showToast('饮下再生药水，生命会持续恢复。');
+            break;
+        case 'ironSkinPotion':
+            p.ironSkinUntil = performance.now() + 14000;
+            state.inventory.ironSkinPotion -= 1;
+            showToast('饮下硬皮药水，短时间减少受到的伤害。');
             break;
         case 'roastMeat':
             p.hp = Math.min(p.maxHp, p.hp + 40);
@@ -1775,6 +2378,78 @@ function deploySnare() {
     showToast(`${target.name} 被捕兽夹困住了。`);
 }
 
+function placeBambooFence() {
+    const p = state.player;
+    const pos = placementPosition(38);
+    const fence = { x: pos.x, y: pos.y, radius: 18 };
+    if (terrainInfoAt(pos.x, pos.y).kind === 'water' || collides(fence)) {
+        showToast('这里不能放置竹栅栏。');
+        return;
+    }
+    state.inventory.bambooFence -= 1;
+    state.placedFences.push(fence);
+    spawnBurst(pos.x, pos.y, '#d7f28a', 10, 80, 14);
+    showToast('已放置竹栅栏，可阻挡小怪。');
+    renderHud();
+}
+
+function placeBambooTrap() {
+    const pos = placementPosition(42);
+    if (terrainInfoAt(pos.x, pos.y).kind === 'water') {
+        showToast('竹刺陷阱不能放在深水里。');
+        return;
+    }
+    state.inventory.bambooTrap -= 1;
+    state.bambooTraps.push({ x: pos.x, y: pos.y, radius: 24, used: false });
+    spawnBurst(pos.x, pos.y, '#d7f28a', 10, 90, 16);
+    showToast('已布置竹刺陷阱，怪物踩中会受伤并被定住。');
+    renderHud();
+}
+
+function placeStation(kind) {
+    const pos = stationPlacementPosition(kind);
+    if (!pos) {
+        showToast('附近没有足够空间放置工作设施。');
+        return;
+    }
+    const station = { kind, x: pos.x, y: pos.y, radius: kind === 'forge' ? 28 : 24 };
+    state.inventory[kind] -= 1;
+    state.placedStations.push(station);
+    spawnBurst(pos.x, pos.y, kind === 'forge' ? '#ff9f1c' : '#ffd166', 14, 90, 18);
+    showToast(`已放置${RESOURCE_LABELS[kind]}。靠近它可解锁相关合成。`);
+    renderHud();
+}
+
+function stationPlacementPosition(kind) {
+    const radius = kind === 'forge' ? 28 : 24;
+    const p = state.player;
+    const base = Math.atan2(p.facing.y, p.facing.x);
+    const candidates = [
+        { angle: base, distance: 48 },
+        { angle: base - 0.7, distance: 58 },
+        { angle: base + 0.7, distance: 58 },
+        { angle: base - 1.35, distance: 64 },
+        { angle: base + 1.35, distance: 64 },
+    ];
+    for (const candidate of candidates) {
+        const station = {
+            x: clamp(p.x + Math.cos(candidate.angle) * candidate.distance, 24, WORLD.width - 24),
+            y: clamp(p.y + Math.sin(candidate.angle) * candidate.distance, 24, WORLD.height - 24),
+            radius,
+        };
+        if (terrainInfoAt(station.x, station.y).kind !== 'water' && !collides(station)) return station;
+    }
+    return null;
+}
+
+function placementPosition(distanceAhead) {
+    const p = state.player;
+    return {
+        x: clamp(p.x + p.facing.x * distanceAhead, 24, WORLD.width - 24),
+        y: clamp(p.y + p.facing.y * distanceAhead, 24, WORLD.height - 24),
+    };
+}
+
 function updateQuest() {
     if (state.win || state.lose) return;
     if (state.quest === 'collect-basic' && state.inventory.wood >= 8 && state.inventory.stone >= 4) state.quest = 'repair-camp';
@@ -1813,7 +2488,25 @@ function renderHud() {
         row.className = 'inventory-row';
         if (row.tagName === 'BUTTON') row.type = 'button';
         row.classList.toggle('usable', canUseInventoryItem(key));
-        row.innerHTML = `<span class="inventory-icon">${RESOURCE_ICONS[key] || '•'}</span><span class="inventory-name">${label}</span><strong>${state.inventory[key] || 0}</strong>`;
+        row.classList.add('draggable');
+        row.dataset.itemKey = key;
+        row.appendChild(createPixelIconElement(key, 'inventory-icon'));
+        const name = document.createElement('span');
+        name.className = 'inventory-name';
+        name.textContent = label;
+        row.appendChild(name);
+        const count = document.createElement('strong');
+        count.textContent = state.inventory[key] || 0;
+        row.appendChild(count);
+        row.draggable = true;
+        row.addEventListener('dragstart', event => {
+            state.draggedInventoryItem = key;
+            event.dataTransfer.setData('text/plain', key);
+            event.dataTransfer.effectAllowed = 'move';
+        });
+        row.addEventListener('dragend', () => {
+            state.draggedInventoryItem = null;
+        });
         if (canUseInventoryItem(key)) row.addEventListener('click', () => useInventoryItem(key));
         inventory.appendChild(row);
     });
@@ -1824,9 +2517,11 @@ function renderHud() {
         inventory.appendChild(empty);
     }
 
+    renderHotbarDropZone();
+
     const recipes = document.getElementById('recipes');
     recipes.innerHTML = '';
-    const visibleRecipes = RECIPES.filter(recipe => recipeHasKnownMaterial(recipe));
+    const visibleRecipes = RECIPES.filter(recipe => recipeHasKnownMaterial(recipe) && recipeStationVisible(recipe));
     const sortedRecipes = visibleRecipes.slice().sort((a, b) => {
         const aCraft = canCraft(a) ? 0 : 1;
         const bCraft = canCraft(b) ? 0 : 1;
@@ -1841,11 +2536,11 @@ function renderHud() {
         button.className = 'recipe-btn';
         button.disabled = !canCraft(item);
         const cost = Object.entries(item.cost)
-            .map(([key, amount]) => `<span class="cost-chip ${state.inventory[key] >= amount ? 'met' : ''}"><span>${RESOURCE_ICONS[key] || '•'}</span><b>${amount}</b></span>`)
+            .map(([key, amount]) => `<span class="cost-chip ${state.inventory[key] >= amount ? 'met' : ''}">${pixelIconHtml(key)}<b>${amount}</b></span>`)
             .join('');
         button.innerHTML = `
             <div class="recipe-title"><span>${item.name}</span><small>${item.desc}</small></div>
-            <div class="recipe-cost"><span class="recipe-cost-list">${cost}</span><span>${item.owned(state) ? '已拥有' : (requiresCamp(item) && !isNearCamp() ? '需在营地' : (button.disabled ? '材料不足' : '可合成'))}</span></div>
+            <div class="recipe-cost"><span class="recipe-cost-list">${cost}</span><span>${recipeStatusText(item, button.disabled)}</span></div>
         `;
         button.addEventListener('click', () => craft(item.id));
         recipes.appendChild(button);
@@ -1860,6 +2555,95 @@ function renderHud() {
     const objective = document.getElementById('objective-text');
     if (objective) objective.textContent = questText();
     updateInventoryOverlay();
+}
+
+function recipeStatusText(item, disabled) {
+    if (item.owned(state)) return '已拥有';
+    if (requiresCamp(item) && !isNearCamp()) return '需在营地';
+    const stationText = stationRequirementText(item);
+    if (stationText) return stationText;
+    return disabled ? '材料不足' : '可合成';
+}
+
+function recipeStationVisible(item) {
+    return !stationRequirement(item) || hasRequiredStation(item);
+}
+
+function renderHotbarDropZone() {
+    let zone = document.getElementById('hotbar-drop-zone');
+    if (!zone) return;
+    zone.innerHTML = '';
+    state.hotbarItems.forEach((key, index) => {
+        const slot = document.createElement('button');
+        slot.type = 'button';
+        slot.className = `hotbar-drop-slot${index === state.selectedHotbar ? ' selected' : ''}`;
+        slot.dataset.slot = String(index);
+        slot.addEventListener('dragover', event => {
+            if (!state.draggedInventoryItem) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            slot.classList.add('drop-target');
+        });
+        slot.addEventListener('dragleave', () => slot.classList.remove('drop-target'));
+        slot.addEventListener('drop', event => {
+            event.preventDefault();
+            slot.classList.remove('drop-target');
+            const itemKey = event.dataTransfer.getData('text/plain') || state.draggedInventoryItem;
+            assignHotbarItem(index, itemKey);
+        });
+        slot.addEventListener('click', () => {
+            state.selectedHotbar = index;
+            renderHud();
+        });
+        const number = document.createElement('small');
+        number.textContent = String(index + 1);
+        slot.appendChild(number);
+        if (key) {
+            slot.appendChild(createPixelIconElement(key, 'hotbar-drop-icon'));
+            const label = document.createElement('span');
+            label.textContent = RESOURCE_LABELS[key] || key;
+            slot.appendChild(label);
+        }
+        zone.appendChild(slot);
+    });
+}
+
+function assignHotbarItem(index, itemKey) {
+    if (!itemKey || (state.inventory[itemKey] || 0) <= 0) {
+        showToast('只能把背包里已有的物品放到快捷栏。');
+        return;
+    }
+    state.hotbarItems = state.hotbarItems.map((key, slotIndex) => key === itemKey && slotIndex !== index ? null : key);
+    state.hotbarItems[index] = itemKey;
+    state.selectedHotbar = index;
+    state.draggedInventoryItem = null;
+    showToast(`${RESOURCE_LABELS[itemKey]} 已放到快捷栏 ${index + 1}。`);
+    renderHud();
+}
+
+function createPixelIconElement(key, className = 'pixel-icon') {
+    const icon = document.createElement('span');
+    icon.className = `pixel-icon ${className}`;
+    icon.setAttribute('aria-hidden', 'true');
+    const colors = itemIconColors(key);
+    pixelIconRects(key).forEach(rect => {
+        const cell = document.createElement('span');
+        cell.style.left = `${rect[0] * 25}%`;
+        cell.style.top = `${rect[1] * 25}%`;
+        cell.style.width = `${rect[2] * 25}%`;
+        cell.style.height = `${rect[3] * 25}%`;
+        cell.style.background = colors[rect[4] || 0];
+        icon.appendChild(cell);
+    });
+    return icon;
+}
+
+function pixelIconHtml(key) {
+    const colors = itemIconColors(key);
+    const pixels = pixelIconRects(key)
+        .map(rect => `<i style="left:${rect[0] * 25}%;top:${rect[1] * 25}%;width:${rect[2] * 25}%;height:${rect[3] * 25}%;background:${colors[rect[4] || 0]}"></i>`)
+        .join('');
+    return `<span class="pixel-icon recipe-pixel-icon" aria-hidden="true">${pixels}</span>`;
 }
 
 function updateInventoryOverlay() {
@@ -1879,17 +2663,54 @@ function toggleInventory(force = null) {
 }
 
 function canUseInventoryItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'leatherArmor', 'ironArmor', 'crystalArmor', 'woodShield', 'ironShield', 'coalBomb', 'torch', 'bedroll', 'campCharm', 'snare', 'campFlag', 'potion', 'stew', 'salve', 'speedPotion', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
+    return ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'leatherArmor', 'ironArmor', 'crystalArmor', 'woodShield', 'ironShield', 'coalBomb', 'torch', 'bedroll', 'campCharm', 'snare', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'campFlag', 'potion', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
 }
 
 function recipeHasKnownMaterial(recipe) {
     return Object.keys(recipe.cost).some(key => (state.inventory[key] || 0) > 0);
 }
 
+function itemIconColors(key) {
+    return PIXEL_ICON_PALETTES[ITEM_ICON_TYPES[key] || key] || PIXEL_ICON_PALETTES.default;
+}
+
+function pixelIconRects(key) {
+    const type = ITEM_ICON_TYPES[key] || key;
+    if (['sword', 'blade', 'dagger'].includes(type)) return [[1, 0, 1, 1, 2], [2, 0, 1, 1, 1], [1, 1, 1, 1, 1], [1, 2, 1, 1, 1], [0, 3, 2, 1, 0]];
+    if (['spear'].includes(type)) return [[2, 0, 1, 1, 2], [2, 1, 1, 1, 1], [1, 2, 1, 1, 0], [1, 3, 1, 1, 0]];
+    if (['axe', 'pickaxe'].includes(type)) return [[1, 0, 1, 4, 0], [2, 0, 2, 1, 1], [2, 1, 1, 1, 2], [0, 3, 1, 1, 0]];
+    if (['armor', 'shield'].includes(type)) return [[1, 0, 2, 1, 1], [0, 1, 4, 2, 0], [1, 3, 2, 1, 2]];
+    if (['potion', 'salve', 'antidote', 'speed'].includes(type)) return [[1, 0, 2, 1, 2], [1, 1, 2, 1, 0], [0, 2, 4, 2, 1]];
+    if (['torch'].includes(type)) return [[1, 0, 2, 1, 2], [1, 1, 2, 1, 1], [2, 2, 1, 2, 0]];
+    if (['bomb'].includes(type)) return [[1, 0, 2, 1, 2], [0, 1, 4, 3, 0], [2, 1, 1, 1, 1]];
+    if (['key'].includes(type)) return [[0, 1, 2, 2, 1], [2, 2, 2, 1, 1], [3, 3, 1, 1, 2]];
+    if (['meat', 'hide', 'bedroll'].includes(type)) return [[0, 1, 3, 2, 0], [1, 0, 2, 1, 1], [2, 2, 2, 1, 2]];
+    if (['fang'].includes(type)) return [[1, 0, 2, 1, 2], [1, 1, 2, 1, 1], [2, 2, 1, 2, 1]];
+    if (['fence', 'trap'].includes(type)) return [[0, 1, 4, 1, 1], [0, 3, 4, 1, 1], [1, 0, 1, 4, 0], [3, 0, 1, 4, 0]];
+    if (['flag'].includes(type)) return [[1, 0, 1, 4, 0], [2, 0, 2, 2, 1], [2, 2, 1, 1, 2]];
+    if (['wood', 'bamboo', 'stone', 'ore', 'coal', 'crystal', 'mud'].includes(type)) return [[0, 1, 4, 2, 0], [1, 0, 2, 1, 1], [2, 2, 2, 1, 2]];
+    return [[1, 0, 2, 1, 2], [0, 1, 4, 2, 1], [1, 3, 2, 1, 0]];
+}
+
+function drawPixelItemIcon(target, key, x, y, size = 28) {
+    const colors = itemIconColors(key);
+    const unit = size / 4;
+    target.save();
+    target.imageSmoothingEnabled = false;
+    target.fillStyle = 'rgba(0, 0, 0, 0.32)';
+    target.fillRect(x - size / 2 - 2, y - size / 2 - 2, size + 4, size + 4);
+    for (const rect of pixelIconRects(key)) {
+        target.fillStyle = colors[rect[4] || 0];
+        target.fillRect(x - size / 2 + rect[0] * unit, y - size / 2 + rect[1] * unit, rect[2] * unit, rect[3] * unit);
+    }
+    target.restore();
+}
+
 function render(now) {
     ctx.clearRect(0, 0, VIEW.width, VIEW.height);
     drawTerrain();
     drawWorldObjects(now);
+    drawTerrainForeground();
     drawParticles();
     drawFloatTexts();
     drawEffects(now);
@@ -1939,32 +2760,74 @@ function getTerrainChunk(cx, cy) {
 }
 
 function terrainInfoAt(x, y) {
-    const river = riverDistance(x, y);
-    if (river < 46) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((46 - river) / 46, 0, 1)) };
-    if (river < 82) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', (river - 46) / 36) };
-
     const shapeNoise = biomeShapeNoise(x, y);
+    const camp = naturalRegionWeight(x, y, CAMP_POSITION.x, CAMP_POSITION.y, 520, 15.5);
+    if (camp > 0.46) {
+        const campNoise = valueNoise(x * 0.006, y * 0.006);
+        return { kind: 'camp', color: mixMany([['#6f5532', camp], ['#3e7f47', Math.max(0, 1 - camp)]], campNoise) };
+    }
+
+    const river = riverDistance(x, y);
+    const lake = lakeDistance(x, y);
+    const water = Math.min(river - 68, lake);
+    if (water < 0) return { kind: 'water', color: blendColor('#1f5f92', '#2f8fc7', clamp((-water) / 84, 0, 1)) };
+    if (water < 54) return { kind: 'shore', color: blendColor('#6f8750', '#3d8146', water / 54) };
+
+    const climate = climateAt(x, y);
     const mine = Math.max(
-        naturalRegionWeight(x, y, 1760, 1010, 620, 0.2),
-        naturalRegionWeight(x, y, 2700, 1760, 520, 1.1),
-        naturalRegionWeight(x, y, 5400, 3500, 720, 2.0),
-        naturalRegionWeight(x, y, 4920, 1180, 560, 2.9),
-        naturalRegionWeight(x, y, 6100, 2420, 620, 3.7)
+        climate.rock * 0.56 + climate.height * 0.24,
+        naturalRegionWeight(x, y, 5200, 3420, 1060, 2.0),
+        naturalRegionWeight(x, y, 5100, 1120, 980, 2.9),
+        naturalRegionWeight(x, y, 2600, 1700, 820, 1.1)
     );
-    const ruins = Math.max(naturalRegionWeight(x, y, 2060, 360, 560, 4.3), naturalRegionWeight(x, y, 5600, 780, 520, 5.1));
-    const swamp = Math.max(naturalRegionWeight(x, y, 3380, 2760, 720, 6.2), naturalRegionWeight(x, y, 1180, 3860, 520, 7.0));
-    const dry = Math.max(naturalRegionWeight(x, y, 5700, 1280, 760, 8.4), naturalRegionWeight(x, y, 6150, 3650, 620, 9.3));
-    const forest = Math.max(naturalRegionWeight(x, y, 780, 340, 620, 10.2), naturalRegionWeight(x, y, 520, 1720, 620, 11.1), naturalRegionWeight(x, y, 2500, 1450, 460, 12.4), naturalRegionWeight(x, y, 4550, 1060, 760, 13.3), naturalRegionWeight(x, y, 4200, 3100, 680, 14.6));
-    const camp = naturalRegionWeight(x, y, CAMP_POSITION.x, CAMP_POSITION.y, 430, 15.5);
+    const ruins = Math.max(naturalRegionWeight(x, y, 2060, 360, 620, 4.3), naturalRegionWeight(x, y, 5600, 780, 620, 5.1));
+    const swamp = Math.max(
+        climate.moisture * 0.55 + (1 - climate.height) * 0.32 + naturalRegionWeight(x, y, 1180, 3580, 1120, 7.0) * 0.55,
+        naturalRegionWeight(x, y, 3420, 2880, 1020, 6.2)
+    );
+    const dry = Math.max(
+        (1 - climate.moisture) * 0.64 + climate.temperature * 0.28 + naturalRegionWeight(x, y, 5850, 3300, 1100, 9.3) * 0.42,
+        naturalRegionWeight(x, y, 5680, 1360, 980, 8.4)
+    );
+    const forest = Math.max(
+        climate.moisture * 0.48 + (1 - Math.abs(climate.temperature - 0.48)) * 0.24 + naturalRegionWeight(x, y, 820, 1120, 1260, 10.2) * 0.5,
+        naturalRegionWeight(x, y, 4300, 980, 1040, 13.3),
+        naturalRegionWeight(x, y, 4100, 3150, 900, 14.6)
+    );
+    const waterEdge = clamp(1 - water / 230, 0, 1);
     const noise = valueNoise(x * 0.006, y * 0.006);
 
     if (ruins + shapeNoise * 0.04 > 0.54) return { kind: 'ruins', color: mixMany([['#38414d', ruins], ['#4f5964', 0.32], ['#2f6b3d', Math.max(0, 1 - ruins)]], noise) };
-    if (mine + shapeNoise * 0.05 > 0.52) return { kind: 'mine', color: mixMany([['#58636e', mine], ['#6a604f', 0.2], ['#376d3f', Math.max(0, 1 - mine)]], noise) };
-    if (swamp + shapeNoise * 0.06 > 0.48) return { kind: 'swamp', color: mixMany([['#214b3d', swamp], ['#2f6d57', 0.25], ['#2f6b3d', Math.max(0, 1 - swamp)]], noise) };
-    if (dry + shapeNoise * 0.05 > 0.5) return { kind: 'dry', color: mixMany([['#a47a3c', dry], ['#735536', 0.24], ['#3f8f4f', Math.max(0, 1 - dry)]], noise) };
-    if (forest + shapeNoise * 0.07 > 0.46) return { kind: 'forest', color: mixMany([['#1f5a35', forest], ['#2f7041', 0.3], ['#3f8f4f', Math.max(0, 1 - forest)]], noise) };
-    if (camp > 0.44) return { kind: 'camp', color: mixMany([['#6f5532', camp], ['#3e7f47', Math.max(0, 1 - camp)]], noise) };
+    if (mine + shapeNoise * 0.05 > 0.58) return { kind: 'mine', color: mixMany([['#58636e', mine], ['#6a604f', 0.2], ['#376d3f', Math.max(0, 1 - mine)]], noise) };
+    if (swamp + waterEdge * 0.24 + shapeNoise * 0.06 > 0.68) {
+        if (waterEdge > 0.42 && climate.moisture > 0.54) return { kind: 'mud', color: mixMany([['#263f34', swamp], ['#4b3b28', 0.38], ['#2f6d57', 0.24]], noise) };
+        return { kind: 'swamp', color: mixMany([['#214b3d', swamp], ['#2f6d57', 0.25], ['#2f6b3d', Math.max(0, 1 - swamp)]], noise) };
+    }
+    if (dry + shapeNoise * 0.05 > 0.62) return { kind: 'dry', color: mixMany([['#a47a3c', dry], ['#735536', 0.24], ['#3f8f4f', Math.max(0, 1 - dry)]], noise) };
+    if (forest + shapeNoise * 0.07 > 0.58) {
+        if (climate.moisture > 0.66 && climate.temperature > 0.42 && valueNoise(x * 0.004 + 18, y * 0.004 - 12) > 0.54) {
+            return { kind: 'bamboo', color: mixMany([['#1f6b3f', forest], ['#3b8d49', 0.36], ['#24502e', 0.22]], noise) };
+        }
+        return { kind: 'forest', color: mixMany([['#1f5a35', forest], ['#2f7041', 0.3], ['#3f8f4f', Math.max(0, 1 - forest)]], noise) };
+    }
+    if (climate.moisture > 0.46 && valueNoise(x * 0.005 - 3, y * 0.005 + 7) > 0.58) {
+        return { kind: 'tallgrass', color: blendColor('#2f7f45', '#4e9a4a', noise * 0.45) };
+    }
     return { kind: 'grass', color: blendColor('#347d47', '#428c4e', noise * 0.32) };
+}
+
+function climateAt(x, y) {
+    const nx = x / WORLD.width;
+    const ny = y / WORLD.height;
+    const broadMoisture = valueNoise(x * 0.0012 + 4, y * 0.0012 - 8);
+    const broadTemp = valueNoise(x * 0.001 + 22, y * 0.001 + 6);
+    const broadHeight = valueNoise(x * 0.0014 - 12, y * 0.0014 + 16);
+    return {
+        moisture: clamp(broadMoisture * 0.62 + (1 - nx) * 0.18 + ny * 0.14 + valueNoise(x * 0.003, y * 0.003) * 0.18, 0, 1),
+        temperature: clamp(broadTemp * 0.62 + nx * 0.22 + ny * 0.12, 0, 1),
+        height: clamp(broadHeight * 0.68 + valueNoise(x * 0.003 - 9, y * 0.003 + 2) * 0.22 + nx * 0.1, 0, 1),
+        rock: clamp(valueNoise(x * 0.0017 + 11, y * 0.0017 - 19) * 0.72 + nx * 0.18 + (1 - ny) * 0.1, 0, 1),
+    };
 }
 
 function riverCenterY(x) {
@@ -1972,7 +2835,7 @@ function riverCenterY(x) {
 }
 
 function riverDistance(x, y) {
-    const mainRiver = Math.abs(y - riverCenterY(x));
+    const mainRiver = Math.abs(y - riverCenterY(x)) * 0.82;
     const easternBranch = Math.abs(y - (1120 + Math.sin(x * 0.003 + 2.1) * 78 + Math.sin(x * 0.008) * 28))
         + rangePenalty(x, 2200, 5200) * 1.8;
     const northCreek = Math.abs(y - (430 + Math.sin(x * 0.005 + 0.8) * 52))
@@ -1981,7 +2844,28 @@ function riverDistance(x, y) {
         + rangePenalty(x, 3600, WORLD.width) * 1.5;
     const verticalStream = Math.abs(x - (3840 + Math.sin(y * 0.004) * 95))
         + rangePenalty(y, 980, 3520) * 1.6;
-    return Math.min(mainRiver, easternBranch, northCreek, southRiver, verticalStream);
+    const deltaBranch = Math.abs(y - (2580 + Math.sin(x * 0.0026 + 3.2) * 120))
+        + rangePenalty(x, 700, 3950) * 1.15;
+    return Math.min(mainRiver, easternBranch, northCreek, southRiver, verticalStream, deltaBranch);
+}
+
+function lakeDistance(x, y) {
+    return Math.min(
+        lakeEdgeDistance(x, y, 1120, 3500, 520, 340, 1.6),
+        lakeEdgeDistance(x, y, 1060, 1120, 360, 250, 2.4),
+        lakeEdgeDistance(x, y, 3560, 2820, 440, 300, 3.1),
+        lakeEdgeDistance(x, y, 4530, 820, 300, 210, 4.7)
+    );
+}
+
+function lakeEdgeDistance(x, y, cx, cy, rx, ry, seed) {
+    const angle = Math.atan2(y - cy, x - cx);
+    const wobble = 1
+        + Math.sin(angle * 3.2 + seed) * 0.08
+        + Math.sin(angle * 6.1 + seed * 1.7) * 0.05
+        + (valueNoise(x * 0.004 + seed, y * 0.004 - seed) - 0.5) * 0.12;
+    const normalized = Math.hypot((x - cx) / (rx * wobble), (y - cy) / (ry * wobble));
+    return (normalized - 1) * Math.min(rx, ry);
 }
 
 function rangePenalty(value, min, max) {
@@ -1991,6 +2875,13 @@ function rangePenalty(value, min, max) {
 }
 
 function waterCurrentAt(x, y) {
+    if (lakeDistance(x, y) < riverDistance(x, y) - 68) {
+        const swirl = Math.sin(x * 0.004 + y * 0.003);
+        return {
+            x: Math.cos(y * 0.006) * 10 + swirl * 6,
+            y: Math.sin(x * 0.006) * 10 - swirl * 6,
+        };
+    }
     return {
         x: 42 + Math.sin(y * 0.012) * 18,
         y: Math.cos(x * 0.006) * 16,
@@ -2107,6 +2998,14 @@ function drawTerrainDetailAt(target, sx, sy, grid, info, h) {
         }
         return;
     }
+    if (info.kind === 'mud') {
+        target.fillStyle = 'rgba(28, 22, 16, 0.24)';
+        target.fillRect(sx + 3 + (h * 13) % 16, sy + 12, 24, 7);
+        target.fillStyle = 'rgba(78, 100, 64, 0.22)';
+        target.fillRect(sx + 8, sy + 22, 4, 8);
+        target.fillRect(sx + 21, sy + 9, 3, 10);
+        return;
+    }
     if (info.kind === 'dry') {
         target.fillStyle = 'rgba(90, 56, 28, 0.24)';
         target.fillRect(sx + 5, sy + 12 + h * 10, 22, 3);
@@ -2124,6 +3023,32 @@ function drawTerrainDetailAt(target, sx, sy, grid, info, h) {
     if (info.kind === 'forest') {
         target.fillStyle = h > 0.5 ? 'rgba(32, 22, 12, 0.18)' : 'rgba(132, 87, 43, 0.16)';
         target.fillRect(sx + 7, sy + 18, 14, 5);
+        return;
+    }
+    if (info.kind === 'bamboo') {
+        target.fillStyle = 'rgba(98, 72, 38, 0.18)';
+        target.fillRect(sx + 2, sy + 5, grid - 4, grid - 8);
+        target.fillStyle = h > 0.5 ? 'rgba(184, 151, 70, 0.22)' : 'rgba(38, 95, 45, 0.18)';
+        target.fillRect(sx + 4 + h * 5, sy + 17, 22, 5);
+        target.fillStyle = 'rgba(32, 64, 28, 0.16)';
+        target.fillRect(sx + 10, sy + 7 + h * 6, 9, 10);
+        target.strokeStyle = 'rgba(116, 165, 70, 0.22)';
+        target.lineWidth = 2;
+        target.beginPath();
+        target.moveTo(sx + 7, sy + 26);
+        target.lineTo(sx + 17, sy + 12);
+        target.moveTo(sx + 24, sy + 28);
+        target.lineTo(sx + 14, sy + 16);
+        target.stroke();
+        return;
+    }
+    if (info.kind === 'tallgrass') {
+        target.fillStyle = 'rgba(185, 205, 84, 0.12)';
+        target.fillRect(sx + 2, sy + 4, grid - 4, grid - 8);
+        target.fillStyle = h > 0.55 ? 'rgba(72, 106, 45, 0.2)' : 'rgba(220, 190, 80, 0.16)';
+        target.fillRect(sx + 4, sy + 18 + h * 6, 23, 4);
+        target.fillStyle = 'rgba(36, 70, 36, 0.13)';
+        target.fillRect(sx + 12 + h * 8, sy + 8, 12, 12);
         return;
     }
     target.fillStyle = h > 0.5 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.045)';
@@ -2165,13 +3090,119 @@ function drawWorldObjects(now) {
     const drawables = [
         ...(isNearView(state.camp, 160) ? [{ y: state.camp.y, draw: () => drawCamp() }] : []),
         ...(isNearView(state.ruins, 220) ? [{ y: state.ruins.y, draw: () => drawRuins() }] : []),
+        ...state.spawnDens.filter(den => isNearView(den, 140)).map(den => ({ y: den.y - 4, draw: () => drawSpawnDen(den) })),
+        ...state.bambooTraps.filter(t => isNearView(t, 90)).map(t => ({ y: t.y - 2, draw: () => drawBambooTrap(t) })),
+        ...state.placedFences.filter(t => isNearView(t, 120)).map(t => ({ y: t.y + 8, draw: () => drawBambooFence(t) })),
+        ...state.placedStations.filter(t => isNearView(t, 140)).map(t => ({ y: t.y + 10, draw: () => drawStation(t) })),
         ...state.placedTorches.filter(t => isNearView(t, 120)).map(t => ({ y: t.y, draw: () => drawPlacedTorch(t) })),
-        ...state.resources.filter(r => r.hp > 0 && isNearView(r, 180)).map(r => ({ y: r.y, draw: () => drawResource(r) })),
+        ...state.resources.filter(shouldDrawResource).map(r => ({ y: r.y, draw: () => drawResource(r) })),
         ...state.enemies.filter(e => e.hp > 0 && isNearView(e, 220)).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
         { y: state.player.y, draw: () => drawPlayer(now) },
     ];
     drawables.sort((a, b) => a.y - b.y);
     drawables.forEach(item => item.draw());
+}
+
+function shouldDrawResource(r) {
+    if (r.hp <= 0 || !isNearView(r, 180)) return false;
+    return true;
+}
+
+function drawBambooFence(fence) {
+    const x = worldX(fence.x);
+    const y = worldY(fence.y);
+    drawShadow(x, y + 2, 42, 8);
+    ctx.strokeStyle = '#20351f';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y - 16);
+    ctx.lineTo(x + 20, y - 20);
+    ctx.moveTo(x - 20, y - 4);
+    ctx.lineTo(x + 20, y - 8);
+    ctx.stroke();
+    ctx.strokeStyle = '#9bd86a';
+    ctx.lineWidth = 4;
+    [-14, 0, 14].forEach(offset => {
+        ctx.beginPath();
+        ctx.moveTo(x + offset, y + 4);
+        ctx.lineTo(x + offset + 3, y - 28);
+        ctx.stroke();
+    });
+}
+
+function drawBambooTrap(trap) {
+    const x = worldX(trap.x);
+    const y = worldY(trap.y);
+    drawShadow(x, y + 2, 34, 7);
+    ctx.strokeStyle = trap.used ? 'rgba(100, 80, 48, 0.7)' : '#d7f28a';
+    ctx.lineWidth = 3;
+    for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x - 16 + i * 9, y + 2);
+        ctx.lineTo(x - 7 + i * 9, y - 18);
+        ctx.lineTo(x + 2 + i * 9, y + 2);
+        ctx.stroke();
+    }
+}
+
+function drawSpawnDen(den) {
+    const x = worldX(den.x);
+    const y = worldY(den.y);
+    drawShadow(x, y + 2, 54, 10);
+    const colors = {
+        frog: ['#1f5f4a', '#8cff66'],
+        scorpion: ['#6d4121', '#d68a43'],
+        bat: ['#241b3c', '#8fb8ff'],
+        wolf: ['#46515d', '#d8e5f2'],
+        slime: ['#168b64', '#5ee089'],
+    }[den.kind] || ['#38414d', '#ffd166'];
+    ctx.fillStyle = colors[0];
+    ctx.fillRect(x - 20, y - 12, 40, 16);
+    ctx.fillRect(x - 12, y - 22, 24, 12);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(x - 10, y - 16, 20, 9);
+    ctx.fillStyle = colors[1];
+    ctx.fillRect(x - 18, y - 6, 6, 4);
+    ctx.fillRect(x + 12, y - 7, 6, 4);
+}
+
+function drawStation(station) {
+    const x = worldX(station.x);
+    const y = worldY(station.y);
+    drawShadow(x, y + 4, station.radius * 2.1, 12);
+    if (station.kind === 'potionTable') {
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - 24, y - 22, 48, 24);
+        ctx.fillStyle = '#7dcbe8';
+        ctx.fillRect(x - 14, y - 42, 10, 20);
+        ctx.fillRect(x + 7, y - 36, 12, 14);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 12, y - 30, 6, 7);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x + 10, y - 30, 7, 5);
+    } else if (station.kind === 'workbench') {
+        ctx.fillStyle = '#4a2b17';
+        ctx.fillRect(x - 28, y - 28, 56, 28);
+        ctx.fillStyle = '#9a6436';
+        ctx.fillRect(x - 24, y - 34, 48, 10);
+        ctx.fillStyle = '#d49a5a';
+        ctx.fillRect(x - 20, y - 31, 16, 4);
+        ctx.fillRect(x + 6, y - 31, 14, 4);
+    } else {
+        ctx.fillStyle = '#3d4650';
+        ctx.fillRect(x - 28, y - 30, 56, 30);
+        ctx.fillStyle = '#20262d';
+        ctx.fillRect(x - 18, y - 42, 36, 14);
+        ctx.fillStyle = '#ff9f1c';
+        ctx.fillRect(x - 12, y - 25, 24, 12);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 6, y - 23, 12, 7);
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px "Microsoft YaHei"';
+    ctx.textAlign = 'center';
+    ctx.fillText(RESOURCE_LABELS[station.kind], x, y + 18);
+    ctx.textAlign = 'left';
 }
 
 function drawPlacedTorch(torch) {
@@ -2236,6 +3267,26 @@ function drawResource(r) {
 }
 
 function drawGatherablePatch(r, x, y) {
+    if (r.kind === 'bamboo') {
+        const variant = Math.floor(hash2(r.x * 0.03, r.y * 0.03) * 4);
+        const sprite = getBambooSprite(variant);
+        ctx.drawImage(sprite, x - sprite.width / 2, y - sprite.height + 8);
+        return;
+    }
+    if (r.kind === 'mudClump') {
+        drawShadow(x, y + 1, 24, 7);
+        ctx.fillStyle = '#4b3b28';
+        ctx.fillRect(x - 14, y - 8, 28, 9);
+        ctx.fillStyle = '#6d5438';
+        ctx.fillRect(x - 9, y - 12, 17, 6);
+        ctx.fillStyle = 'rgba(150, 120, 70, 0.35)';
+        ctx.fillRect(x - 4, y - 10, 8, 2);
+        return;
+    }
+    if (r.kind === 'tallGrass') {
+        drawTallGrassClump(r, x, y, false);
+        return;
+    }
     if (r.kind === 'stump') {
         drawShadow(x, y + 1, 32, 8);
         ctx.fillStyle = COLORS.bark;
@@ -2312,6 +3363,205 @@ function drawGatherablePatch(r, x, y) {
     ctx.fillRect(x + 4, y - 28, 6, 6);
 }
 
+function drawBambooCane(x, groundY, width, height, seed) {
+    const lean = Math.sin(seed * 8) * 3;
+    const topX = x + lean;
+    const yTop = groundY - height;
+    const gradient = ctx.createLinearGradient(x - width / 2, groundY, x + width / 2, groundY);
+    gradient.addColorStop(0, '#2f7a38');
+    gradient.addColorStop(0.5, '#8dcf57');
+    gradient.addColorStop(1, '#1d5a2b');
+    ctx.fillStyle = gradient;
+    ctx.strokeStyle = '#143f22';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - width / 2, groundY);
+    ctx.lineTo(topX - width / 2, yTop);
+    ctx.lineTo(topX + width / 2, yTop);
+    ctx.lineTo(x + width / 2, groundY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(20, 70, 24, 0.72)';
+    ctx.lineWidth = 2;
+    for (let y = groundY - 14; y > yTop + 6; y -= 15) {
+        const t = (groundY - y) / height;
+        const cx = x + lean * t;
+        ctx.beginPath();
+        ctx.moveTo(cx - width / 2, y);
+        ctx.lineTo(cx + width / 2, y - 1);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#7fcf55';
+    ctx.lineWidth = 3;
+    [
+        { y: 0.24, side: -1 },
+        { y: 0.42, side: 1 },
+        { y: 0.62, side: -1 },
+        { y: 0.78, side: 1 },
+    ].forEach(branch => {
+        const by = groundY - height * branch.y;
+        const bx = x + lean * branch.y;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.quadraticCurveTo(bx + branch.side * 13, by - 8, bx + branch.side * 28, by - 5);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(142, 211, 82, 0.78)';
+        ctx.fillRect(bx + branch.side * 24, by - 10, branch.side * 10, 5);
+        ctx.fillRect(bx + branch.side * 18, by - 3, branch.side * 12, 4);
+    });
+}
+
+function getBambooSprite(variant) {
+    const key = String(variant);
+    if (vegetationSpriteCache.bamboo.has(key)) return vegetationSpriteCache.bamboo.get(key);
+    const sprite = document.createElement('canvas');
+    sprite.width = 96;
+    sprite.height = 150;
+    const target = sprite.getContext('2d');
+    target.imageSmoothingEnabled = false;
+    drawBambooSprite(target, variant);
+    vegetationSpriteCache.bamboo.set(key, sprite);
+    return sprite;
+}
+
+function drawBambooSprite(target, variant) {
+    const baseX = 44;
+    const groundY = 140;
+    target.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    target.beginPath();
+    target.ellipse(baseX, groundY - 2, 18, 5, 0, 0, Math.PI * 2);
+    target.fill();
+    const seed = 0.23 + variant * 0.19;
+    drawBambooCaneOn(target, baseX - 8, groundY, 7, 104 + seed * 18, seed);
+    drawBambooCaneOn(target, baseX + 8, groundY + 2, 6, 92 + seed * 16, seed + 1.7);
+    if (variant !== 0) drawBambooCaneOn(target, baseX + 19, groundY + 3, 5, 76 + seed * 14, seed + 3.1);
+}
+
+function drawBambooCaneOn(target, x, groundY, width, height, seed) {
+    const lean = Math.sin(seed * 8) * 3;
+    const topX = x + lean;
+    const yTop = groundY - height;
+    const gradient = target.createLinearGradient(x - width / 2, groundY, x + width / 2, groundY);
+    gradient.addColorStop(0, '#2f7a38');
+    gradient.addColorStop(0.5, '#8dcf57');
+    gradient.addColorStop(1, '#1d5a2b');
+    target.fillStyle = gradient;
+    target.strokeStyle = '#143f22';
+    target.lineWidth = 2;
+    target.beginPath();
+    target.moveTo(x - width / 2, groundY);
+    target.lineTo(topX - width / 2, yTop);
+    target.lineTo(topX + width / 2, yTop);
+    target.lineTo(x + width / 2, groundY);
+    target.closePath();
+    target.fill();
+    target.stroke();
+    target.strokeStyle = 'rgba(20, 70, 24, 0.72)';
+    target.lineWidth = 2;
+    for (let y = groundY - 14; y > yTop + 6; y -= 15) {
+        const t = (groundY - y) / height;
+        const cx = x + lean * t;
+        target.beginPath();
+        target.moveTo(cx - width / 2, y);
+        target.lineTo(cx + width / 2, y - 1);
+        target.stroke();
+    }
+    target.strokeStyle = '#7fcf55';
+    target.lineWidth = 3;
+    [
+        { y: 0.28, side: -1 },
+        { y: 0.5, side: 1 },
+        { y: 0.72, side: -1 },
+    ].forEach(branch => {
+        const by = groundY - height * branch.y;
+        const bx = x + lean * branch.y;
+        target.beginPath();
+        target.moveTo(bx, by);
+        target.quadraticCurveTo(bx + branch.side * 11, by - 7, bx + branch.side * 23, by - 5);
+        target.stroke();
+        target.fillStyle = 'rgba(142, 211, 82, 0.78)';
+        target.fillRect(bx + branch.side * 20, by - 9, branch.side * 9, 5);
+    });
+}
+
+function drawTallGrassClump(r, x, y, foreground) {
+    const variant = Math.floor(hash2(r.x * 0.04, r.y * 0.04) * 6);
+    const sprite = getTallGrassSprite(variant, foreground);
+    ctx.drawImage(sprite, x - sprite.width / 2, y - sprite.height + 8);
+}
+
+function getTallGrassSprite(variant, foreground) {
+    const key = `${foreground ? 'front' : 'base'}:${variant}`;
+    if (vegetationSpriteCache.tallGrass.has(key)) return vegetationSpriteCache.tallGrass.get(key);
+    const sprite = document.createElement('canvas');
+    sprite.width = 64;
+    sprite.height = 72;
+    const target = sprite.getContext('2d');
+    target.imageSmoothingEnabled = false;
+    drawTallGrassSprite(target, variant, foreground);
+    vegetationSpriteCache.tallGrass.set(key, sprite);
+    return sprite;
+}
+
+function drawTallGrassSprite(target, variant, foreground) {
+    const x = 32;
+    const y = 62;
+    if (!foreground) {
+        target.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        target.beginPath();
+        target.ellipse(x, y - 2, 19, 4, 0, 0, Math.PI * 2);
+        target.fill();
+    }
+    const seed = 0.19 + variant * 0.137;
+    const layers = foreground
+        ? [
+            { count: 4, width: 2, alpha: 0.42, height: 34, color: [42, 91, 42], y: 6 },
+            { count: 3, width: 2, alpha: 0.5, height: 42, color: [143, 180, 74], y: 4 },
+        ]
+        : [
+            { count: 4, width: 3, alpha: 0.2, height: 28, color: [33, 72, 36], y: 8 },
+            { count: 5, width: 2, alpha: 0.36, height: 36, color: [48, 112, 52], y: 5 },
+            { count: 3, width: 2, alpha: 0.44, height: 46, color: [164, 196, 82], y: 2 },
+        ];
+    layers.forEach((layer, layerIndex) => {
+        for (let i = 0; i < layer.count; i++) {
+            const t = i / Math.max(1, layer.count - 1);
+            const wave = Math.sin(seed * 9 + i * 1.37 + layerIndex * 2.4);
+            const spread = -22 + t * 44 + wave * 4;
+            const height = layer.height + ((i * 17 + Math.floor(seed * 41) + layerIndex * 9) % 18);
+            const lean = Math.sin(seed * 13 + i * 0.83 + layerIndex) * (6 + layerIndex);
+            const baseY = y + layer.y + Math.sin(i * 1.9 + seed) * 3;
+            const [r1, g1, b1] = layer.color;
+            target.strokeStyle = `rgba(${r1}, ${g1}, ${b1}, ${layer.alpha})`;
+            target.lineWidth = layer.width;
+            target.beginPath();
+            target.moveTo(x + spread, baseY);
+            target.bezierCurveTo(
+                x + spread + lean * 0.15,
+                baseY - height * 0.35,
+                x + spread + lean * 0.55,
+                baseY - height * 0.72,
+                x + spread + lean,
+                baseY - height
+            );
+            target.stroke();
+            if ((i + layerIndex) % 8 === 0) {
+                target.fillStyle = `rgba(218, 187, 96, ${foreground ? 0.58 : 0.42})`;
+                target.fillRect(x + spread + lean - 1, baseY - height - 6, 3, 8);
+            }
+        }
+    });
+    if (!foreground) {
+        target.fillStyle = 'rgba(24, 58, 30, 0.24)';
+        target.fillRect(x - 20, y - 8, 40, 6);
+        target.fillStyle = 'rgba(200, 172, 86, 0.12)';
+        target.fillRect(x - 12 + seed * 6, y - 15, 20, 3);
+    }
+}
+
 function drawEnemy(e, now) {
     const x = worldX(e.x);
     const y = worldY(e.y);
@@ -2321,18 +3571,38 @@ function drawEnemy(e, now) {
     const flyLift = e.kind === 'bat' ? 16 + Math.sin(now / 90) * 6 + Math.sin(swoopProgress * Math.PI) * 18 : 0;
     const chargeLean = e.chargeUntil > now ? 8 : 0;
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2) - leapLift - flyLift;
+    const concealed = e.kind !== 'bat' && tallGrassCoverAt(e);
+    const revealed = e.windupUntil || e.hurtUntil || distance(e, state.player) < 54;
+    if (concealed && !revealed) ctx.globalAlpha = 0.18;
     drawShadow(x, y + 1, e.radius * (e.kind === 'bat' ? 1.1 : 1.62), e.radius * (e.kind === 'bat' ? 0.25 : 0.42));
+    ctx.globalAlpha = 1;
     if (e.windupUntil) {
         drawEnemyTelegraph(e, x, y, now);
     }
+    if (e.tongueUntil > now) {
+        const alpha = clamp((e.tongueUntil - now) / 260, 0, 1);
+        ctx.strokeStyle = `rgba(255, 143, 199, ${0.35 + alpha * 0.5})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x + e.attackDir.x * 10, y + e.attackDir.y * 10 - 10);
+        ctx.lineTo(worldX(e.tongueTargetX), worldY(e.tongueTargetY) - 8);
+        ctx.stroke();
+    }
+    if (concealed && !revealed) ctx.globalAlpha = 0.16;
     if (e.hurtUntil) {
         ctx.globalAlpha = 0.72;
         drawSpriteGrounded(e.kind, x + e.attackDir.x * chargeLean, y + bounce, 3.2, { tint: '#ffffff' });
         ctx.globalAlpha = 1;
     } else {
         drawSpriteGrounded(e.kind, x + e.attackDir.x * chargeLean, y + bounce, 3.2);
+        ctx.globalAlpha = 1;
+        if (concealed && !revealed && (e.kind === 'wolf' || e.kind === 'scorpion')) {
+            ctx.fillStyle = 'rgba(255, 224, 138, 0.42)';
+            ctx.fillRect(x - 5, y - 22, 2, 2);
+            ctx.fillRect(x + 4, y - 22, 2, 2);
+        }
     }
-    drawMiniBar(x, y + e.radius + 10, e.hp / e.maxHp, '#ff6b6b');
+    if (!concealed || revealed) drawMiniBar(x, y + e.radius + 10, e.hp / e.maxHp, '#ff6b6b');
 }
 
 function drawEnemyTelegraph(e, x, y, now) {
@@ -2377,10 +3647,11 @@ function drawEnemyTelegraph(e, x, y, now) {
         );
         ctx.stroke();
     } else if (e.kind === 'frog') {
-        ctx.strokeStyle = 'rgba(92, 220, 120, 0.78)';
+        ctx.strokeStyle = 'rgba(255, 143, 199, 0.86)';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.ellipse(x + e.attackDir.x * 50, y + e.attackDir.y * 50, e.radius + 10 + pulse * 0.35, e.radius * 0.55 + 5, 0, 0, Math.PI * 2);
+        ctx.moveTo(x + e.attackDir.x * 12, y + e.attackDir.y * 12 - 8);
+        ctx.lineTo(x + e.attackDir.x * (126 + pulse), y + e.attackDir.y * (126 + pulse) - 8);
         ctx.stroke();
     } else if (e.kind === 'scorpion') {
         const angle = Math.atan2(e.attackDir.y, e.attackDir.x);
@@ -2418,6 +3689,11 @@ function drawPlayer(now) {
     const lean = keys.size ? Math.sin(now / 110) * 2 : 0;
     drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4);
     ctx.globalAlpha = 1;
+    if (p.poisonUntil > now) {
+        ctx.globalAlpha = 0.34 + Math.sin(now / 90) * 0.08;
+        drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4, { tint: '#8cff66' });
+        ctx.globalAlpha = 1;
+    }
     drawArmorOverlay(x + p.facing.x * Math.abs(lean), y + step);
     drawPlayerHandsAndWeapon(x, y + step, p, now);
     if (p.attackUntil > now) {
@@ -2459,8 +3735,8 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
         return;
     }
     const weaponLength = Math.max(20, state.equipment.range * 0.58);
-    ctx.strokeStyle = state.equipment.weapon === '铁剑' ? '#d8e5f2' : (state.equipment.weapon === '石矛' ? '#a8b3bd' : COLORS.trunk);
-    ctx.lineWidth = state.equipment.weapon === '石矛' ? 3 : 5;
+    ctx.strokeStyle = state.equipment.weapon === '铁剑' ? '#d8e5f2' : (state.equipment.weapon === '石矛' ? '#a8b3bd' : (state.equipment.weapon === '竹矛' ? '#d7f28a' : COLORS.trunk));
+    ctx.lineWidth = state.equipment.weapon === '石矛' || state.equipment.weapon === '竹矛' ? 3 : 5;
     ctx.beginPath();
     ctx.moveTo(handX, handY);
     ctx.lineTo(handX + dir.x * weaponLength, handY + dir.y * weaponLength);
@@ -2579,6 +3855,19 @@ function drawEffects() {
     drawHarvestProgress();
 }
 
+function drawTerrainForeground() {
+    const foregroundGrass = new Set(getNearbyTallGrass(state.player, 130).filter(grass => isNearView(grass, 80)));
+    for (const enemy of state.enemies) {
+        if (enemy.hp <= 0 || !isNearView(enemy, 120)) continue;
+        getNearbyTallGrass(enemy, enemy.radius + 42).forEach(grass => {
+            if (isNearView(grass, 80)) foregroundGrass.add(grass);
+        });
+    }
+    for (const grass of foregroundGrass) {
+        drawTallGrassClump(grass, worldX(grass.x), worldY(grass.y), true);
+    }
+}
+
 function nightAmount() {
     const t = state.timeOfDay;
     if (t > 0.22 && t < 0.72) return 0;
@@ -2639,6 +3928,16 @@ function drawUiOverlay() {
     ctx.fillStyle = 'rgba(255,255,255,0.76)';
     ctx.font = 'bold 13px "Microsoft YaHei"';
     ctx.fillText('按 I 打开背包 / 合成栏', 30, 104);
+    if (state.player.poisonUntil > performance.now()) {
+        ctx.fillStyle = 'rgba(42, 88, 38, 0.82)';
+        ctx.fillRect(402, 64, 62, 20);
+        ctx.strokeStyle = '#9cff7a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(402, 64, 62, 20);
+        ctx.fillStyle = '#d9ffd0';
+        ctx.font = 'bold 13px "Microsoft YaHei"';
+        ctx.fillText('中毒', 419, 79);
+    }
     drawHotbar();
 
     if (state.win || state.lose) {
@@ -2657,13 +3956,14 @@ function drawUiOverlay() {
 function drawHotbar() {
     const slot = 48;
     const gap = 6;
-    const total = HOTBAR_ITEMS.length * slot + (HOTBAR_ITEMS.length - 1) * gap;
+    const hotbarItems = state.hotbarItems || HOTBAR_ITEMS;
+    const total = hotbarItems.length * slot + (hotbarItems.length - 1) * gap;
     const startX = Math.round((VIEW.width - total) / 2);
     const y = VIEW.height - slot - 18;
     ctx.save();
     ctx.fillStyle = 'rgba(8, 14, 21, 0.82)';
     ctx.fillRect(startX - 10, y - 10, total + 20, slot + 20);
-    HOTBAR_ITEMS.forEach((key, index) => {
+    hotbarItems.forEach((key, index) => {
         const x = startX + index * (slot + gap);
         const selected = index === state.selectedHotbar;
         ctx.fillStyle = selected ? 'rgba(255, 209, 102, 0.28)' : 'rgba(255, 255, 255, 0.12)';
@@ -2676,16 +3976,14 @@ function drawHotbar() {
         ctx.textAlign = 'left';
         ctx.fillText(String(index + 1), x + 4, y + 12);
         if (state.inventory[key] > 0) {
-            ctx.font = '24px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(RESOURCE_ICONS[key] || '•', x + slot / 2, y + 31);
+            drawPixelItemIcon(ctx, key, x + slot / 2, y + 28, 28);
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 13px "Microsoft YaHei"';
             ctx.textAlign = 'right';
             ctx.fillText(String(state.inventory[key]), x + slot - 5, y + slot - 5);
         }
     });
-    const selectedKey = HOTBAR_ITEMS[state.selectedHotbar];
+    const selectedKey = hotbarItems[state.selectedHotbar];
     if (selectedKey && state.inventory[selectedKey] > 0) {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 14px "Microsoft YaHei"';
@@ -2785,7 +4083,7 @@ function drawGroundContact(x, y, kind) {
 }
 
 function resourceName(kind) {
-    return { tree: '树木', stump: '树桩', rock: '岩石', pebble: '小石子', grass: '草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', flower: '野花', lotus: '莲花', cactus: '仙人掌', ore: '铁矿' }[kind] || '资源';
+    return { tree: '树木', stump: '树桩', rock: '岩石', pebble: '小石子', grass: '草丛', tallGrass: '高草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', flower: '野花', lotus: '莲花', cactus: '仙人掌', ore: '铁矿', bamboo: '竹子', mudClump: '泥块' }[kind] || '资源';
 }
 
 function loop(now) {
@@ -2809,8 +4107,9 @@ window.addEventListener('keydown', event => {
     if (/^[1-9]$/.test(key)) {
         const index = Number(key) - 1;
         state.selectedHotbar = index;
-        const item = HOTBAR_ITEMS[index];
+        const item = (state.hotbarItems || HOTBAR_ITEMS)[index];
         if (item && canUseInventoryItem(item)) useInventoryItem(item);
+        else if (item && (state.inventory[item] || 0) > 0) showToast(`${RESOURCE_LABELS[item]} 不能直接使用，只能查看数量。`);
         return;
     }
     if (key === 'e') {
