@@ -17,9 +17,11 @@
                 <span>采集：长按 E</span>
                 <span>交互：按 E</span>
                 <span>攻击：鼠标左键 / 空格</span>
+                <span>投掷：选中煤火弹后按住攻击键瞄准，松开投出</span>
                 <span>格挡：F / 右键</span>
                 <span>冲刺：Shift</span>
                 <span>背包/合成：I</span>
+                <span>手机：左侧摇杆移动，右侧按钮操作</span>
             </div>
         </section>
 
@@ -27,6 +29,18 @@
             <div id="canvas-wrap">
                 <canvas id="game-canvas" width="960" height="640" aria-label="荒野工匠游戏画面"></canvas>
                 <div id="toast">靠近资源后长按 E 采集。</div>
+                <div id="mobile-controls" aria-hidden="true">
+                    <div id="mobile-joystick" aria-label="移动摇杆">
+                        <div id="mobile-joystick-thumb"></div>
+                    </div>
+                    <div id="mobile-buttons" aria-label="手机操作按钮">
+                        <button type="button" data-mobile-action="inventory">背包</button>
+                        <button type="button" data-mobile-action="block">格挡</button>
+                        <button type="button" data-mobile-action="interact">采集</button>
+                        <button type="button" data-mobile-action="use">使用</button>
+                        <button type="button" data-mobile-action="attack" class="primary">攻击</button>
+                    </div>
+                </div>
             </div>
 
             <aside id="hud">
@@ -34,9 +48,11 @@
                     <h2>状态</h2>
                     <div class="stat-row"><span>生命</span><strong id="hp-label">100/100</strong></div>
                     <div class="bar"><div id="hp-bar"></div></div>
+                    <div class="stat-row"><span>饥饿</span><strong id="hunger-label">100/100</strong></div>
+                    <div class="bar hunger"><div id="hunger-bar"></div></div>
                     <div class="stat-row"><span>攻击</span><strong id="attack-label">1</strong></div>
                     <div class="stat-row"><span>工具</span><strong id="tool-label">徒手</strong></div>
-                    <div class="stat-row"><span>装备</span><strong id="armor-label">布衣</strong></div>
+                    <div class="stat-row"><span>装备</span><strong id="armor-label">无</strong></div>
                     <div class="stat-row"><span>时间</span><strong id="time-label">白天</strong></div>
                 </div>
 
@@ -66,10 +82,17 @@
             </header>
             <div id="inventory-layout">
                 <section class="inventory-section">
-                    <h3>已获得物品</h3>
-                    <p class="inventory-hint">拖拽可使用物品到下方快捷栏槽位。</p>
-                    <div id="inventory"></div>
+                    <div id="inventory-main">
+                        <aside id="equipment-panel" aria-label="装备栏"></aside>
+                        <div id="backpack-panel">
+                            <h3>已获得物品</h3>
+                            <p class="inventory-hint">背包最多 4 行；拖拽到快捷栏，或点丢弃按钮丢掉物品。</p>
+                            <div id="inventory-capacity"></div>
+                            <div id="inventory"></div>
+                        </div>
+                    </div>
                     <div id="hotbar-drop-zone" aria-label="快捷栏槽位"></div>
+                    <div id="chest-storage" class="hidden" aria-label="木箱储物"></div>
                 </section>
                 <section class="inventory-section">
                     <h3>合成栏</h3>
