@@ -157,7 +157,7 @@ const SIMPLE_WEAPON_DEFS = [
     { id: 'antlerFork', name: '鹿角叉', desc: '扇形戳刺，适合打多个敌人', cost: { wood: 2, antler: 1, fiber: 1 }, icon: 'spear', profile: { damage: 4, range: 82, stamina: 13, cooldown: 0.44, arc: -0.02, style: 'slash', maxHits: 3 } },
     { id: 'sling', name: '投石带', desc: '消耗小石子，蓄力越久越远', cost: { fiber: 4, hide: 1 }, icon: 'bow', ranged: true, profile: { damage: 2, range: 390, stamina: 11, cooldown: 0.78, arc: 0.18, style: 'thrust', rangedKind: 'slingStone' } },
     { id: 'bambooCrossbow', name: '竹弩', desc: '慢装填，高穿透直线射击', cost: { bamboo: 5, wood: 2, fiber: 3 }, icon: 'bow', ranged: true, profile: { damage: 4, range: 520, stamina: 18, cooldown: 1.15, arc: 0.18, style: 'thrust', rangedKind: 'crossbowBolt', maxHits: 2 } },
-    { id: 'ropeSickle', name: '绳镰', desc: '拉拽敌人，绕身攻击', cost: { stoneSickle: 1, fiber: 4 }, icon: 'sickle', profile: { damage: 3, range: 92, stamina: 13, cooldown: 0.46, arc: -0.08, style: 'slash', pull: true } },
+    { id: 'ropeSickle', name: '绳镰', desc: '拉拽敌人，绕身攻击', cost: { stoneSickle: 1, fiber: 4 }, icon: 'sickle', profile: { damage: 3, range: 118, stamina: 13, cooldown: 0.46, arc: -0.08, style: 'rope', pull: true } },
     { id: 'nailClub', name: '木钉棒', desc: '普通挥击，概率眩晕', cost: { wood: 3, stone: 2 }, icon: 'club', profile: { damage: 3, range: 48, stamina: 12, cooldown: 0.4, arc: 0.04, style: 'club', stunChance: 0.35 } },
     { id: 'resinHammer', name: '树脂粘锤', desc: '命中减速，蓄力感强的黏击', cost: { wood: 3, resin: 2, stone: 2 }, icon: 'hammer', profile: { damage: 4, range: 50, stamina: 15, cooldown: 0.58, arc: 0.05, style: 'chop', root: 1100 } },
     { id: 'frogWhip', name: '蛙舌鞭', desc: '长距离鞭打，可打断冲锋', cost: { frogTongue: 1, fiber: 3, wood: 1 }, icon: 'whip', profile: { damage: 2, range: 116, stamina: 12, cooldown: 0.42, arc: -0.03, style: 'slash', interrupt: true } },
@@ -1205,9 +1205,20 @@ function villageForTrader(npc) {
 }
 
 function createVillageAmenities(region, buildings, well, tier = 'advanced') {
-    const noticePoint = avoidPointOverlapWithBuildings(nearestDryVillagePoint(region.x - 72, region.y + 42, region), buildings, region, 82);
-    const bellPoint = avoidPointOverlapWithBuildings(nearestDryVillagePoint(region.x + 78, region.y - 54, region), buildings, region, 86);
-    const flagPoint = avoidPointOverlapWithBuildings(nearestDryVillagePoint(region.x - region.radius * 0.18, region.y - region.radius * 0.26, region), buildings, region, 76);
+    const placed = [well];
+    const place = (point, radius, minBuildingDistance = 74) => {
+        const safe = avoidFunctionalPointOverlap(
+            nearestDryVillagePoint(point.x, point.y, region),
+            buildings,
+            placed,
+            region,
+            radius,
+            minBuildingDistance
+        );
+        const item = { x: snapToGroundGrid(safe.x), y: snapToGroundGrid(safe.y), radius };
+        placed.push(item);
+        return item;
+    };
     const lampAnchors = [
         { x: region.x - region.radius * 0.42, y: region.y - region.radius * 0.18 },
         { x: region.x + region.radius * 0.38, y: region.y - region.radius * 0.14 },
@@ -1216,19 +1227,23 @@ function createVillageAmenities(region, buildings, well, tier = 'advanced') {
         { x: well.x + 54, y: well.y + 38 },
     ];
     if (tier === 'basic') {
+        const flag = place({ x: region.x - region.radius * 0.18, y: region.y - region.radius * 0.26 }, 18, 76);
         return {
-            flag: { kind: 'villageFlag', label: '低级村旗', x: snapToGroundGrid(flagPoint.x), y: snapToGroundGrid(flagPoint.y), radius: 18 },
+            flag: { kind: 'villageFlag', label: '低级村旗', ...flag },
             lamps: lampAnchors.slice(0, 2).map((point, index) => {
-                const placed = avoidPointOverlapWithBuildings(nearestDryVillagePoint(point.x, point.y, region), buildings, region, 58);
-                return { kind: 'villageLamp', x: snapToGroundGrid(placed.x), y: snapToGroundGrid(placed.y), radius: 12, index };
+                const lamp = place(point, 12, 58);
+                return { kind: 'villageLamp', ...lamp, index };
             }),
         };
     }
     if (tier === 'fortress') {
+        const notice = place({ x: region.x - 92, y: region.y + 70 }, 26, 82);
+        const bell = place({ x: region.x + 92, y: region.y - 70 }, 28, 86);
+        const flag = place({ x: region.x, y: region.y - 146 }, 18, 76);
         return {
-            noticeBoard: { kind: 'villageNotice', label: '铁堡告示牌', x: snapToGroundGrid(region.x - 92), y: snapToGroundGrid(region.y + 70), radius: 26 },
-            bell: { kind: 'villageBell', label: '铁堡警钟', x: snapToGroundGrid(region.x + 92), y: snapToGroundGrid(region.y - 70), radius: 28, lastRungAt: 0 },
-            flag: { kind: 'villageFlag', label: '铁堡村旗', x: snapToGroundGrid(region.x), y: snapToGroundGrid(region.y - 146), radius: 18 },
+            noticeBoard: { kind: 'villageNotice', label: '铁堡告示牌', ...notice },
+            bell: { kind: 'villageBell', label: '铁堡警钟', ...bell, lastRungAt: 0 },
+            flag: { kind: 'villageFlag', label: '铁堡村旗', ...flag },
             lamps: [
                 { x: region.x - 210, y: region.y - 170 },
                 { x: region.x + 210, y: region.y - 170 },
@@ -1236,16 +1251,22 @@ function createVillageAmenities(region, buildings, well, tier = 'advanced') {
                 { x: region.x + 210, y: region.y + 170 },
                 { x: region.x, y: region.y - 230 },
                 { x: region.x, y: region.y + 230 },
-            ].map((point, index) => ({ kind: 'villageLamp', x: snapToGroundGrid(point.x), y: snapToGroundGrid(point.y), radius: 12, index })),
+            ].map((point, index) => {
+                const lamp = place(point, 12, 58);
+                return { kind: 'villageLamp', ...lamp, index };
+            }),
         };
     }
+    const notice = place({ x: region.x - 72, y: region.y + 42 }, 26, 82);
+    const bell = place({ x: region.x + 78, y: region.y - 54 }, 28, 86);
+    const flag = place({ x: region.x - region.radius * 0.18, y: region.y - region.radius * 0.26 }, 18, 76);
     return {
-        noticeBoard: { kind: 'villageNotice', label: '村庄告示牌', x: snapToGroundGrid(noticePoint.x), y: snapToGroundGrid(noticePoint.y), radius: 26 },
-        bell: { kind: 'villageBell', label: '警钟', x: snapToGroundGrid(bellPoint.x), y: snapToGroundGrid(bellPoint.y), radius: 28, lastRungAt: 0 },
-        flag: { kind: 'villageFlag', label: '高级村旗', x: snapToGroundGrid(flagPoint.x), y: snapToGroundGrid(flagPoint.y), radius: 18 },
+        noticeBoard: { kind: 'villageNotice', label: '村庄告示牌', ...notice },
+        bell: { kind: 'villageBell', label: '警钟', ...bell, lastRungAt: 0 },
+        flag: { kind: 'villageFlag', label: '高级村旗', ...flag },
         lamps: lampAnchors.map((point, index) => {
-            const placed = avoidPointOverlapWithBuildings(nearestDryVillagePoint(point.x, point.y, region), buildings, region, 58);
-            return { kind: 'villageLamp', x: snapToGroundGrid(placed.x), y: snapToGroundGrid(placed.y), radius: 12, index };
+            const lamp = place(point, 12, 58);
+            return { kind: 'villageLamp', ...lamp, index };
         }),
     };
 }
@@ -1280,6 +1301,29 @@ function avoidPointOverlapWithBuildings(point, buildings, region, minDistance = 
         }
     }
     return best;
+}
+
+function avoidFunctionalPointOverlap(point, buildings, placed, region, radius = 18, minBuildingDistance = 74) {
+    const overlapsBuilding = candidate => buildings.some(building => (
+        Math.abs(candidate.x - building.x) < building.w / 2 + minBuildingDistance
+        && Math.abs(candidate.y - building.y) < building.h / 2 + minBuildingDistance
+    ));
+    const overlapsPlaced = candidate => placed.some(item => (
+        distance(candidate, item) < radius + (item.radius || 18) + 24
+    ));
+    const overlaps = candidate => overlapsBuilding(candidate) || overlapsPlaced(candidate);
+    const seed = region.seed || 0;
+    const origin = { x: snapToGroundGrid(point.x), y: snapToGroundGrid(point.y) };
+    if (!overlaps(origin)) return origin;
+    for (let r = 48; r <= 460; r += 36) {
+        for (let i = 0; i < 20; i++) {
+            const angle = i * Math.PI * 2 / 20 + seed * 0.017 + r * 0.003;
+            const candidate = nearestDryVillagePoint(point.x + Math.cos(angle) * r, point.y + Math.sin(angle) * r * 0.78, region, 180);
+            const snapped = { x: snapToGroundGrid(candidate.x), y: snapToGroundGrid(candidate.y) };
+            if (!overlaps(snapped)) return snapped;
+        }
+    }
+    return origin;
 }
 
 function villageLayoutForSeed(seed) {
@@ -6516,6 +6560,18 @@ function enemyHitByAttack(e, p, attackDir, attackProfile, strike) {
         return {
             hit: forward > 6 && forward <= attackProfile.range + e.radius && side <= e.radius + 12,
             dist: forward,
+        };
+    }
+    if (attackProfile.style === 'rope') {
+        const start = { x: p.x + attackDir.x * 18, y: p.y + attackDir.y * 18 };
+        const end = {
+            x: p.x + attackDir.x * attackProfile.range,
+            y: p.y + attackDir.y * attackProfile.range,
+        };
+        const lineDist = distanceToSegment(e, start, end);
+        return {
+            hit: forward > 18 && forward <= attackProfile.range + e.radius && lineDist <= e.radius + 12,
+            dist: forward + lineDist * 0.1,
         };
     }
     const toEnemy = normalize(dx, dy);
@@ -12161,10 +12217,13 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
     const def = simpleWeaponDef(key);
     if (!def) return;
     const angle = Math.atan2(dir.y, dir.x);
-    const lunge = attacking ? 7 : 0;
+    const attackProgress = attackVisualProgress();
+    const heavy = ['vineStoneHammer', 'resinHammer'].includes(key);
+    const flexible = ['ropeSickle', 'frogWhip', 'scorpionHook'].includes(key);
+    const lunge = attacking ? (heavy ? Math.sin(attackProgress * Math.PI) * 4 : 7) : 0;
     ctx.save();
     ctx.translate(handX + dir.x * (10 + lunge), handY + dir.y * (10 + lunge));
-    ctx.rotate(angle);
+    ctx.rotate(angle + weaponSwingRotation(key, attackProgress, attacking));
     const visualScale = clamp((def.profile.range || 50) / 64, 0.68, 1.85);
     ctx.scale(visualScale, visualScale);
     const chargeGlow = state.player.meleeCharge?.key === key ? meleeChargeAmount(state.player.meleeCharge, performance.now()) : 0;
@@ -12231,21 +12290,10 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
             for (let px = 18; px <= 38; px += 8) ctx.fillRect(px, -8, 5, 7);
             break;
         case 'vineStoneHammer':
-            drawShaft(36, 5, palette.wood);
-            ctx.fillStyle = palette.stone;
-            ctx.fillRect(32, -12, 22, 24);
-            if (chargeGlow > 0.05) {
-                ctx.fillStyle = `rgba(216,229,242,${0.25 + chargeGlow * 0.35})`;
-                ctx.fillRect(27, -16, 32, 32);
-            }
-            ctx.strokeStyle = '#5f7a46';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(28, -8);
-            ctx.lineTo(52, 8);
-            ctx.moveTo(29, 8);
-            ctx.lineTo(52, -8);
-            ctx.stroke();
+            drawWeightedHammer(36, palette.stone, palette.wood, chargeGlow, attackProgress, '#5f7a46');
+            break;
+        case 'resinHammer':
+            drawWeightedHammer(36, '#d68a43', palette.wood, chargeGlow, attackProgress, '#ffd166');
             break;
         case 'shieldClub':
             drawShaft(34, 6, palette.wood);
@@ -12290,7 +12338,7 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
             drawCrossbowInHand(directRangedPullAmount('bambooCrossbow', attacking));
             break;
         case 'ropeSickle':
-            drawRopeSickle(palette.stone, palette.hide);
+            drawRopeSickle(palette.stone, palette.hide, attackProgress, attacking);
             break;
         case 'nailClub':
             drawShaft(38, 7, palette.wood);
@@ -12299,35 +12347,11 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
             ctx.fillRect(31, 4, 5, 5);
             ctx.fillRect(40, -6, 5, 5);
             break;
-        case 'resinHammer':
-            drawShaft(36, 6, palette.wood);
-            ctx.fillStyle = '#d68a43';
-            ctx.fillRect(31, -11, 24, 22);
-            ctx.fillStyle = '#ffd166';
-            ctx.fillRect(36, -7, 14, 14);
-            if (chargeGlow > 0.05) {
-                ctx.fillStyle = `rgba(255,209,102,${0.22 + chargeGlow * 0.42})`;
-                ctx.fillRect(28, -15, 30, 30);
-            }
-            break;
         case 'frogWhip':
-            ctx.strokeStyle = '#8cff66';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(-4, 0);
-            ctx.bezierCurveTo(18, -16, 34, 18, 58, -6);
-            ctx.stroke();
-            ctx.fillStyle = '#d94bff';
-            ctx.fillRect(55, -9, 8, 8);
+            drawWhipCurve('#8cff66', '#d94bff', attackProgress, attacking);
             break;
         case 'scorpionHook':
-            drawShaft(44, 4, palette.wood);
-            ctx.strokeStyle = palette.venom;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(40, 0);
-            ctx.quadraticCurveTo(58, -16, 64, 4);
-            ctx.stroke();
+            drawScorpionHook(palette.wood, palette.venom, attackProgress, attacking);
             break;
         case 'shadowWoodBlade':
             drawDagger(palette.shadow, palette.dark, 48);
@@ -12351,6 +12375,46 @@ function drawDagger(bladeColor, handleColor, length = 34) {
     ctx.lineTo(9, 6);
     ctx.closePath();
     ctx.fill();
+}
+
+function attackVisualProgress() {
+    const remaining = Math.max(0, state.player.attackUntil - performance.now());
+    return state.player.attackUntil > performance.now() ? clamp(1 - remaining / 260, 0, 1) : 0;
+}
+
+function weaponSwingRotation(key, progress, attacking) {
+    if (!attacking) return 0;
+    if (['vineStoneHammer', 'resinHammer'].includes(key)) return -0.55 + Math.sin(progress * Math.PI) * 0.95;
+    if (['ropeSickle', 'frogWhip', 'scorpionHook'].includes(key)) return Math.sin(progress * Math.PI * 1.4) * 0.38;
+    return Math.sin(progress * Math.PI) * 0.18;
+}
+
+function drawWeightedHammer(length, headColor, shaftColor, chargeGlow, progress, wrapColor) {
+    const sag = Math.sin(progress * Math.PI) * 6;
+    ctx.strokeStyle = shaftColor;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.quadraticCurveTo(length * 0.45, sag * 0.35, length, sag);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(length + 3, sag);
+    ctx.rotate(0.18 + progress * 0.22);
+    ctx.fillStyle = headColor;
+    ctx.fillRect(-4, -13, 24, 26);
+    if (chargeGlow > 0.05) {
+        ctx.fillStyle = `rgba(255,255,220,${0.18 + chargeGlow * 0.38})`;
+        ctx.fillRect(-9, -17, 34, 34);
+    }
+    ctx.strokeStyle = wrapColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-7, -8);
+    ctx.lineTo(20, 8);
+    ctx.moveTo(-6, 8);
+    ctx.lineTo(20, -8);
+    ctx.stroke();
+    ctx.restore();
 }
 
 function drawDaggerPair(bladeColor, handleColor) {
@@ -12396,17 +12460,73 @@ function drawCrossbowInHand(pull = 0) {
     ctx.fillRect(4 - pull * 8, -2, 44, 4);
 }
 
-function drawRopeSickle(bladeColor, ropeColor) {
-    ctx.strokeStyle = ropeColor;
-    ctx.lineWidth = 3;
+function drawWhipCurve(lineColor, tipColor, progress = 0, attacking = false) {
+    const wave = attacking ? Math.sin(progress * Math.PI) * 18 : 6;
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(-5, 0);
-    ctx.bezierCurveTo(15, -12, 32, 10, 48, -4);
+    ctx.moveTo(-4, 0);
+    ctx.bezierCurveTo(15, -14 - wave * 0.35, 31, 18 + wave, 58 + wave * 0.45, -6 + wave * 0.2);
     ctx.stroke();
+    ctx.fillStyle = tipColor;
+    ctx.fillRect(55 + wave * 0.45, -9 + wave * 0.2, 8, 8);
+}
+
+function drawRopeSickle(bladeColor, ropeColor, progress = 0, attacking = false) {
+    const swing = attacking ? Math.sin(progress * Math.PI) * 24 : Math.sin(performance.now() / 180) * 5;
+    const travel = attacking ? progress * 34 : 0;
+    const points = [];
+    const segments = 8;
+    for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const lag = Math.sin((t * 2.2 - progress * 2.8) * Math.PI) * swing * t;
+        points.push({
+            x: -5 + t * (50 + travel),
+            y: Math.sin(t * Math.PI) * 7 + lag,
+        });
+    }
+    ctx.strokeStyle = ropeColor;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const point = points[i];
+        ctx.quadraticCurveTo(prev.x, prev.y, (prev.x + point.x) / 2, (prev.y + point.y) / 2);
+    }
+    const end = points[points.length - 1];
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    ctx.fillStyle = ropeColor;
+    for (let i = 1; i < points.length; i += 2) {
+        ctx.fillRect(points[i].x - 2, points[i].y - 2, 4, 4);
+    }
+    ctx.save();
+    ctx.translate(end.x, end.y);
+    ctx.rotate((attacking ? 0.9 : 0.25) + swing * 0.025);
     ctx.strokeStyle = bladeColor;
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(52, -2, 10, -1.4, 0.9);
+    ctx.arc(0, 0, 11, -1.5, 1.05);
+    ctx.stroke();
+    ctx.fillStyle = bladeColor;
+    ctx.fillRect(6, -3, 9, 6);
+    ctx.restore();
+}
+
+function drawScorpionHook(shaftColor, hookColor, progress = 0, attacking = false) {
+    const snap = attacking ? Math.sin(progress * Math.PI) * 13 : 0;
+    ctx.strokeStyle = shaftColor;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-6, 0);
+    ctx.quadraticCurveTo(20, snap * 0.15, 44, 0);
+    ctx.stroke();
+    ctx.strokeStyle = hookColor;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(39, 0);
+    ctx.quadraticCurveTo(58 + snap, -18 - snap * 0.2, 66 + snap * 0.5, 5);
     ctx.stroke();
 }
 
