@@ -40,6 +40,7 @@ let state = createState();
 const RESOURCE_LABELS = {
     wood: '木头',
     bamboo: '竹材',
+    bambooShard: '竹片',
     stone: '石头',
     fiber: '纤维',
     pebble: '小石子',
@@ -141,6 +142,31 @@ const RESOURCE_LABELS = {
     copperCoin: '铜币',
 };
 
+const SIMPLE_WEAPON_DEFS = [
+    { id: 'woodFork', name: '木叉', desc: '中距离刺击，命中轻微击退', cost: { wood: 3, fiber: 1 }, icon: 'spear', profile: { damage: 2, range: 76, stamina: 10, cooldown: 0.36, arc: 0.26, style: 'thrust', knock: 1.25 } },
+    { id: 'stoneBladeSpear', name: '石刃短矛', desc: '快速连刺，第三击距离更长', cost: { wood: 2, stone: 2, fiber: 1 }, icon: 'spear', profile: { damage: 3, range: 78, stamina: 10, cooldown: 0.32, arc: 0.28, style: 'thrust', comboRange: 28 } },
+    { id: 'bambooPike', name: '竹刺枪', desc: '直线突刺，可穿过第一个小怪', cost: { bamboo: 4, stone: 1 }, icon: 'spear', profile: { damage: 3, range: 118, stamina: 12, cooldown: 0.48, arc: 0.36, style: 'thrust', maxHits: 2 } },
+    { id: 'boneSpikedClub', name: '骨刺棍', desc: '横扫攻击，命中造成流血', cost: { wood: 3, fang: 1, fiber: 1 }, icon: 'club', profile: { damage: 3, range: 54, stamina: 12, cooldown: 0.42, arc: -0.05, style: 'slash', cleave: true, bleed: true } },
+    { id: 'vineStoneHammer', name: '藤索石锤', desc: '慢速重击，砸地可短暂定身', cost: { wood: 2, stone: 4, fiber: 3 }, icon: 'hammer', profile: { damage: 5, range: 52, stamina: 18, cooldown: 0.72, arc: 0.04, style: 'chop', cleave: true, root: 700 } },
+    { id: 'shieldClub', name: '木盾短棍', desc: '攻防一体，命中后短暂稳住身形', cost: { wood: 5, fiber: 2 }, icon: 'shield', profile: { damage: 2, range: 45, stamina: 9, cooldown: 0.34, arc: 0.05, style: 'club', guard: true, knock: 0.8 } },
+    { id: 'twinStoneDagger', name: '双石匕首', desc: '双连击，贴身快速爆发', cost: { stone: 3, fiber: 2 }, icon: 'dagger', profile: { damage: 2, range: 38, stamina: 8, cooldown: 0.22, arc: 0.02, style: 'stab', multiStrike: 2 } },
+    { id: 'bambooThrowingKnife', name: '竹片飞刀', desc: '轻快近战，短按连削并附带飞刀残影', cost: { bamboo: 2, fiber: 1 }, icon: 'dagger', profile: { damage: 2, range: 50, stamina: 9, cooldown: 0.28, arc: 0.08, style: 'stab', dart: true } },
+    { id: 'torchClub', name: '火把棍', desc: '近战点燃敌人，夜晚伤害更高', cost: { wood: 2, resin: 1, coal: 1 }, icon: 'torch', profile: { damage: 3, range: 48, stamina: 11, cooldown: 0.38, arc: 0.08, style: 'club', burn: true, nightBonus: 1 } },
+    { id: 'toxicKnife', name: '毒刺短刀', desc: '快速攻击，命中叠毒', cost: { stone: 2, toxicMushroom: 1, fiber: 1 }, icon: 'dagger', profile: { damage: 2, range: 36, stamina: 8, cooldown: 0.24, arc: 0.04, style: 'stab', poison: true } },
+    { id: 'beeNeedleSpear', name: '蜂刺针矛', desc: '高频刺击，小概率麻痹', cost: { wood: 2, beeStinger: 1, fiber: 1 }, icon: 'spear', profile: { damage: 3, range: 86, stamina: 10, cooldown: 0.3, arc: 0.3, style: 'thrust', stunChance: 0.28 } },
+    { id: 'antlerFork', name: '鹿角叉', desc: '扇形戳刺，适合打多个敌人', cost: { wood: 2, antler: 1, fiber: 1 }, icon: 'spear', profile: { damage: 4, range: 82, stamina: 13, cooldown: 0.44, arc: -0.02, style: 'slash', maxHits: 3 } },
+    { id: 'sling', name: '投石带', desc: '消耗小石子，蓄力越久越远', cost: { fiber: 4, hide: 1 }, icon: 'bow', ranged: true, profile: { damage: 2, range: 390, stamina: 11, cooldown: 0.78, arc: 0.18, style: 'thrust', rangedKind: 'slingStone' } },
+    { id: 'bambooCrossbow', name: '竹弩', desc: '慢装填，高穿透直线射击', cost: { bamboo: 5, wood: 2, fiber: 3 }, icon: 'bow', ranged: true, profile: { damage: 4, range: 520, stamina: 18, cooldown: 1.15, arc: 0.18, style: 'thrust', rangedKind: 'crossbowBolt', maxHits: 2 } },
+    { id: 'ropeSickle', name: '绳镰', desc: '拉拽敌人，绕身攻击', cost: { stoneSickle: 1, fiber: 4 }, icon: 'sickle', profile: { damage: 3, range: 92, stamina: 13, cooldown: 0.46, arc: -0.08, style: 'slash', pull: true } },
+    { id: 'nailClub', name: '木钉棒', desc: '普通挥击，概率眩晕', cost: { wood: 3, stone: 2 }, icon: 'club', profile: { damage: 3, range: 48, stamina: 12, cooldown: 0.4, arc: 0.04, style: 'club', stunChance: 0.35 } },
+    { id: 'resinHammer', name: '树脂粘锤', desc: '命中减速，蓄力感强的黏击', cost: { wood: 3, resin: 2, stone: 2 }, icon: 'hammer', profile: { damage: 4, range: 50, stamina: 15, cooldown: 0.58, arc: 0.05, style: 'chop', root: 1100 } },
+    { id: 'frogWhip', name: '蛙舌鞭', desc: '长距离鞭打，可打断冲锋', cost: { frogTongue: 1, fiber: 3, wood: 1 }, icon: 'whip', profile: { damage: 2, range: 116, stamina: 12, cooldown: 0.42, arc: -0.03, style: 'slash', interrupt: true } },
+    { id: 'scorpionHook', name: '蝎尾钩', desc: '钩击加毒伤，可把小怪拉近', cost: { scorpionShell: 1, venom: 1, wood: 2 }, icon: 'sickle', profile: { damage: 4, range: 88, stamina: 14, cooldown: 0.46, arc: 0.12, style: 'thrust', poison: true, pull: true } },
+    { id: 'shadowWoodBlade', name: '影木刃', desc: '短距离瞬斩，夜晚有额外残影', cost: { wood: 2, shadowShard: 1, fiber: 1 }, icon: 'blade', profile: { damage: 4, range: 58, stamina: 13, cooldown: 0.34, arc: 0.02, style: 'slash', cleave: true, nightBonus: 2, shadow: true } },
+];
+
+Object.assign(RESOURCE_LABELS, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, weapon.name])));
+
 const VILLAGER_TRADES = {
     blacksmith: [
         { give: { ore: 2, coal: 1 }, receive: { simpleArrow: 8 }, minRep: -2 },
@@ -186,6 +212,7 @@ const VILLAGER_TRADES = {
 const RESOURCE_ICONS = {
     wood: '🪵',
     bamboo: '🎋',
+    bambooShard: '▴',
     stone: '🪨',
     fiber: '🌾',
     pebble: '▫',
@@ -286,6 +313,18 @@ const RESOURCE_ICONS = {
     key: '🗝',
     copperCoin: '◎',
 };
+Object.assign(RESOURCE_ICONS, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, {
+    spear: '🔱',
+    dagger: '🔪',
+    hammer: '▐',
+    shield: '◧',
+    torch: '🔥',
+    bow: '⌒',
+    sickle: '⌒',
+    blade: '🗡',
+    club: '▌',
+    whip: '〰',
+}[weapon.icon] || '⚔'])));
 
 const HOTBAR_ITEMS = ['stoneAxe', 'stonePickaxe', 'stoneSpear', 'ironSword', 'crystalBlade', 'torch', 'potion', 'speedPotion', 'bedroll'];
 const POOR_SWIMMERS = new Set(['boar', 'wolf', 'scorpion', 'golem']);
@@ -294,7 +333,7 @@ const BACKPACK_ROWS = 3;
 const BACKPACK_SLOT_LIMIT = BACKPACK_COLUMNS * BACKPACK_ROWS;
 const CHEST_SLOT_LIMIT = 27;
 const ITEM_ICON_TYPES = {
-    wood: 'wood', bamboo: 'bamboo', stone: 'stone', pebble: 'stone', ore: 'ore', coal: 'coal', crystal: 'crystal', mud: 'mud',
+    wood: 'wood', bamboo: 'bamboo', bambooShard: 'bamboo', stone: 'stone', pebble: 'stone', ore: 'ore', coal: 'coal', crystal: 'crystal', mud: 'mud',
     resin: 'resin', sap: 'sap', honey: 'honey', beeStinger: 'fang', beeswax: 'honey', rabbitFur: 'hide', rabbitFoot: 'meat', antler: 'fang', sinew: 'fiber',
     frogLeg: 'meat', frogTongue: 'venom', scorpionShell: 'armor', batWing: 'wing', stoneCore: 'stoneCore', shadowShard: 'shadow', shadowEssence: 'shadow', toxicMushroom: 'toxicMushroom',
     fiber: 'grass', herb: 'herb', flower: 'flower', berry: 'berry', mushroom: 'mushroom', lotus: 'lotus', cactusFruit: 'cactus',
@@ -309,6 +348,7 @@ const ITEM_ICON_TYPES = {
     antlerCharm: 'charm', waxTorch: 'torch', beehiveBox: 'honey', antlerHorn: 'horn', shadowLantern: 'shadow', stoneCoreTotem: 'stoneCore', reedMat: 'grass', chest: 'stationWorkbench', resinGlue: 'resin',
     mapleSnack: 'sap', honeyRoastMeat: 'meat', roastMeat: 'meat', key: 'key',
 };
+Object.assign(ITEM_ICON_TYPES, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, weapon.icon])));
 const PIXEL_ICON_PALETTES = {
     wood: ['#5a341d', '#9a6436', '#d49a5a'], bamboo: ['#1f5f34', '#70bf55', '#d7f28a'], stone: ['#48515a', '#8c98a4', '#d8e5f2'],
     ore: ['#48515a', '#7dcbe8', '#e8fbff'], coal: ['#121820', '#303946', '#7b8794'], crystal: ['#512b9a', '#b77dff', '#f2ddff'],
@@ -340,6 +380,9 @@ const RECIPES = [
     recipe('sickle', '石镰', '快速收割纤维和花草', { wood: 2, stone: 3, fiber: 2 }, game => {
         game.inventory.stoneSickle += 1;
     }, game => game.inventory.stoneSickle > 0 || game.equipment.tool === '石镰'),
+    recipe('bambooShard', '竹片', '把 1 个竹材削成 3 个竹片，供竹片飞刀发射', { bamboo: 1 }, game => {
+        game.inventory.bambooShard = (game.inventory.bambooShard || 0) + 3;
+    }, () => false),
     recipe('workbench', '工作台', '放置后制作复杂物品', { wood: 8, stone: 2 }, game => {
         game.inventory.workbench += 1;
     }, () => false),
@@ -349,6 +392,9 @@ const RECIPES = [
     recipe('forge', '锻造台', '放置后锻造高级装备', { stone: 8, mud: 4, coal: 3, ore: 2 }, game => {
         game.inventory.forge += 1;
     }, () => false),
+    ...SIMPLE_WEAPON_DEFS.map(weapon => recipe(weapon.id, weapon.name, weapon.desc, weapon.cost, game => {
+        game.inventory[weapon.id] = (game.inventory[weapon.id] || 0) + 1;
+    }, game => (game.inventory[weapon.id] || 0) > 0 || game.equipment.weapon === weapon.name)),
     recipe('spear', '石矛', '近战伤害 +2', { wood: 3, stone: 3, fiber: 2 }, game => {
         game.inventory.stoneSpear += 1;
     }, game => game.inventory.stoneSpear > 0 || game.equipment.weapon === '石矛'),
@@ -843,8 +889,10 @@ function createState() {
             shadowUntil: 0,
             throwableAim: null,
             rangedAim: null,
+            meleeCharge: null,
+            pendingMeleeCharge: null,
         },
-        inventory: { wood: 0, bamboo: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, rabbitCloak: 0, scorpionArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0 },
+        inventory: { wood: 0, bamboo: 0, bambooShard: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, rabbitCloak: 0, scorpionArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -862,6 +910,7 @@ function createState() {
         village,
         villages,
         roadLamps: createVillageRoadLamps(villages),
+        roadSigns: createVillageRoadSigns(villages),
         enemies: createEnemies(spawnDens),
         outdoorVillagers: [],
         pendingVillagerExits: [],
@@ -1065,6 +1114,68 @@ function createVillageRoadLamps(villages) {
     return lamps;
 }
 
+function villageDisplayName(village) {
+    if (village?.tier === 'fortress') return '铁堡村';
+    if (village?.tier === 'basic') return '低级村';
+    return '高级村';
+}
+
+function villageVisualProfile(village) {
+    if (village?.tier === 'fortress') {
+        return {
+            flag: { main: '#2f3945', trim: '#d8e5f2', dark: '#171d24', emblem: 'bar' },
+            building: { roof: '#303946', wall: '#6f7780', accent: '#8c98a4', sign: '#d8e5f2' },
+            clothing: { body: '#303946', trim: '#d8e5f2', accent: '#8c98a4' },
+        };
+    }
+    if (village?.tier === 'basic') {
+        return {
+            flag: { main: '#7a4a24', trim: '#d6a06a', dark: '#3f2a1c', emblem: 'patch' },
+            building: { roof: '#6f5a2f', wall: '#8a6a3d', accent: '#5a341d', sign: '#d6a06a' },
+            clothing: { body: '#5a4632', trim: '#d6a06a', accent: '#8a6a3d' },
+        };
+    }
+    return {
+        flag: { main: '#7f2034', trim: '#ffd166', dark: '#4a2b17', emblem: 'cross' },
+        building: { roof: '#4b3b28', wall: '#7a6040', accent: '#d6a06a', sign: '#ffd166' },
+        clothing: { body: '#4a3a2a', trim: '#ffd166', accent: '#d6a06a' },
+    };
+}
+
+function createVillageRoadSigns(villages) {
+    if (!villages?.length || villages.length < 2) return [];
+    const signs = [];
+    villages.forEach((village, villageIndex) => {
+        const nearby = villages
+            .filter(other => other !== village)
+            .map(other => ({ village: other, dist: distance(village, other) }))
+            .sort((a, b) => a.dist - b.dist)
+            .slice(0, 2);
+        nearby.forEach((target, targetIndex) => {
+            const dir = normalize(target.village.x - village.x, target.village.y - village.y);
+            const edgeDistance = village.tier === 'fortress'
+                ? Math.max(fortressWallSize(village).w, fortressWallSize(village).h) * 0.54 + 42
+                : village.radius + 86;
+            const sideOffset = (targetIndex - (nearby.length - 1) / 2) * 54;
+            const x = snapToGroundGrid(village.x + dir.x * edgeDistance - dir.y * sideOffset);
+            const y = snapToGroundGrid(village.y + dir.y * edgeDistance + dir.x * sideOffset);
+            if (!isDryVillagePoint(x, y)) return;
+            signs.push({
+                kind: 'roadSign',
+                x,
+                y,
+                radius: 18,
+                angle: Math.atan2(dir.y, dir.x),
+                label: villageDisplayName(target.village),
+                distance: target.dist,
+                villageIndex,
+                targetIndex,
+            });
+        });
+    });
+    return signs;
+}
+
 function allVillages() {
     return state?.villages?.length ? state.villages : (state?.village ? [state.village] : []);
 }
@@ -1096,6 +1207,7 @@ function villageForTrader(npc) {
 function createVillageAmenities(region, buildings, well, tier = 'advanced') {
     const noticePoint = avoidPointOverlapWithBuildings(nearestDryVillagePoint(region.x - 72, region.y + 42, region), buildings, region, 82);
     const bellPoint = avoidPointOverlapWithBuildings(nearestDryVillagePoint(region.x + 78, region.y - 54, region), buildings, region, 86);
+    const flagPoint = avoidPointOverlapWithBuildings(nearestDryVillagePoint(region.x - region.radius * 0.18, region.y - region.radius * 0.26, region), buildings, region, 76);
     const lampAnchors = [
         { x: region.x - region.radius * 0.42, y: region.y - region.radius * 0.18 },
         { x: region.x + region.radius * 0.38, y: region.y - region.radius * 0.14 },
@@ -1105,6 +1217,7 @@ function createVillageAmenities(region, buildings, well, tier = 'advanced') {
     ];
     if (tier === 'basic') {
         return {
+            flag: { kind: 'villageFlag', label: '低级村旗', x: snapToGroundGrid(flagPoint.x), y: snapToGroundGrid(flagPoint.y), radius: 18 },
             lamps: lampAnchors.slice(0, 2).map((point, index) => {
                 const placed = avoidPointOverlapWithBuildings(nearestDryVillagePoint(point.x, point.y, region), buildings, region, 58);
                 return { kind: 'villageLamp', x: snapToGroundGrid(placed.x), y: snapToGroundGrid(placed.y), radius: 12, index };
@@ -1115,6 +1228,7 @@ function createVillageAmenities(region, buildings, well, tier = 'advanced') {
         return {
             noticeBoard: { kind: 'villageNotice', label: '铁堡告示牌', x: snapToGroundGrid(region.x - 92), y: snapToGroundGrid(region.y + 70), radius: 26 },
             bell: { kind: 'villageBell', label: '铁堡警钟', x: snapToGroundGrid(region.x + 92), y: snapToGroundGrid(region.y - 70), radius: 28, lastRungAt: 0 },
+            flag: { kind: 'villageFlag', label: '铁堡村旗', x: snapToGroundGrid(region.x), y: snapToGroundGrid(region.y - 146), radius: 18 },
             lamps: [
                 { x: region.x - 210, y: region.y - 170 },
                 { x: region.x + 210, y: region.y - 170 },
@@ -1128,6 +1242,7 @@ function createVillageAmenities(region, buildings, well, tier = 'advanced') {
     return {
         noticeBoard: { kind: 'villageNotice', label: '村庄告示牌', x: snapToGroundGrid(noticePoint.x), y: snapToGroundGrid(noticePoint.y), radius: 26 },
         bell: { kind: 'villageBell', label: '警钟', x: snapToGroundGrid(bellPoint.x), y: snapToGroundGrid(bellPoint.y), radius: 28, lastRungAt: 0 },
+        flag: { kind: 'villageFlag', label: '高级村旗', x: snapToGroundGrid(flagPoint.x), y: snapToGroundGrid(flagPoint.y), radius: 18 },
         lamps: lampAnchors.map((point, index) => {
             const placed = avoidPointOverlapWithBuildings(nearestDryVillagePoint(point.x, point.y, region), buildings, region, 58);
             return { kind: 'villageLamp', x: snapToGroundGrid(placed.x), y: snapToGroundGrid(placed.y), radius: 12, index };
@@ -1321,6 +1436,27 @@ function snapToGroundGrid(value) {
 
 function createResources(villageParam = null) {
     const resources = [];
+    const placementCell = 128;
+    const placementGrid = new Map();
+    const placementKey = (x, y) => `${Math.floor(x / placementCell)},${Math.floor(y / placementCell)}`;
+    const registerResource = item => {
+        resources.push(item);
+        const key = placementKey(item.x, item.y);
+        if (!placementGrid.has(key)) placementGrid.set(key, []);
+        placementGrid.get(key).push(item);
+    };
+    const hasNearbyResource = (point, radius, spacing) => {
+        const cx = Math.floor(point.x / placementCell);
+        const cy = Math.floor(point.y / placementCell);
+        for (let gy = cy - 1; gy <= cy + 1; gy++) {
+            for (let gx = cx - 1; gx <= cx + 1; gx++) {
+                const bucket = placementGrid.get(`${gx},${gy}`);
+                if (!bucket) continue;
+                if (bucket.some(item => distance(item, point) < item.radius + radius + spacing)) return true;
+            }
+        }
+        return false;
+    };
     const campPoint = CAMP_POSITION;
     const ruinsPoint = worldRegionSet().ruins[0];
     const villageForClearance = villageParam || null;
@@ -1333,13 +1469,13 @@ function createResources(villageParam = null) {
         if (distance(point, campPoint) < 95 && kind !== 'grass' && kind !== 'tallGrass') return;
         if (distance(point, ruinsPoint) < 230) return;
         const spacing = kind === 'tallGrass' ? -42 : (kind === 'grass' ? 8 : 24);
-        if (resources.some(item => distance(item, point) < item.radius + radius + spacing)) return;
-        resources.push(resource(kind, x, y, gives, hp, radius));
+        if (hasNearbyResource(point, radius, spacing)) return;
+        registerResource(resource(kind, x, y, gives, hp, radius));
     };
     const addForced = (kind, x, y, gives, hp, radius) => {
         if (terrainInfoAt(x, y).kind === 'water') return;
         if (villageForClearance && kind !== 'woodFence' && isNearVillageHouseClearance({ x, y }, villageForClearance)) return;
-        resources.push(resource(kind, x, y, gives, hp, radius));
+        registerResource(resource(kind, x, y, gives, hp, radius));
     };
 
     for (let y = 180; y <= WORLD.height - 170; y += 72) {
@@ -2046,6 +2182,7 @@ function updatePlayer(dt, now) {
     if (p.attackCooldown > 0) p.attackCooldown -= dt;
     if (isAimingThrowable() || isAimingDirectRanged()) return;
     if (now < p.dizzyUntil) return;
+    if (p.meleeCharge) return;
     if ((mouse.down || keys.has(' ')) && p.attackCooldown <= 0) {
         attack(now);
     } else if (p.attackQueuedUntil > now && p.attackCooldown <= 0) {
@@ -3527,12 +3664,12 @@ function applyIndoorPlayerProjectileHit(projectile, target) {
     const attackProfile = { name: directProjectileName(projectile), damage, dir: projectile.dir || state.player.facing };
     if (target.kind === 'totem') damageVillageTotem(target, now, attackProfile);
     else damageVillager(target, now, attackProfile);
-    if (projectile.kind === 'poisonArrow' && target.kind !== 'totem' && target.hp > 0) {
+    if ((projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt') && target.kind !== 'totem' && target.hp > 0) {
         target.poisonUntil = Math.max(target.poisonUntil || 0, now + 5200);
         target.poisonTickAt = Math.min(target.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', target.x, target.y - 54, '#9cff7a');
     }
-    spawnBurst(projectile.x, projectile.y, projectile.kind === 'poisonArrow' ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' ? 6 : 12, 85, (target.radius || 17) * 0.55);
+    spawnBurst(projectile.x, projectile.y, projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt' ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' || projectile.kind === 'slingStone' ? 6 : 12, 85, (target.radius || 17) * 0.55);
 }
 
 function projectileHitsTarget(projectile, previous, target, radius) {
@@ -4848,13 +4985,15 @@ function poisonPlayer(now, duration) {
 }
 
 function getBlockResult(e, rawDamage, verb) {
-    if (!state.player.blocking || state.equipment.shield === '无') return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    const weaponGuard = performance.now() < (state.player.blockUntil || 0) && selectedHotbarItem() === 'shieldClub';
+    if (!state.player.blocking && !weaponGuard) return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    if (state.equipment.shield === '无' && !weaponGuard) return { damage: rawDamage, blocked: false, staminaCost: 0 };
     if (verb === '震地' && state.equipment.shield !== '铁盾') return { damage: rawDamage, blocked: false, staminaCost: 0 };
     const toEnemy = normalize(e.x - state.player.x, e.y - state.player.y);
     const dot = toEnemy.x * state.player.attackDir.x + toEnemy.y * state.player.attackDir.y;
-    if (dot < 0.25) return { damage: rawDamage, blocked: false, staminaCost: 0 };
-    const reduction = state.equipment.shield === '铁盾' ? 0.7 : 0.5;
-    const staminaCost = state.equipment.shield === '铁盾' ? 10 : 12;
+    if (dot < -0.1) return { damage: rawDamage, blocked: false, staminaCost: 0 };
+    const reduction = weaponGuard ? 0.42 : (state.equipment.shield === '铁盾' ? 0.7 : 0.5);
+    const staminaCost = weaponGuard ? 5 : (state.equipment.shield === '铁盾' ? 8 : 9);
     if (state.player.stamina < staminaCost) return { damage: rawDamage, blocked: false, staminaCost: 0 };
     return { damage: rawDamage * (1 - reduction), blocked: true, staminaCost };
 }
@@ -5077,6 +5216,9 @@ function enterVillageHouse(building) {
         return;
     }
     building.interiorObjects ||= createIndoorObjects(building.kind);
+    building.interiorObjects.forEach(object => {
+        if (object.kind === 'npc') object.homeBuilding ||= building;
+    });
     state.openChest = null;
     state.openIndoorContainer = null;
     state.indoorProjectiles = [];
@@ -5525,7 +5667,7 @@ function interactVillageNpc(role) {
     const task = state.villageTasks[role];
     const name = npcName(role);
     const npc = state.indoor?.objects.find(object => object.kind === 'npc' && object.role === role);
-    const village = villageForTrader(npc);
+    const taskVillage = villageForTrader(npc);
     if (!task) {
         if (role === 'merchant') showToast(`${name}：我收木头、浆果和铁矿换铜币，也用铜币卖补给。点击右下角“交易”。`);
         return;
@@ -5572,7 +5714,7 @@ function interactVillageNpc(role) {
         return;
     }
     task.status = 'done';
-    const reputation = changeVillageReputation(village, task.reputation);
+    const reputation = changeVillageReputation(taskVillage, task.reputation);
     showToast(`${name}：东西正好用得上。拿着，这是说好的 ${itemListText(task.reward)}。声誉 +${task.reputation}。`);
     renderHud();
 }
@@ -5909,23 +6051,26 @@ function attack(now = performance.now()) {
         showToast('正在使用物品，稍等一下。');
         return;
     }
+    advanceWeaponCombo(selectedHotbarItem(), now);
     const attackProfile = currentAttackProfile();
+    p.pendingMeleeCharge = null;
     if (p.attackCooldown > 0) {
         p.attackQueuedUntil = now + 220;
         return;
     }
-    const staminaCost = weaponStaminaCost();
+    const staminaCost = attackProfile.stamina;
     if (p.stamina < staminaCost) {
         showToast('体力不足，稍等恢复后再攻击。');
         return;
     }
     p.stamina = Math.max(0, p.stamina - staminaCost);
     consumeHungerForAction(staminaCost * 0.015);
-    p.attackCooldown = weaponCooldown();
-    p.attackUntil = now + 160;
+    p.attackCooldown = attackProfile.cooldown;
+    p.attackUntil = now + (attackProfile.name.includes('蓄力') ? 260 : 160);
     const attackDir = currentAimDir();
     p.attackDir = attackDir;
     p.facing = attackDir;
+    if (attackProfile.dart) launchBambooKnifeProjectile(p, attackDir, now);
     const strike = { x: p.x + attackDir.x * p.radius, y: p.y + attackDir.y * p.radius };
     const hits = [];
     if (!state.indoor) {
@@ -5958,7 +6103,7 @@ function attack(now = performance.now()) {
     }
 
     hits.sort((a, b) => a.dist - b.dist);
-    const maxHits = attackProfile.cleave ? 2 : 1;
+    const maxHits = attackProfile.maxHits || (attackProfile.cleave ? 2 : 1);
     for (const hit of hits.slice(0, maxHits)) {
         if (hit.type === 'villager') damageVillager(hit.target, now, attackProfile);
         else if (hit.type === 'outdoorVillager') damageOutdoorVillager(hit.target, now, attackProfile);
@@ -5973,7 +6118,40 @@ function isThrowableItem(key) {
 }
 
 function isDirectRangedItem(key) {
-    return key === 'slingshot' || key === 'sinewBow';
+    return key === 'slingshot' || key === 'sinewBow' || !!simpleWeaponDef(key)?.ranged;
+}
+
+function isChargeMeleeItem(key) {
+    return ['vineStoneHammer', 'resinHammer', 'stoneCoreHammer'].includes(key);
+}
+
+function startMeleeCharge(now = performance.now()) {
+    const key = selectedHotbarItem();
+    if (!isChargeMeleeItem(key) || state.player.attackCooldown > 0) return false;
+    state.player.meleeCharge = { key, startedAt: now };
+    mouse.down = true;
+    resetHarvestHold();
+    return true;
+}
+
+function releaseMeleeCharge(now = performance.now()) {
+    const charge = state.player.meleeCharge;
+    if (!charge) return false;
+    state.player.meleeCharge = null;
+    mouse.down = false;
+    keys.delete(' ');
+    if ((state.inventory[charge.key] || 0) <= 0) return true;
+    state.player.pendingMeleeCharge = {
+        key: charge.key,
+        amount: meleeChargeAmount(charge, now),
+    };
+    attack(now);
+    return true;
+}
+
+function meleeChargeAmount(charge = state.player.meleeCharge, now = performance.now()) {
+    if (!charge) return 0;
+    return clamp((now - charge.startedAt) / 900, 0, 1);
 }
 
 function isAimingThrowable() {
@@ -6027,7 +6205,7 @@ function startDirectRangedAim(now = performance.now()) {
     if (state.player.rangedAim?.key === key) return;
     const ammo = directRangedAmmoFor(key);
     if (!ammo) {
-        showToast(key === 'slingshot' ? '弹弓需要小石子作为子弹。' : '鹿筋弓需要箭矢。');
+        showToast(key === 'slingshot' || key === 'sling' ? `${RESOURCE_LABELS[key]}需要小石子作为弹药。` : `${RESOURCE_LABELS[key]}需要箭矢。`);
         return;
     }
     if (state.player.attackCooldown > 0) return;
@@ -6045,12 +6223,13 @@ function releaseDirectRanged(now = performance.now()) {
     keys.delete(' ');
     const ammo = directRangedAmmoFor(aim.key, aim.ammo);
     if (!ammo) {
-        showToast(aim.key === 'slingshot' ? '没有小石子。' : '没有箭矢。');
+        showToast(aim.key === 'slingshot' || aim.key === 'sling' ? '没有小石子。' : '没有箭矢。');
         return true;
     }
     const held = directRangedCharge(aim, now);
     const p = state.player;
-    const cost = aim.key === 'slingshot' ? 10 : 16;
+    const rangedDef = simpleWeaponDef(aim.key);
+    const cost = rangedDef?.profile?.stamina || (aim.key === 'slingshot' ? 10 : 16);
     if (p.stamina < cost) {
         showToast('体力不足，无法稳定发射。');
         return true;
@@ -6058,16 +6237,18 @@ function releaseDirectRanged(now = performance.now()) {
     const dir = currentAimDirWithSpread(aim, held);
     p.stamina = Math.max(0, p.stamina - cost);
     consumeHungerForAction(cost * 0.018);
-    p.attackCooldown = aim.key === 'slingshot' ? 0.95 : 0.82;
+    p.attackCooldown = rangedDef?.profile?.cooldown || (aim.key === 'slingshot' ? 0.95 : 0.82);
     p.attackUntil = now + 180 + held * 120;
     p.attackDir = dir;
     p.facing = dir;
     state.inventory[ammo] -= 1;
-    const range = aim.key === 'slingshot' ? (150 + held * 240) : (230 + held * 390);
+    const range = rangedDef?.profile?.range
+        ? (rangedDef.profile.range * (0.45 + held * 0.55))
+        : (aim.key === 'slingshot' ? (150 + held * 240) : (230 + held * 390));
     if (state.indoor) {
         state.indoorProjectiles ||= [];
         state.indoorProjectiles.push({
-            kind: aim.key === 'slingshot' ? 'slingshotPebble' : ammo,
+            kind: directProjectileKindFor(aim.key, ammo),
             owner: 'player',
             indoor: true,
             weapon: aim.key,
@@ -6084,14 +6265,15 @@ function releaseDirectRanged(now = performance.now()) {
             duration: aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120,
             profile: { color: ammo === 'poisonArrow' ? '#8cff66' : '#d8e5f2' },
             splashRadius: 0,
+            pierceRemaining: aim.key === 'bambooCrossbow' ? 1 : 0,
         });
-        spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
+        spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
         syncHotbarItems();
         renderHud();
         return true;
     }
     state.projectiles.push({
-        kind: aim.key === 'slingshot' ? 'slingshotPebble' : ammo,
+        kind: directProjectileKindFor(aim.key, ammo),
         weapon: aim.key,
         ammo,
         x: p.x,
@@ -6104,32 +6286,77 @@ function releaseDirectRanged(now = performance.now()) {
         charge: held,
         startedAt: now,
         duration: aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120,
+        pierceRemaining: aim.key === 'bambooCrossbow' ? 1 : 0,
         exploded: false,
     });
-    spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
+    spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
     syncHotbarItems();
     renderHud();
     return true;
 }
 
 function directRangedCharge(aim, now = performance.now()) {
-    const fullTime = aim.key === 'slingshot' ? 850 : 1050;
+    const fullTime = aim.key === 'slingshot' || aim.key === 'sling' ? 850 : (aim.key === 'bambooCrossbow' ? 1250 : 1050);
     return clamp((now - aim.startedAt) / fullTime, 0.18, 1);
 }
 
 function directRangedAmmoFor(key, preferred = '') {
     if (preferred && (state.inventory[preferred] || 0) > 0) return preferred;
-    if (key === 'slingshot') return (state.inventory.pebble || 0) > 0 ? 'pebble' : '';
-    if (key === 'sinewBow') {
+    if (key === 'slingshot' || key === 'sling') return (state.inventory.pebble || 0) > 0 ? 'pebble' : '';
+    if (key === 'sinewBow' || key === 'bambooCrossbow') {
         if ((state.inventory.poisonArrow || 0) > 0) return 'poisonArrow';
         if ((state.inventory.simpleArrow || 0) > 0) return 'simpleArrow';
     }
     return '';
 }
 
+function directProjectileKindFor(weapon, ammo) {
+    if (weapon === 'slingshot') return 'slingshotPebble';
+    if (weapon === 'sling') return 'slingStone';
+    if (weapon === 'bambooCrossbow') return ammo === 'poisonArrow' ? 'crossbowPoisonBolt' : 'crossbowBolt';
+    return ammo;
+}
+
+function launchBambooKnifeProjectile(player, dir, now = performance.now()) {
+    if ((state.inventory.bambooShard || 0) <= 0) {
+        addFloatText('缺少竹片', player.x, player.y - 48, '#d8e5f2');
+        return false;
+    }
+    state.inventory.bambooShard -= 1;
+    const range = 210;
+    const projectile = {
+        kind: 'bambooKnife',
+        weapon: 'bambooThrowingKnife',
+        ammo: '',
+        owner: 'player',
+        indoor: !!state.indoor,
+        x: player.x,
+        y: player.y - 10,
+        startX: player.x,
+        startY: player.y - 10,
+        targetX: state.indoor ? clamp(player.x + dir.x * range, 220, VIEW.width - 220) : clamp(player.x + dir.x * range, 24, WORLD.width - 24),
+        targetY: state.indoor ? clamp(player.y + dir.y * range, 160, VIEW.height - 74) : clamp(player.y + dir.y * range, 24, WORLD.height - 24),
+        dir,
+        charge: 0.45,
+        startedAt: now,
+        duration: 230,
+        profile: { color: '#d7f28a' },
+        exploded: false,
+    };
+    if (state.indoor) {
+        state.indoorProjectiles ||= [];
+        state.indoorProjectiles.push(projectile);
+    } else {
+        state.projectiles.push(projectile);
+    }
+    syncHotbarItems();
+    renderHud();
+    return true;
+}
+
 function currentAimDirWithSpread(aim, charge) {
     const dir = currentAimDir();
-    const maxSpread = aim.key === 'slingshot' ? 0.22 : 0.13;
+    const maxSpread = aim.key === 'slingshot' ? 0.22 : (aim.key === 'sling' ? 0.16 : (aim.key === 'bambooCrossbow' ? 0.06 : 0.13));
     const spread = (1 - charge) * maxSpread * (hash2(performance.now() * 0.01, state.player.x * 0.01) - 0.5) * 2;
     const angle = Math.atan2(dir.y, dir.x) + spread;
     return { x: Math.cos(angle), y: Math.sin(angle) };
@@ -6158,15 +6385,21 @@ function updateProjectiles(dt, now) {
         if (isDirectProjectile(projectile.kind)) {
             const hit = findDirectProjectileHit(projectile, previous);
             if (hit) {
-                projectile.exploded = true;
                 hitDirectProjectileTarget(projectile, hit);
+                if (projectileCanPierce(projectile)) {
+                    projectile.pierceRemaining -= 1;
+                    projectile.hitTargets ||= new Set();
+                    projectile.hitTargets.add(hit.target);
+                    continue;
+                }
+                projectile.exploded = true;
                 continue;
             }
         }
         if (Math.random() < 0.65) {
-            const trailColor = projectile.kind === 'poisonVial'
+        const trailColor = projectile.kind === 'poisonVial'
                 ? (Math.random() < 0.5 ? '#8cff66' : '#d94bff')
-                : (isDirectProjectile(projectile.kind) ? '#d8e5f2' : (Math.random() < 0.5 ? '#ff9f1c' : '#ffd166'));
+                : (isDirectProjectile(projectile.kind) ? (projectile.kind.includes('Poison') || projectile.kind === 'poisonArrow' ? '#8cff66' : '#d8e5f2') : (Math.random() < 0.5 ? '#ff9f1c' : '#ffd166'));
             addParticle({
                 x: projectile.x,
                 y: projectile.y,
@@ -6187,14 +6420,19 @@ function updateProjectiles(dt, now) {
 
 function findDirectProjectileHit(projectile, previous) {
     const enemyHit = state.enemies
-        .filter(enemy => enemy.hp > 0)
+        .filter(enemy => enemy.hp > 0 && !projectile.hitTargets?.has(enemy))
         .map(enemy => ({ type: 'enemy', target: enemy, d: distanceToSegment(enemy, previous, projectile), radius: enemy.radius + 10 }))
         .filter(hit => hit.d <= hit.radius);
     const villagerHit = (state.outdoorVillagers || [])
-        .filter(npc => npc.outside && npc.hp > 0)
+        .filter(npc => npc.outside && npc.hp > 0 && !projectile.hitTargets?.has(npc))
         .map(npc => ({ type: 'outdoorVillager', target: npc, d: distanceToSegment(npc, previous, projectile), radius: (npc.radius || 17) + 10 }))
         .filter(hit => hit.d <= hit.radius);
     return [...enemyHit, ...villagerHit].sort((a, b) => a.d - b.d)[0] || null;
+}
+
+function projectileCanPierce(projectile) {
+    return (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt')
+        && (projectile.pierceRemaining || 0) > 0;
 }
 
 function fireSlingshot(now = performance.now()) {
@@ -6245,7 +6483,7 @@ function resolveProjectileImpact(projectile) {
 }
 
 function isDirectProjectile(kind) {
-    return kind === 'slingshotPebble' || kind === 'simpleArrow' || kind === 'poisonArrow';
+    return ['slingshotPebble', 'slingStone', 'simpleArrow', 'poisonArrow', 'crossbowBolt', 'crossbowPoisonBolt', 'bambooKnife'].includes(kind);
 }
 
 function enemyHitByAttack(e, p, attackDir, attackProfile, strike) {
@@ -6296,8 +6534,9 @@ function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
     hit.windupUntil = 0;
     hit.strikeAt = 0;
     const dir = state.player.attackDir || state.player.facing;
-    hit.knockX += dir.x * (hit.boss ? 130 : 240);
-    hit.knockY += dir.y * (hit.boss ? 130 : 240);
+    const knockScale = attackProfile.knock ?? 1;
+    hit.knockX += dir.x * (hit.boss ? 130 : 240) * knockScale;
+    hit.knockY += dir.y * (hit.boss ? 130 : 240) * knockScale;
     state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
     spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
     addFloatText(`-${attackProfile.damage}`, hit.x, hit.y - 36, '#fff3b0');
@@ -6306,6 +6545,7 @@ function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 900, now + 900);
         spawnBurst(hit.x, hit.y - 8, '#8cff66', 6, 90, hit.radius * 0.45);
     }
+    applyPlayerWeaponEffects(hit, now, attackProfile, 'enemy');
     if (hit.hp <= 0) {
         hit.deathAt = now;
         markSpawnAreaCleared(hit.x, hit.y, now);
@@ -6315,6 +6555,51 @@ function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
         showToast(`击败 ${hit.name}，获得 ${drops.toastText}`);
     } else {
         showToast(`${hit.name} 被${attackProfile.name}击中，剩余 ${Math.ceil(Math.max(0, hit.hp))}/${hit.maxHp}`);
+    }
+}
+
+function applyPlayerWeaponEffects(target, now, attackProfile, targetType) {
+    const dir = state.player.attackDir || state.player.facing;
+    if (attackProfile.bleed && target.kind !== 'golem') {
+        target.poisonUntil = Math.max(target.poisonUntil || 0, now + 3000);
+        target.poisonTickAt = Math.min(target.poisonTickAt || now + 700, now + 700);
+        addFloatText('流血', target.x, target.y - 50, '#ff6b6b');
+    }
+    if (attackProfile.burn && target.kind !== 'golem') {
+        target.poisonUntil = Math.max(target.poisonUntil || 0, now + 3600);
+        target.poisonTickAt = Math.min(target.poisonTickAt || now + 650, now + 650);
+        spawnBurst(target.x, target.y - 8, '#ff9f1c', 8, 90, (target.radius || 17) * 0.55);
+        addFloatText('点燃', target.x, target.y - 52, '#ffd166');
+    }
+    if (attackProfile.root && targetType === 'enemy') {
+        target.rootedUntil = Math.max(target.rootedUntil || 0, now + attackProfile.root);
+        addFloatText('定身', target.x, target.y - 54, '#d8e5f2');
+    }
+    if (attackProfile.stunChance && Math.random() < attackProfile.stunChance) {
+        target.rootedUntil = Math.max(target.rootedUntil || 0, now + 650);
+        target.attackCooldown = Math.max(target.attackCooldown || 0, 0.55);
+        target.windupUntil = 0;
+        addFloatText('眩晕', target.x, target.y - 54, '#fff3b0');
+    }
+    if (attackProfile.interrupt) {
+        target.windupUntil = 0;
+        target.strikeAt = 0;
+        target.chargeUntil = 0;
+        target.leapUntil = 0;
+        addFloatText('打断', target.x, target.y - 54, '#d8e5f2');
+    }
+    if (attackProfile.pull && targetType === 'enemy') {
+        target.knockX += -dir.x * 360;
+        target.knockY += -dir.y * 360;
+        addFloatText('拉拽', target.x, target.y - 54, '#d6a06a');
+    }
+    if (attackProfile.guard) {
+        state.player.blocking = true;
+        state.player.blockUntil = Math.max(state.player.blockUntil || 0, now + 360);
+        addFloatText('稳守', state.player.x, state.player.y - 48, '#d8e5f2');
+    }
+    if (attackProfile.dart) {
+        spawnBurst(target.x - dir.x * 18, target.y - dir.y * 18, '#d8e5f2', 4, 120, 8);
     }
 }
 
@@ -6340,6 +6625,7 @@ function damageVillager(npc, now, attackProfile = currentAttackProfile()) {
     }
     npc.hp -= attackProfile.damage;
     npc.hurtUntil = now + 180;
+    applyPlayerWeaponEffects(npc, now, attackProfile, 'villager');
     setVillagerPlayerAggro(npc);
     if (['elder', 'apothecary'].includes(npc.role)) {
         npc.moveTargetUntil = 0;
@@ -6374,6 +6660,7 @@ function damageOutdoorVillager(npc, now, attackProfile = currentAttackProfile())
     npc.maxHp ??= 80;
     npc.hp -= attackProfile.damage;
     npc.hurtUntil = now + 180;
+    applyPlayerWeaponEffects(npc, now, attackProfile, 'villager');
     setVillagerPlayerAggro(npc);
     npc.returningHome = npc.hp < npc.maxHp * 0.3;
     const dir = attackProfile.dir || state.player.attackDir || state.player.facing;
@@ -6424,8 +6711,60 @@ function tryVillagerSelfHeal(npc, now) {
     }
 }
 
+function simpleWeaponDef(key) {
+    return SIMPLE_WEAPON_DEFS.find(weapon => weapon.id === key) || null;
+}
+
+function advanceWeaponCombo(key, now) {
+    const p = state.player;
+    if (!simpleWeaponDef(key)) {
+        p.weaponCombo = null;
+        return;
+    }
+    if (!p.weaponCombo || p.weaponCombo.key !== key || now - p.weaponCombo.at > 900) {
+        p.weaponCombo = { key, count: 1, at: now };
+    } else {
+        p.weaponCombo.count = p.weaponCombo.count % 3 + 1;
+        p.weaponCombo.at = now;
+    }
+}
+
+function simpleWeaponProfile(key) {
+    const weapon = simpleWeaponDef(key);
+    if (!weapon) return null;
+    const profile = { ...weapon.profile, name: weapon.name };
+    const combo = state.player.weaponCombo?.key === key ? state.player.weaponCombo.count : 1;
+    if (profile.comboRange && combo === 3) {
+        profile.range += profile.comboRange;
+        profile.damage += 1;
+        profile.name = `${weapon.name}三连刺`;
+    }
+    if (profile.nightBonus && nightAmount() > 0.15) {
+        profile.damage += profile.nightBonus;
+        if (profile.shadow) profile.maxHits = Math.max(profile.maxHits || 1, 2);
+    }
+    if (profile.multiStrike) {
+        profile.damage *= profile.multiStrike;
+        profile.name = `${weapon.name}双击`;
+    }
+    const pendingCharge = state.player.pendingMeleeCharge;
+    if (pendingCharge?.key === key) {
+        const charge = pendingCharge.amount;
+        profile.damage += Math.round(2 + charge * 4);
+        profile.range += Math.round(10 + charge * 18);
+        profile.cooldown += 0.12 + charge * 0.18;
+        profile.stamina += Math.round(4 + charge * 5);
+        profile.root = Math.max(profile.root || 0, 650 + charge * 950);
+        profile.cleave = true;
+        profile.name = `${weapon.name}蓄力重击`;
+    }
+    return profile;
+}
+
 function currentAttackProfile() {
     const item = selectedHotbarItem();
+    const simpleProfile = simpleWeaponProfile(item);
+    if (simpleProfile) return simpleProfile;
     const profiles = {
         stoneAxe: { name: '石斧', damage: 3, range: 46, stamina: 14, cooldown: 0.54, arc: 0.1, style: 'chop' },
         stonePickaxe: { name: '石镐', damage: 3, range: 44, stamina: 15, cooldown: 0.58, arc: 0.16, style: 'pick' },
@@ -6443,7 +6782,22 @@ function currentAttackProfile() {
         bamboo: { name: '竹材', damage: 1, range: 50, stamina: 10, cooldown: 0.4, arc: 0.22, style: 'thrust' },
         stone: { name: '石头', damage: 2, range: 30, stamina: 11, cooldown: 0.44, arc: 0.14, style: 'club' },
     };
-    return profiles[item] || { name: '拳头', damage: 1, range: 32, stamina: 10, cooldown: 0.34, arc: 0.14, style: 'punch' };
+    const profile = profiles[item] || { name: '拳头', damage: 1, range: 32, stamina: 10, cooldown: 0.34, arc: 0.14, style: 'punch' };
+    const pendingCharge = state.player.pendingMeleeCharge;
+    if (pendingCharge?.key === item && item === 'stoneCoreHammer') {
+        const charge = pendingCharge.amount;
+        return {
+            ...profile,
+            name: '石核锤蓄力重击',
+            damage: profile.damage + Math.round(3 + charge * 6),
+            range: profile.range + Math.round(8 + charge * 18),
+            stamina: profile.stamina + Math.round(5 + charge * 6),
+            cooldown: profile.cooldown + 0.16 + charge * 0.22,
+            cleave: true,
+            root: 700 + charge * 1000,
+        };
+    }
+    return profile;
 }
 
 function grantEnemyDrops(hit) {
@@ -6968,6 +7322,12 @@ function craft(id) {
 function useInventoryItem(key) {
     if ((state.inventory[key] || 0) <= 0) return;
     const p = state.player;
+    const simpleWeapon = simpleWeaponDef(key);
+    if (simpleWeapon) {
+        equipWeapon(simpleWeapon.name, simpleWeapon.profile.damage, simpleWeapon.profile.range, `已装备${simpleWeapon.name}。${simpleWeapon.desc}`);
+        renderHud();
+        return;
+    }
     switch (key) {
         case 'stoneAxe':
             state.equipment.tool = '石斧';
@@ -7253,15 +7613,18 @@ function hitDirectProjectileTarget(projectile, hitInfo = findDirectProjectileHit
     hit.attackCooldown = Math.max(hit.attackCooldown, 0.22);
     if (projectile.kind !== 'slingshotPebble') {
         const knock = projectile.dir || normalize(hit.x - state.player.x, hit.y - state.player.y);
-        hit.knockX += knock.x * (projectile.kind === 'poisonArrow' ? 80 : 120);
-        hit.knockY += knock.y * (projectile.kind === 'poisonArrow' ? 80 : 120);
+        const force = projectile.kind === 'slingStone' ? 230
+            : (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt' ? 190
+                : (projectile.kind === 'poisonArrow' ? 80 : 120));
+        hit.knockX += knock.x * force;
+        hit.knockY += knock.y * force;
     }
-    if (projectile.kind === 'poisonArrow' && hit.kind !== 'golem') {
+    if ((projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt') && hit.kind !== 'golem') {
         hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + 5200);
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', hit.x, hit.y - 48, '#9cff7a');
     }
-    spawnBurst(hit.x, hit.y, projectile.kind === 'poisonArrow' ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' ? 6 : 12, 70, hit.radius * 0.45);
+    spawnBurst(hit.x, hit.y, projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt' ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' || projectile.kind === 'slingStone' ? 6 : 12, 70, hit.radius * 0.45);
     addFloatText(`-${damage}`, hit.x, hit.y - 36, '#fff3b0');
     if (hit.hp <= 0) {
         markSpawnAreaCleared(hit.x, hit.y, now);
@@ -7282,22 +7645,29 @@ function hitOutdoorVillagerWithDirectProjectile(projectile, npc) {
         damage,
         dir: projectile.dir || normalize(npc.x - projectile.startX, npc.y - projectile.startY),
     });
-    if (projectile.kind === 'poisonArrow' && npc.hp > 0) {
+    if ((projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt') && npc.hp > 0) {
         npc.poisonUntil = Math.max(npc.poisonUntil || 0, now + 5200);
         npc.poisonTickAt = Math.min(npc.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', npc.x, npc.y - 54, '#9cff7a');
     }
-    spawnBurst(npc.x, npc.y, projectile.kind === 'poisonArrow' ? '#8cff66' : '#d8e5f2', 12, 80, (npc.radius || 17) * 0.55);
+    spawnBurst(npc.x, npc.y, projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt' ? '#8cff66' : '#d8e5f2', 12, 80, (npc.radius || 17) * 0.55);
 }
 
 function directProjectileDamage(projectile) {
     if (projectile.kind === 'slingshotPebble') return 1;
+    if (projectile.kind === 'slingStone') return Math.max(2, Math.round(1 + (projectile.charge || 0.5) * 3));
+    if (projectile.kind === 'bambooKnife') return 1;
+    if (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt') return Math.max(4, Math.round(3 + (projectile.charge || 0.5) * 5));
     if (projectile.kind === 'poisonArrow') return Math.max(2, Math.round(2 + (projectile.charge || 0.5) * 2));
     return Math.max(3, Math.round(2 + (projectile.charge || 0.5) * 4));
 }
 
 function directProjectileName(projectile) {
     if (projectile.kind === 'slingshotPebble') return '弹弓石子';
+    if (projectile.kind === 'slingStone') return '投石带石子';
+    if (projectile.kind === 'bambooKnife') return '竹片飞刀';
+    if (projectile.kind === 'crossbowBolt') return '竹弩箭';
+    if (projectile.kind === 'crossbowPoisonBolt') return '竹弩毒箭';
     if (projectile.kind === 'poisonArrow') return '毒箭';
     return '箭矢';
 }
@@ -7894,6 +8264,11 @@ function selectHotbarSlot(index, notify = true) {
 
 function autoEquipSelectedItem(key, notify = true) {
     const silent = !notify;
+    const simpleWeapon = simpleWeaponDef(key);
+    if (simpleWeapon) {
+        equipWeapon(simpleWeapon.name, simpleWeapon.profile.damage, simpleWeapon.profile.range, silent ? '' : `手持${simpleWeapon.name}。${simpleWeapon.desc}`);
+        return;
+    }
     switch (key) {
         case 'stoneAxe':
             state.equipment.tool = '石斧';
@@ -8011,7 +8386,7 @@ function makePebblesFromHeldStone() {
 }
 
 function isEquipmentItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'woodShield', 'ironShield'].includes(key);
+    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'woodShield', 'ironShield'].includes(key);
 }
 
 function createPixelIconElement(key, className = 'pixel-icon') {
@@ -8056,6 +8431,8 @@ function toggleInventory(force = null) {
         mouse.down = false;
         state.player.rangedAim = null;
         state.player.throwableAim = null;
+        state.player.meleeCharge = null;
+        state.player.pendingMeleeCharge = null;
         resetHarvestHold();
     } else {
         state.openIndoorContainer = null;
@@ -8066,7 +8443,7 @@ function toggleInventory(force = null) {
 }
 
 function canUseInventoryItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'woodShield', 'ironShield', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat'].includes(key) && (state.inventory[key] || 0) > 0;
+    return (!!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'woodShield', 'ironShield', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat'].includes(key)) && (state.inventory[key] || 0) > 0;
 }
 
 function recipeHasKnownMaterial(recipe) {
@@ -8697,24 +9074,33 @@ function drawWallModuleObject(object) {
         ctx.fillStyle = '#d94b5f';
         ctx.fillRect(x + 18, y - 14, 8, 8);
     } else if (object.kind === 'flag') {
+        const flagProfile = villageVisualProfile(state.indoor?.building?.village).flag;
         ctx.fillStyle = '#4a2b17';
         ctx.fillRect(left + 16, top + 10, 7, object.h - 20);
         ctx.fillRect(left + 16, top + 14, object.w - 32, 7);
-        ctx.fillStyle = '#a42d3f';
+        ctx.fillStyle = flagProfile.main;
         ctx.fillRect(left + 27, top + 26, object.w - 45, object.h - 39);
-        ctx.fillStyle = '#d94b5f';
+        ctx.fillStyle = flagProfile.trim;
         ctx.fillRect(left + 27, top + 26, object.w - 45, 16);
-        ctx.fillStyle = '#7f2034';
+        ctx.fillStyle = flagProfile.dark;
         ctx.fillRect(left + 27, bottom - 23, object.w - 45, 10);
-        ctx.fillStyle = '#ffd166';
+        ctx.fillStyle = flagProfile.trim;
         ctx.fillRect(x - 22, y - 8, 44, 6);
         ctx.fillRect(x - 5, y - 24, 10, 38);
         for (let dx = -40; dx <= 40; dx += 20) ctx.fillRect(x + dx, bottom - 14, 9, 7);
-        ctx.fillStyle = '#f8fbff';
-        ctx.fillRect(x - 14, y - 16, 8, 8);
-        ctx.fillRect(x + 6, y - 16, 8, 8);
-        ctx.fillRect(x - 14, y + 4, 8, 8);
-        ctx.fillRect(x + 6, y + 4, 8, 8);
+        ctx.fillStyle = flagProfile.emblem === 'patch' ? '#5a341d' : '#f8fbff';
+        if (flagProfile.emblem === 'bar') {
+            ctx.fillRect(x - 16, y - 14, 32, 6);
+            ctx.fillRect(x - 4, y - 26, 8, 34);
+        } else if (flagProfile.emblem === 'patch') {
+            ctx.fillRect(x - 18, y - 16, 14, 12);
+            ctx.fillRect(x + 6, y + 2, 12, 10);
+        } else {
+            ctx.fillRect(x - 14, y - 16, 8, 8);
+            ctx.fillRect(x + 6, y - 16, 8, 8);
+            ctx.fillRect(x - 14, y + 4, 8, 8);
+            ctx.fillRect(x + 6, y + 4, 8, 8);
+        }
     } else if (object.kind === 'chest') {
         const storage = object.storage || object.loot || {};
         const empty = Object.values(storage).every(amount => amount <= 0);
@@ -8782,6 +9168,45 @@ function villagerAttackProgress(object) {
     return Math.sin(progress * Math.PI);
 }
 
+function villagerVisualVillage(object) {
+    return object.homeBuilding?.village || state.indoor?.building?.village || state.village;
+}
+
+function villagerClothingColors(object) {
+    const village = villagerVisualVillage(object);
+    const villageClothes = villageVisualProfile(village).clothing;
+    const roleColors = {
+        blacksmith: ['#5a341d', '#66737f'],
+        apothecary: ['#355d3f', '#69e08e'],
+        kitchen: ['#7a3f2a', '#ffd166'],
+        guard: ['#303946', '#d8e5f2'],
+        merchant: ['#6d4324', '#ffd166'],
+        basicElder: ['#5a4632', '#d8e5f2'],
+        elder: ['#3f2a1c', '#b77dff'],
+        unemployed: ['#4a3a2a', '#d6a06a'],
+    }[object.role] || ['#5a341d', '#d49a5a'];
+    if (village?.tier === 'fortress') return [object.role === 'merchant' ? '#4b3b28' : villageClothes.body, object.role === 'elder' ? '#ffd166' : villageClothes.trim];
+    if (village?.tier === 'basic') return [object.role === 'basicElder' ? '#5a4632' : villageClothes.body, object.role === 'basicElder' ? '#d8e5f2' : villageClothes.trim];
+    return roleColors;
+}
+
+function drawVillageClothingAccent(object, x, y) {
+    const village = villagerVisualVillage(object);
+    const accent = villageVisualProfile(village).clothing.accent;
+    if (village?.tier === 'fortress') {
+        ctx.fillStyle = accent;
+        ctx.fillRect(x - 13, y - 31, 26, 5);
+        ctx.fillRect(x - 10, y - 17, 20, 4);
+    } else if (village?.tier === 'basic') {
+        ctx.fillStyle = accent;
+        ctx.fillRect(x - 11, y - 18, 8, 7);
+        ctx.fillRect(x + 3, y - 10, 7, 6);
+    } else {
+        ctx.fillStyle = accent;
+        ctx.fillRect(x - 10, y - 18, 20, 4);
+    }
+}
+
 function drawIndoorNpc(object) {
     const x = object.x;
     const y = object.y;
@@ -8796,16 +9221,7 @@ function drawIndoorNpc(object) {
         return;
     }
     drawShadow(x, y + 1, 30, 7);
-    const colors = {
-        blacksmith: ['#5a341d', '#66737f'],
-        apothecary: ['#355d3f', '#69e08e'],
-        kitchen: ['#7a3f2a', '#ffd166'],
-        guard: ['#303946', '#d8e5f2'],
-        merchant: ['#6d4324', '#ffd166'],
-        basicElder: ['#5a4632', '#d8e5f2'],
-        elder: ['#3f2a1c', '#b77dff'],
-        unemployed: ['#4a3a2a', '#d6a06a'],
-    }[object.role] || ['#5a341d', '#d49a5a'];
+    const colors = villagerClothingColors(object);
     const attackProgress = villagerAttackProgress(object);
     ctx.fillStyle = '#d6a06a';
     ctx.fillRect(x - 8, y - 42, 16, 16);
@@ -8813,6 +9229,7 @@ function drawIndoorNpc(object) {
     ctx.fillRect(x - 11, y - 27, 22, 26);
     ctx.fillStyle = colors[1];
     ctx.fillRect(x - 8, y - 24, 16, 6);
+    drawVillageClothingAccent(object, x, y);
     ctx.fillStyle = '#2d2117';
     const face = object.facing === -1 ? -2 : 2;
     ctx.fillRect(x - 4 + face, y - 38, 3, 3);
@@ -10137,6 +10554,7 @@ function drawWorldObjects(now) {
         ...state.projectiles.filter(p => isNearView(p, 120)).map(p => ({ y: p.y, draw: () => drawProjectile(p) })),
         ...(state.indoorProjectiles || []).filter(p => !p.indoor && isNearView(p, 160)).map(p => ({ y: p.y, draw: () => drawOutdoorVillagerProjectile(p) })),
         ...visibleResources(180).map(r => ({ y: r.y, draw: () => drawResource(r) })),
+        ...(state.roadSigns || []).filter(sign => isNearView(sign, 140)).map(sign => ({ y: sign.y + 18, draw: () => drawRoadSign(sign) })),
         ...state.enemies.filter(e => (e.hp > 0 || (e.deathAt && now - e.deathAt < 1200)) && isNearView(e, 220)).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
         ...state.outdoorVillagers.filter(npc => npc.hp > 0 && isNearView(npc, 160)).map(npc => ({ y: npc.y, draw: () => drawOutdoorVillager(npc, now) })),
         { y: state.player.y, draw: () => drawPlayer(now) },
@@ -10169,6 +10587,7 @@ function villageDrawables(village) {
         items.push(...fortressWallDrawables(village));
     }
     village.amenities?.lamps?.forEach(lamp => items.push({ y: lamp.y, draw: () => drawVillageLamp(lamp) }));
+    if (village.amenities?.flag) items.push({ y: village.amenities.flag.y + 22, draw: () => drawVillageFlag(village.amenities.flag, village) });
     if (village.amenities?.noticeBoard) items.push({ y: village.amenities.noticeBoard.y + 20, draw: () => drawVillageNoticeBoard(village.amenities.noticeBoard) });
     if (village.amenities?.bell) items.push({ y: village.amenities.bell.y + 26, draw: () => drawVillageBell(village.amenities.bell) });
     items.push({ y: village.y + 8, draw: () => drawVillageWell(village.well) });
@@ -10246,19 +10665,35 @@ function drawFortressWallSegment(segment) {
         ctx.strokeRect(x + 2, y + 2, Math.max(0, segment.w - 4), Math.max(0, segment.h - 4));
         return;
     }
-    ctx.fillStyle = '#66737f';
+    ctx.fillStyle = '#2f3945';
     ctx.fillRect(x, y, segment.w, segment.h);
+    ctx.fillStyle = '#6f7780';
+    ctx.fillRect(x + 4, y + 4, Math.max(0, segment.w - 8), Math.max(0, segment.h - 8));
     ctx.fillStyle = '#8c98a4';
     if (segment.kind === 'horizontal') {
-        const capY = segment.edge === 'north' ? y - 5 : y + segment.h - 3;
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(x + 3, y + 3, Math.max(0, segment.w - 6), 10);
+        ctx.fillStyle = '#8c98a4';
+        for (let yy = y + 16; yy < y + segment.h - 6; yy += 16) {
+            ctx.fillRect(x + 8, yy, Math.max(0, segment.w - 16), 5);
+        }
+        const capY = segment.edge === 'north' ? y - 6 : y + segment.h - 4;
+        ctx.fillStyle = '#66737f';
         for (let px = x + 10; px < x + segment.w - 18; px += 34) {
-            ctx.fillRect(px, capY, 18, 8);
+            ctx.fillRect(px, capY, 18, 12);
         }
         return;
     }
-    const capX = segment.edge === 'west' ? x - 4 : x + segment.w - 4;
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x + 3, y + 3, 10, Math.max(0, segment.h - 6));
+    ctx.fillStyle = '#8c98a4';
+    for (let yy = y + 10; yy < y + segment.h - 12; yy += 16) {
+        ctx.fillRect(x + 8, yy, Math.max(0, segment.w - 16), 5);
+    }
+    const capX = segment.edge === 'west' ? x - 5 : x + segment.w - 7;
+    ctx.fillStyle = '#66737f';
     for (let py = y + 8; py < y + segment.h - 18; py += 34) {
-        ctx.fillRect(capX, py, 8, 18);
+        ctx.fillRect(capX, py, 12, 18);
     }
 }
 
@@ -10324,6 +10759,70 @@ function drawVillageLamp(lamp) {
         ctx.fillStyle = `rgba(255, 209, 102, ${0.12 + night * 0.22})`;
         ctx.fillRect(x - 22, y - 43, 44, 34);
     }
+}
+
+function drawVillageFlag(flag, village) {
+    const x = worldX(flag.x);
+    const y = worldY(flag.y);
+    const profile = villageVisualProfile(village).flag;
+    drawShadow(x, y + 10, 44, 8);
+    ctx.fillStyle = profile.dark;
+    ctx.fillRect(x - 4, y - 66, 8, 78);
+    ctx.fillRect(x - 4, y - 62, 48, 7);
+    ctx.fillStyle = profile.main;
+    ctx.fillRect(x + 6, y - 54, 52, 34);
+    ctx.fillStyle = profile.trim;
+    ctx.fillRect(x + 6, y - 54, 52, 6);
+    ctx.fillRect(x + 6, y - 25, 52, 5);
+    if (profile.emblem === 'bar') {
+        ctx.fillStyle = '#d8e5f2';
+        ctx.fillRect(x + 18, y - 44, 28, 5);
+        ctx.fillRect(x + 28, y - 50, 8, 22);
+    } else if (profile.emblem === 'patch') {
+        ctx.fillStyle = '#f0d7a1';
+        ctx.fillRect(x + 18, y - 45, 12, 10);
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x + 36, y - 38, 10, 8);
+    } else {
+        ctx.fillStyle = '#f8fbff';
+        ctx.fillRect(x + 25, y - 47, 8, 22);
+        ctx.fillRect(x + 17, y - 40, 24, 8);
+    }
+}
+
+function drawRoadSign(sign) {
+    const x = worldX(sign.x);
+    const y = worldY(sign.y);
+    const label = `${sign.label} ${Math.max(1, Math.round(sign.distance / 100))}里`;
+    drawShadow(x, y + 11, 42, 7);
+    ctx.fillStyle = '#4a2b17';
+    ctx.fillRect(x - 3, y - 36, 6, 48);
+    ctx.save();
+    ctx.translate(x, y - 30);
+    ctx.rotate(sign.angle);
+    ctx.fillStyle = '#6b4a2f';
+    ctx.fillRect(-8, -10, 78, 20);
+    ctx.beginPath();
+    ctx.moveTo(70, -14);
+    ctx.lineTo(93, 0);
+    ctx.lineTo(70, 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#2d2117';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-8, -10, 78, 20);
+    ctx.beginPath();
+    ctx.moveTo(70, -14);
+    ctx.lineTo(93, 0);
+    ctx.lineTo(70, 14);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#f0d7a1';
+    ctx.font = 'bold 11px "Microsoft YaHei"';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x + Math.cos(sign.angle) * 36, y - 26 + Math.sin(sign.angle) * 36);
+    ctx.textAlign = 'left';
 }
 
 function drawVillageHouse(building) {
@@ -10433,7 +10932,7 @@ function drawBasicVillageHouse(building, x, y, left, top, style) {
 }
 
 function villageHouseStyle(building) {
-    return {
+    const base = {
         basicElder: { roof: '#6b5333', wall: '#8a6a3d', sign: '#d8e5f2', icon: '⚔' },
         basicVillager: { roof: '#6f5a2f', wall: '#8a6a3d', sign: '#d6a06a', icon: '△' },
         blacksmith: { roof: '#2f3945', wall: '#735536', sign: '#d8e5f2', icon: '⚒' },
@@ -10445,6 +10944,14 @@ function villageHouseStyle(building) {
         elder: { roof: '#3f2a1c', wall: '#6b4a2f', sign: '#b77dff', icon: '◆' },
         unemployed: { roof: '#5a4632', wall: '#7a6040', sign: '#d6a06a', icon: '•' },
     }[building.kind] || { roof: building.roofTone > 0.5 ? '#5a4632' : '#4b3b28', wall: '#7a6040', sign: '#d6a06a', icon: '•' };
+    const profile = villageVisualProfile(building.village).building;
+    if (building.village?.tier === 'fortress' && building.kind !== 'guardFortress') {
+        return { ...base, roof: profile.roof, wall: profile.wall, sign: profile.sign };
+    }
+    if (building.village?.tier === 'basic') {
+        return { ...base, roof: profile.roof, wall: profile.wall, sign: profile.sign };
+    }
+    return base;
 }
 
 function drawVillageHouseSign(building, x, top, style) {
@@ -11615,6 +12122,10 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
         drawBowInHand(handX, handY, dir, directRangedPullAmount('sinewBow', attacking));
         return;
     }
+    if (simpleWeaponDef(heldItem)) {
+        drawSimpleWeaponInHand(heldItem, handX, handY, dir, attacking);
+        return;
+    }
     const weaponLength = Math.max(20, attackProfile.range * 0.58);
     ctx.strokeStyle = attackProfile.name === '铁剑' ? '#d8e5f2'
         : (attackProfile.name === '石矛' ? '#a8b3bd'
@@ -11637,13 +12148,266 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
 }
 
 function isHandWeaponItem(key) {
-    return ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'sinewBow', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'wood', 'bamboo', 'stone'].includes(key) || !key;
+    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'sinewBow', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'wood', 'bamboo', 'stone'].includes(key) || !key;
 }
 
 function directRangedPullAmount(key, attacking) {
     const aim = state.player.rangedAim;
     if (aim?.key === key) return directRangedCharge(aim, performance.now());
     return attacking ? 0.45 : 0;
+}
+
+function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
+    const def = simpleWeaponDef(key);
+    if (!def) return;
+    const angle = Math.atan2(dir.y, dir.x);
+    const lunge = attacking ? 7 : 0;
+    ctx.save();
+    ctx.translate(handX + dir.x * (10 + lunge), handY + dir.y * (10 + lunge));
+    ctx.rotate(angle);
+    const visualScale = clamp((def.profile.range || 50) / 64, 0.68, 1.85);
+    ctx.scale(visualScale, visualScale);
+    const chargeGlow = state.player.meleeCharge?.key === key ? meleeChargeAmount(state.player.meleeCharge, performance.now()) : 0;
+    const palette = {
+        wood: '#6b3b1f',
+        lightWood: '#a66a3c',
+        stone: '#a8b3bd',
+        metal: '#d8e5f2',
+        bamboo: '#9bd86a',
+        venom: '#8cff66',
+        fire: '#ff9f1c',
+        shadow: '#b77dff',
+        hide: '#d6a06a',
+        dark: '#243041',
+    };
+    const drawShaft = (length, width = 4, color = palette.wood) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(length, 0);
+        ctx.stroke();
+    };
+    const drawTip = (x, color = palette.stone, size = 8) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x + size, 0);
+        ctx.lineTo(x - size * 0.45, -size * 0.6);
+        ctx.lineTo(x - size * 0.25, size * 0.6);
+        ctx.closePath();
+        ctx.fill();
+    };
+    const drawFork = (length, tineColor, tineCount = 3) => {
+        drawShaft(length, 4, key.includes('bamboo') || key === 'bambooPike' ? palette.bamboo : palette.wood);
+        ctx.strokeStyle = tineColor;
+        ctx.lineWidth = 3;
+        for (let i = 0; i < tineCount; i++) {
+            const offset = (i - (tineCount - 1) / 2) * 5;
+            ctx.beginPath();
+            ctx.moveTo(length - 5, offset * 0.35);
+            ctx.lineTo(length + 13, offset);
+            ctx.stroke();
+        }
+    };
+    switch (key) {
+        case 'woodFork':
+            drawFork(44, palette.lightWood, 3);
+            break;
+        case 'stoneBladeSpear':
+            drawShaft(50);
+            drawTip(50, palette.stone, 10);
+            ctx.fillStyle = palette.hide;
+            ctx.fillRect(14, -4, 12, 8);
+            break;
+        case 'bambooPike':
+            drawShaft(66, 4, palette.bamboo);
+            drawTip(66, palette.stone, 8);
+            ctx.fillStyle = '#d7f28a';
+            ctx.fillRect(20, -2, 26, 4);
+            break;
+        case 'boneSpikedClub':
+            drawShaft(38, 7, palette.wood);
+            ctx.fillStyle = palette.metal;
+            for (let px = 18; px <= 38; px += 8) ctx.fillRect(px, -8, 5, 7);
+            break;
+        case 'vineStoneHammer':
+            drawShaft(36, 5, palette.wood);
+            ctx.fillStyle = palette.stone;
+            ctx.fillRect(32, -12, 22, 24);
+            if (chargeGlow > 0.05) {
+                ctx.fillStyle = `rgba(216,229,242,${0.25 + chargeGlow * 0.35})`;
+                ctx.fillRect(27, -16, 32, 32);
+            }
+            ctx.strokeStyle = '#5f7a46';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(28, -8);
+            ctx.lineTo(52, 8);
+            ctx.moveTo(29, 8);
+            ctx.lineTo(52, -8);
+            ctx.stroke();
+            break;
+        case 'shieldClub':
+            drawShaft(34, 6, palette.wood);
+            ctx.fillStyle = '#8a5a32';
+            ctx.fillRect(6, -12, 15, 24);
+            ctx.strokeStyle = palette.metal;
+            ctx.strokeRect(7, -11, 13, 22);
+            break;
+        case 'twinStoneDagger':
+            drawDaggerPair(palette.stone, palette.wood);
+            break;
+        case 'bambooThrowingKnife':
+            drawDaggerPair(palette.bamboo, palette.bamboo);
+            ctx.fillStyle = '#d7f28a';
+            ctx.fillRect(22, -13, 12, 3);
+            break;
+        case 'torchClub':
+            drawShaft(36, 6, palette.wood);
+            ctx.fillStyle = palette.fire;
+            ctx.fillRect(32, -11, 14, 22);
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(36, -15, 7, 30);
+            break;
+        case 'toxicKnife':
+            drawDagger(palette.venom, palette.dark);
+            ctx.fillStyle = 'rgba(140,255,102,0.55)';
+            ctx.fillRect(30, -8, 12, 16);
+            break;
+        case 'beeNeedleSpear':
+            drawShaft(56, 3, palette.wood);
+            drawTip(56, '#ffd166', 7);
+            ctx.fillStyle = '#2d2117';
+            ctx.fillRect(43, -3, 9, 6);
+            break;
+        case 'antlerFork':
+            drawFork(48, '#f1dfc3', 4);
+            break;
+        case 'sling':
+            drawSlingInHand(attacking ? directRangedPullAmount('sling', true) : directRangedPullAmount('sling', false));
+            break;
+        case 'bambooCrossbow':
+            drawCrossbowInHand(directRangedPullAmount('bambooCrossbow', attacking));
+            break;
+        case 'ropeSickle':
+            drawRopeSickle(palette.stone, palette.hide);
+            break;
+        case 'nailClub':
+            drawShaft(38, 7, palette.wood);
+            ctx.fillStyle = palette.stone;
+            ctx.fillRect(20, -9, 5, 5);
+            ctx.fillRect(31, 4, 5, 5);
+            ctx.fillRect(40, -6, 5, 5);
+            break;
+        case 'resinHammer':
+            drawShaft(36, 6, palette.wood);
+            ctx.fillStyle = '#d68a43';
+            ctx.fillRect(31, -11, 24, 22);
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(36, -7, 14, 14);
+            if (chargeGlow > 0.05) {
+                ctx.fillStyle = `rgba(255,209,102,${0.22 + chargeGlow * 0.42})`;
+                ctx.fillRect(28, -15, 30, 30);
+            }
+            break;
+        case 'frogWhip':
+            ctx.strokeStyle = '#8cff66';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-4, 0);
+            ctx.bezierCurveTo(18, -16, 34, 18, 58, -6);
+            ctx.stroke();
+            ctx.fillStyle = '#d94bff';
+            ctx.fillRect(55, -9, 8, 8);
+            break;
+        case 'scorpionHook':
+            drawShaft(44, 4, palette.wood);
+            ctx.strokeStyle = palette.venom;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(40, 0);
+            ctx.quadraticCurveTo(58, -16, 64, 4);
+            ctx.stroke();
+            break;
+        case 'shadowWoodBlade':
+            drawDagger(palette.shadow, palette.dark, 48);
+            ctx.fillStyle = 'rgba(183,125,255,0.35)';
+            ctx.fillRect(24, -13, 28, 5);
+            break;
+        default:
+            drawShaft(40);
+            drawTip(40);
+    }
+    ctx.restore();
+}
+
+function drawDagger(bladeColor, handleColor, length = 34) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-7, -4, 14, 8);
+    ctx.fillStyle = bladeColor;
+    ctx.beginPath();
+    ctx.moveTo(length, 0);
+    ctx.lineTo(5, -6);
+    ctx.lineTo(9, 6);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawDaggerPair(bladeColor, handleColor) {
+    ctx.save();
+    ctx.rotate(-0.22);
+    drawDagger(bladeColor, handleColor, 32);
+    ctx.restore();
+    ctx.save();
+    ctx.rotate(0.28);
+    ctx.translate(1, 8);
+    drawDagger(bladeColor, handleColor, 28);
+    ctx.restore();
+}
+
+function drawSlingInHand(pull = 0) {
+    ctx.strokeStyle = '#d6a06a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-4, -8);
+    ctx.quadraticCurveTo(16 - pull * 12, 0, -4, 8);
+    ctx.stroke();
+    ctx.fillStyle = '#8c98a4';
+    ctx.fillRect(15 - pull * 12, -4, 8, 8);
+}
+
+function drawCrossbowInHand(pull = 0) {
+    ctx.strokeStyle = '#9bd86a';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.lineTo(42, 0);
+    ctx.moveTo(18, -18);
+    ctx.lineTo(18, 18);
+    ctx.stroke();
+    ctx.strokeStyle = '#f1dfc3';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(18, -18);
+    ctx.lineTo(8 - pull * 8, 0);
+    ctx.lineTo(18, 18);
+    ctx.stroke();
+    ctx.fillStyle = '#d8e5f2';
+    ctx.fillRect(4 - pull * 8, -2, 44, 4);
+}
+
+function drawRopeSickle(bladeColor, ropeColor) {
+    ctx.strokeStyle = ropeColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-5, 0);
+    ctx.bezierCurveTo(15, -12, 32, 10, 48, -4);
+    ctx.stroke();
+    ctx.strokeStyle = bladeColor;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(52, -2, 10, -1.4, 0.9);
+    ctx.stroke();
 }
 
 function drawSlingshotInHand(handX, handY, dir, pull) {
@@ -12294,6 +13058,11 @@ window.addEventListener('keydown', event => {
         startDirectRangedAim();
         return;
     }
+    if (key === ' ' && isChargeMeleeItem(selectedHotbarItem())) {
+        keys.add(key);
+        startMeleeCharge();
+        return;
+    }
     if (key === 'q') {
         useSelectedHotbarItem();
         return;
@@ -12321,6 +13090,7 @@ window.addEventListener('keyup', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (key === ' ' && state.player.throwableAim) releaseThrowable();
     if (key === ' ' && state.player.rangedAim) releaseDirectRanged();
+    if (key === ' ' && state.player.meleeCharge) releaseMeleeCharge();
     keys.delete(key);
     if (key === 'e') resetHarvestHold();
 });
@@ -12394,6 +13164,7 @@ function setupMobileControls() {
                 setMouseToFacing();
                 if (isThrowableItem(selectedHotbarItem())) startThrowableAim();
                 else if (isDirectRangedItem(selectedHotbarItem())) startDirectRangedAim();
+                else if (isChargeMeleeItem(selectedHotbarItem())) startMeleeCharge();
                 else {
                     mouse.down = true;
                     attack();
@@ -12457,6 +13228,10 @@ canvas.addEventListener('mousedown', event => {
         startDirectRangedAim();
         return;
     }
+    if (isChargeMeleeItem(selectedHotbarItem())) {
+        startMeleeCharge();
+        return;
+    }
     mouse.down = true;
     attack();
 });
@@ -12474,12 +13249,17 @@ canvas.addEventListener('mouseup', event => {
         releaseDirectRanged();
         return;
     }
+    if (state.player.meleeCharge) {
+        releaseMeleeCharge();
+        return;
+    }
     mouse.down = false;
 });
 
 canvas.addEventListener('mouseleave', () => {
     if (state.player.throwableAim) releaseThrowable();
     if (state.player.rangedAim) releaseDirectRanged();
+    if (state.player.meleeCharge) releaseMeleeCharge();
     mouse.down = false;
     mouse.blocking = false;
 });
