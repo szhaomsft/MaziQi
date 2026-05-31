@@ -28,7 +28,13 @@
         <section id="play-area">
             <div id="canvas-wrap">
                 <canvas id="game-canvas" width="960" height="640" aria-label="荒野工匠游戏画面"></canvas>
+                <div id="loading-screen">
+                    <div class="loading-spinner"></div>
+                    <strong>生成荒野中...</strong>
+                    <span>正在布置村庄、资源和怪物</span>
+                </div>
                 <div id="toast">靠近资源后长按 E 采集。</div>
+                <button id="villager-trade-btn" class="hidden" type="button">交易</button>
                 <div id="mobile-controls" aria-hidden="true">
                     <div id="mobile-joystick" aria-label="移动摇杆">
                         <div id="mobile-joystick-thumb"></div>
@@ -86,13 +92,14 @@
                         <aside id="equipment-panel" aria-label="装备栏"></aside>
                         <div id="backpack-panel">
                             <h3>已获得物品</h3>
-                            <p class="inventory-hint">背包最多 4 行；拖拽到快捷栏，或点丢弃按钮丢掉物品。</p>
+                            <p class="inventory-hint">背包最多 27 格；拖拽到快捷栏，或点丢弃按钮丢掉物品。</p>
                             <div id="inventory-capacity"></div>
                             <div id="inventory"></div>
                         </div>
                     </div>
                     <div id="hotbar-drop-zone" aria-label="快捷栏槽位"></div>
                     <div id="chest-storage" class="hidden" aria-label="木箱储物"></div>
+                    <div id="trade-panel" class="hidden" aria-label="村民交易"></div>
                 </section>
                 <section class="inventory-section">
                     <h3>合成栏</h3>

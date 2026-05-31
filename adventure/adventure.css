@@ -134,6 +134,44 @@ h2 {
     touch-action: none;
 }
 
+#loading-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    place-content: center;
+    gap: 10px;
+    justify-items: center;
+    background: radial-gradient(circle at 50% 38%, rgba(62, 127, 71, 0.96), rgba(10, 17, 26, 0.96));
+    color: #fff3b0;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+#loading-screen span {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 13px;
+}
+
+.loading-spinner {
+    width: 44px;
+    height: 44px;
+    border: 5px solid rgba(255, 255, 255, 0.22);
+    border-top-color: #ffd166;
+    border-radius: 50%;
+    animation: loading-spin 0.9s linear infinite;
+}
+
+#loading-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+@keyframes loading-spin {
+    to { transform: rotate(360deg); }
+}
+
 #mobile-controls {
     display: none;
 }
@@ -151,11 +189,27 @@ h2 {
     font-weight: 800;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
     transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 40;
 }
 
 #toast.hidden {
     opacity: 0;
     transform: translateY(8px);
+}
+
+#villager-trade-btn {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 41;
+    padding: 10px 16px;
+    border: 1px solid rgba(94, 224, 137, 0.58);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(26, 92, 52, 0.92), rgba(18, 55, 40, 0.92));
+    color: #d8ffd8;
+    cursor: pointer;
+    font-weight: 900;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
 }
 
 #hud {
@@ -256,7 +310,7 @@ h2 {
     grid-auto-rows: 78px;
     justify-content: start;
     gap: 7px;
-    max-height: 333px;
+    max-height: 248px;
     overflow: hidden;
 }
 
@@ -483,6 +537,35 @@ h2 {
 .chest-row:hover {
     border-color: rgba(94, 224, 137, 0.65);
     background: rgba(94, 224, 137, 0.12);
+}
+
+#trade-panel {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#trade-panel .chest-grid {
+    display: flex;
+    flex-direction: column;
+    max-height: 210px;
+    overflow: auto;
+}
+
+#trade-panel .inventory-row {
+    min-height: auto;
+    grid-template-rows: auto;
+    justify-items: stretch;
+    padding: 8px 10px;
+}
+
+#trade-panel .inventory-name {
+    overflow: visible;
+    font-size: 11px;
+    line-height: 1.35;
+    text-align: left;
+    text-overflow: clip;
+    white-space: normal;
 }
 
 #hotbar-drop-zone {
