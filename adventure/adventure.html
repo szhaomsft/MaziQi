@@ -73,6 +73,55 @@
                     </ol>
                     <button id="restart-btn" type="button">重新开始</button>
                 </div>
+
+                <div class="panel" id="wilderness-settings-panel">
+                    <h2>荒野设置</h2>
+                    <label class="settings-row">
+                        <span>世界种子</span>
+                        <input id="setting-seed" type="text" placeholder="留空随机">
+                    </label>
+                    <label class="settings-row">
+                        <span>怪物密度</span>
+                        <input id="setting-monster-density" type="range" min="0.5" max="2" step="0.1" value="1">
+                        <strong id="setting-monster-density-label">1.0x</strong>
+                    </label>
+                    <label class="settings-row">
+                        <span>白天长度</span>
+                        <input id="setting-day-length" type="range" min="140" max="420" step="10" value="230">
+                        <strong id="setting-day-length-label">230秒</strong>
+                    </label>
+                    <label class="settings-row">
+                        <span>丛林规模</span>
+                        <input id="setting-jungle-scale" type="range" min="0.5" max="2.2" step="0.1" value="1">
+                        <strong id="setting-jungle-scale-label">1.0x</strong>
+                    </label>
+                    <label class="settings-row">
+                        <span>森林规模</span>
+                        <input id="setting-forest-scale" type="range" min="0.5" max="2" step="0.1" value="1">
+                        <strong id="setting-forest-scale-label">1.0x</strong>
+                    </label>
+                    <label class="settings-row">
+                        <span>村庄规模</span>
+                        <input id="setting-village-scale" type="range" min="0.7" max="1.8" step="0.1" value="1">
+                        <strong id="setting-village-scale-label">1.0x</strong>
+                    </label>
+                    <label class="settings-row">
+                        <span>村庄间距</span>
+                        <input id="setting-village-distance" type="range" min="0.6" max="1.8" step="0.1" value="1">
+                        <strong id="setting-village-distance-label">1.0x</strong>
+                    </label>
+                    <label class="settings-row">
+                        <span>教派房距</span>
+                        <input id="setting-cult-spacing" type="range" min="80" max="500" step="10" value="150">
+                        <strong id="setting-cult-spacing-label">150</strong>
+                    </label>
+                    <label class="settings-row settings-check-row">
+                        <span>铁堡村</span>
+                        <input id="setting-fortress-enabled" type="checkbox" checked>
+                        <strong>生成</strong>
+                    </label>
+                    <button id="apply-wilderness-settings-btn" type="button">应用并重生荒野</button>
+                </div>
             </aside>
         </section>
     </main>

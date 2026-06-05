@@ -260,6 +260,56 @@ h2 {
     background: linear-gradient(180deg, var(--accent), #ff9f1c);
 }
 
+.settings-row {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr) 48px;
+    gap: 8px;
+    align-items: center;
+    margin: 9px 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.settings-row input[type="text"] {
+    grid-column: span 2;
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.22);
+    color: var(--text);
+}
+
+.settings-row input[type="range"] {
+    width: 100%;
+    accent-color: var(--green);
+}
+
+.settings-check-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--green);
+}
+
+.settings-row strong {
+    color: var(--accent);
+    text-align: right;
+    font-size: 12px;
+}
+
+#apply-wilderness-settings-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border: 1px solid rgba(94, 224, 137, 0.56);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(31, 107, 63, 0.92), rgba(18, 55, 40, 0.92));
+    color: #d8ffd8;
+    cursor: pointer;
+    font-weight: 900;
+}
+
 .stat-row,
 .inventory-row,
 .recipe-cost {
