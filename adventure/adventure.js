@@ -17264,6 +17264,11 @@ function setupMobileControls() {
     if (!controls || !joystick || !thumb) return;
 
     document.body.classList.add('mobile-control-active');
+    document.addEventListener('touchmove', event => {
+        if (!document.body.classList.contains('mobile-control-active')) return;
+        if (state.inventoryOpen) return;
+        event.preventDefault();
+    }, { passive: false });
     const resetStick = () => {
         touchInput.moveX = 0;
         touchInput.moveY = 0;

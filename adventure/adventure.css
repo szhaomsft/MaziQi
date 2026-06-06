@@ -920,25 +920,191 @@ ol {
 }
 
 @media (max-width: 760px) {
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body {
+        position: fixed;
+        inset: 0;
+        background: #050b12;
+    }
+
+    #game-shell {
+        width: 100%;
+        height: 100dvh;
+        padding: 0;
+    }
+
     #intro-panel {
-        padding: 12px;
+        display: none;
     }
 
-    #intro-panel h1 {
-        font-size: 28px;
+    #play-area {
+        display: block;
+        width: 100%;
+        height: 100dvh;
     }
 
-    .controls {
-        gap: 6px;
+    #canvas-wrap {
+        width: 100%;
+        height: 100dvh;
+        border: 0;
+        border-radius: 0;
+        background: #08111d;
     }
 
-    .controls span {
-        padding: 5px 8px;
+    #game-canvas {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #102033;
+    }
+
+    #hud {
+        position: fixed;
+        left: 8px;
+        top: calc(8px + env(safe-area-inset-top));
+        z-index: 45;
+        display: block;
+        width: min(210px, 54vw);
+        max-height: none;
+        overflow: visible;
+        padding: 0;
+        pointer-events: none;
+    }
+
+    #hud .panel {
+        display: none;
+    }
+
+    #hud .panel:first-child {
+        display: block;
+        padding: 8px 9px;
+        border-radius: 14px;
+        background: rgba(8, 14, 21, 0.68);
+        backdrop-filter: blur(4px);
+    }
+
+    #hud .panel:first-child h2 {
+        display: none;
+    }
+
+    #hud .stat-row {
         font-size: 11px;
+        gap: 6px;
+        line-height: 1.15;
+    }
+
+    #hud .bar {
+        height: 8px;
+        margin: 4px 0 6px;
+    }
+
+    #toast {
+        left: 10px;
+        right: 10px;
+        bottom: calc(126px + env(safe-area-inset-bottom));
+        max-width: none;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    #mobile-controls {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: block;
+        pointer-events: none;
+        touch-action: none;
+    }
+
+    #mobile-joystick {
+        position: fixed;
+        left: calc(16px + env(safe-area-inset-left));
+        bottom: calc(18px + env(safe-area-inset-bottom));
+        width: 122px;
+        height: 122px;
+        border: 2px solid rgba(255, 255, 255, 0.24);
+        border-radius: 50%;
+        background: rgba(8, 14, 21, 0.56);
+        backdrop-filter: blur(4px);
+        pointer-events: auto;
+        touch-action: none;
+    }
+
+    #mobile-joystick-thumb {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 48px;
+        height: 48px;
+        border: 2px solid rgba(255, 209, 102, 0.75);
+        border-radius: 50%;
+        background: rgba(255, 209, 102, 0.28);
+        transform: translate(-50%, -50%);
+    }
+
+    #mobile-buttons {
+        position: fixed;
+        right: calc(10px + env(safe-area-inset-right));
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: repeat(3, 62px);
+        grid-template-rows: repeat(2, 52px);
+        gap: 7px;
+        pointer-events: auto;
+        touch-action: none;
+    }
+
+    #mobile-buttons button {
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 14px;
+        background: rgba(8, 14, 21, 0.72);
+        color: #ffffff;
+        font-weight: 900;
+        font-size: 12px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+    }
+
+    #mobile-buttons button.primary {
+        grid-column: span 2;
+        background: rgba(255, 159, 28, 0.72);
+        color: #21160b;
+    }
+
+    #villager-trade-btn {
+        right: calc(12px + env(safe-area-inset-right));
+        bottom: calc(128px + env(safe-area-inset-bottom));
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+
+    #inventory-overlay {
+        padding: 0;
+        z-index: 80;
+    }
+
+    #inventory-window {
+        width: 100%;
+        height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    #inventory-header {
+        padding: 10px 12px;
     }
 
     #inventory-layout {
         grid-template-columns: 1fr;
+        height: calc(100% - 62px);
+        overflow: auto;
+        padding: 10px;
     }
 
     #inventory-main {
@@ -953,110 +1119,16 @@ ol {
         grid-column: 1 / -1;
     }
 
-    #inventory {
-        grid-template-columns: repeat(6, minmax(42px, 1fr));
-        max-height: 432px;
-        overflow-y: auto;
-    }
-
+    #inventory,
     .chest-grid {
-        grid-template-columns: repeat(6, minmax(42px, 1fr));
-        max-height: 324px;
+        grid-template-columns: repeat(5, minmax(48px, 1fr));
+        max-height: none;
+        overflow: visible;
+    }
+
+    #trade-panel .chest-grid,
+    .inventory-section #recipes {
+        max-height: 45dvh;
         overflow-y: auto;
     }
-
-    #canvas-wrap {
-        border-radius: 14px;
-    }
-
-    #toast {
-        left: 10px;
-        right: 10px;
-        bottom: 112px;
-        max-width: none;
-        padding: 8px 10px;
-        font-size: 12px;
-    }
-
-    #mobile-controls {
-        position: absolute;
-        inset: 0;
-        z-index: 10;
-        display: block;
-        pointer-events: none;
-        touch-action: none;
-    }
-
-    #mobile-joystick {
-        position: absolute;
-        left: 18px;
-        bottom: 22px;
-        width: 108px;
-        height: 108px;
-        border: 2px solid rgba(255, 255, 255, 0.24);
-        border-radius: 50%;
-        background: rgba(8, 14, 21, 0.42);
-        pointer-events: auto;
-        touch-action: none;
-    }
-
-    #mobile-joystick-thumb {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 42px;
-        height: 42px;
-        border: 2px solid rgba(255, 209, 102, 0.75);
-        border-radius: 50%;
-        background: rgba(255, 209, 102, 0.28);
-        transform: translate(-50%, -50%);
-    }
-
-    #mobile-buttons {
-        position: absolute;
-        right: 12px;
-        bottom: 16px;
-        display: grid;
-        grid-template-columns: repeat(3, 58px);
-        grid-template-rows: repeat(2, 48px);
-        gap: 8px;
-        pointer-events: auto;
-        touch-action: none;
-    }
-
-    #mobile-buttons button {
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-radius: 14px;
-        background: rgba(8, 14, 21, 0.62);
-        color: #ffffff;
-        font-weight: 900;
-        font-size: 12px;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
-    }
-
-    #mobile-buttons button.primary {
-        grid-column: span 2;
-        background: rgba(255, 159, 28, 0.72);
-        color: #21160b;
-    }
 }
-
-@media (max-width: 640px) {
-    #game-shell {
-        padding: 12px;
-    }
-
-    #play-area {
-        gap: 10px;
-    }
-
-    #hud {
-        grid-template-columns: 1fr;
-    }
-
-    .panel {
-        padding: 10px;
-    }
-}
-    max-width: 100%;
-    font-size: 12px;
