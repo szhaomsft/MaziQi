@@ -7357,7 +7357,7 @@ function learnRecipesFromVillageContainer(object) {
     if (!source) return [];
     state.foundRecipeNotes ||= {};
     state.foundRecipeNotes[source] = true;
-    return learnRecipesByIds(NOTE_RECIPE_IDS[source] || []);
+    return learnOneRecipeByIds(NOTE_RECIPE_IDS[source] || []);
 }
 
 function recipeNoteSourceForObject(object) {
@@ -8915,6 +8915,17 @@ function learnRecipesByIds(ids = []) {
     return learned;
 }
 
+function learnOneRecipeByIds(ids = []) {
+    state.knownRecipes ||= {};
+    const candidates = ids
+        .map(id => RECIPES.find(recipe => recipe.id === id))
+        .filter(item => item && !state.knownRecipes[item.id]);
+    if (!candidates.length) return [];
+    const item = candidates[Math.floor(Math.random() * candidates.length)];
+    state.knownRecipes[item.id] = true;
+    return [item.name];
+}
+
 function learnRecipesFromTeacher(role) {
     if (!role) return [];
     state.learnedRecipeTeachers ||= {};
@@ -9026,7 +9037,7 @@ function takeRecipeNoteFromChest(chest, key, moved) {
     const source = RECIPE_NOTE_SOURCES[key];
     state.foundRecipeNotes ||= {};
     state.foundRecipeNotes[source] = true;
-    const learned = recipeLearningSuffix(learnRecipesByIds(NOTE_RECIPE_IDS[source] || []));
+    const learned = recipeLearningSuffix(learnOneRecipeByIds(NOTE_RECIPE_IDS[source] || [])) || ' 没有新的可学配方。';
     if (chest.villageOwned && chest.ownerObject) {
         chest.ownerObject.opened = true;
         if (!chest.ownerObject.stolen) {
@@ -9400,7 +9411,6 @@ function recipeUnlocked(item) {
     if (item.learn.task) return !!state.completedRecipeTasks?.[item.learn.task] || (state.villageTaskCompletions?.[item.learn.task] || 0) > 0;
     if (item.learn.materials?.length && item.learn.materials.every(hasDiscoveredUnlock)) return true;
     if (item.learn.teachers?.some(role => state.learnedRecipeTeachers?.[role])) return true;
-    if (item.learn.note && state.foundRecipeNotes?.[item.learn.note]) return true;
     return false;
 }
 
@@ -10808,8 +10818,7 @@ function recipeHasDiscoveryProgress(recipe) {
     return !!state.knownRecipes?.[recipe.id]
         || recipeDiscoveredFromOutput(recipe)
         || !!(recipe.learn?.task && ((state.completedRecipeTasks?.[recipe.learn.task]) || (state.villageTaskCompletions?.[recipe.learn.task] || 0) > 0))
-        || recipe.learn?.teachers?.some(role => state.learnedRecipeTeachers?.[role])
-        || !!(recipe.learn?.note && state.foundRecipeNotes?.[recipe.learn.note]);
+        || recipe.learn?.teachers?.some(role => state.learnedRecipeTeachers?.[role]);
 }
 
 function itemIconColors(key) {
