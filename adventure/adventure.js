@@ -243,6 +243,14 @@ const SIMPLE_WEAPON_DEFS = [
     { id: 'pollenDartFan', name: '花粉飞扇', desc: '轻快挥击，命中会减速', cost: { pollenDust: 2, blossomWood: 2, fiber: 2 }, icon: 'dagger', station: 'workbench', unlock: ['pollenDust'], profile: { damage: 2, range: 64, stamina: 9, cooldown: 0.26, arc: -0.04, style: 'slash', root: 900, multiStrike: 2 } },
     { id: 'crystalFangSpear', name: '晶牙长矛', desc: '长距离晶刺，穿透多个目标', cost: { crystalFang: 1, ironwood: 2, fiber: 2 }, icon: 'spear', station: 'forge', unlock: ['crystalFang'], profile: { damage: 5, range: 116, stamina: 16, cooldown: 0.52, arc: 0.32, style: 'thrust', maxHits: 3 } },
     { id: 'boneShardMace', name: '骨片钉锤', desc: '重击震退，概率眩晕', cost: { boneShard: 3, deadWood: 2, stone: 2 }, icon: 'hammer', station: 'forge', unlock: ['boneShard'], profile: { damage: 5, range: 54, stamina: 17, cooldown: 0.62, arc: 0.04, style: 'chop', cleave: true, stunChance: 0.45 } },
+    { id: 'ironwoodMachete', name: '铁木砍刀', desc: '铁木打造的宽刃，横扫范围大并能砍树', cost: { ironwood: 3, ore: 2, fiber: 2 }, icon: 'blade', station: 'forge', unlock: ['ironwood'], profile: { damage: 6, range: 68, stamina: 17, cooldown: 0.46, arc: 0.02, style: 'slash', cleave: true, interrupt: true } },
+    { id: 'ironwoodArbalest', name: '铁木重弩', desc: '特殊铁木弩身，高伤高穿透，装填很慢', cost: { ironwood: 5, ore: 5, simpleArrow: 8 }, icon: 'bow', station: 'forge', unlock: ['ironwood', 'simpleArrow'], ranged: true, profile: { damage: 6, range: 620, stamina: 24, cooldown: 1.45, arc: 0.2, style: 'thrust', rangedKind: 'heavyBolt', maxHits: 3 } },
+    { id: 'willowRecurveBow', name: '柳木反曲弓', desc: '湿地柳木弓，移动射击更稳', cost: { willowWood: 4, sinew: 2, fiber: 3 }, icon: 'bow', station: 'workbench', unlock: ['willowWood'], ranged: true, profile: { damage: 4, range: 500, stamina: 13, cooldown: 0.62, arc: 0.2, style: 'thrust', rangedKind: 'recurveArrow' } },
+    { id: 'elderwoodStaff', name: '古木法杖', desc: '遗迹古木聚能，发射稳定魔晶弹', cost: { elderWood: 3, crystal: 2, fiber: 2 }, icon: 'hammer', station: 'forge', unlock: ['elderWood', 'crystal'], ranged: true, profile: { damage: 5, range: 540, stamina: 18, cooldown: 0.95, arc: 0.22, style: 'thrust', rangedKind: 'elderwoodBolt' } },
+    { id: 'darkwoodScimitar', name: '暗木弯刀', desc: '暗木与暗影残片制成，夜晚残影更强', cost: { darkWood: 3, shadowShard: 2, fiber: 2 }, icon: 'blade', station: 'forge', unlock: ['darkWood', 'shadowShard'], profile: { damage: 5, range: 64, stamina: 15, cooldown: 0.34, arc: 0.03, style: 'slash', cleave: true, nightBonus: 3, shadow: true } },
+    { id: 'buttressRootMaul', name: '板根木槌', desc: '板根木重槌，击退强并短暂缠绕', cost: { buttressWood: 4, vine: 3, stone: 3 }, icon: 'hammer', station: 'workbench', unlock: ['buttressWood'], profile: { damage: 5, range: 58, stamina: 18, cooldown: 0.66, arc: 0.04, style: 'chop', cleave: true, knock: 1.45, root: 850 } },
+    { id: 'cypressMudSaber', name: '沼柏泥刃', desc: '沼柏木加泥沼材料，命中附带迟缓', cost: { cypressWood: 3, mud: 2, reedShell: 1 }, icon: 'blade', station: 'workbench', unlock: ['cypressWood', 'reedShell'], profile: { damage: 4, range: 62, stamina: 13, cooldown: 0.38, arc: 0.05, style: 'slash', root: 950 } },
+    { id: 'blossomwoodWand', name: '花冠木杖', desc: '花冠木与花粉尘制成，轻击会减速敌人', cost: { blossomWood: 3, pollenDust: 2, flower: 2 }, icon: 'hammer', station: 'workbench', unlock: ['blossomWood', 'pollenDust'], ranged: true, profile: { damage: 3, range: 430, stamina: 12, cooldown: 0.58, arc: 0.2, style: 'thrust', rangedKind: 'pollenBolt', root: 800 } },
 ];
 
 Object.assign(RESOURCE_LABELS, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, weapon.name])));
@@ -8292,7 +8300,7 @@ function releaseDirectRanged(now = performance.now()) {
             duration: aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120,
             profile: { color: ammo === 'poisonArrow' ? '#8cff66' : '#d8e5f2' },
             splashRadius: 0,
-            pierceRemaining: aim.key === 'bambooCrossbow' ? 1 : 0,
+            pierceRemaining: directProjectilePierceForWeapon(aim.key),
         });
         spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
         syncHotbarItems();
@@ -8313,7 +8321,7 @@ function releaseDirectRanged(now = performance.now()) {
         charge: held,
         startedAt: now,
         duration: aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120,
-        pierceRemaining: aim.key === 'bambooCrossbow' ? 1 : 0,
+        pierceRemaining: directProjectilePierceForWeapon(aim.key),
         exploded: false,
     });
     spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
@@ -8330,17 +8338,25 @@ function directRangedCharge(aim, now = performance.now()) {
 function directRangedAmmoFor(key, preferred = '') {
     if (preferred && (state.inventory[preferred] || 0) > 0) return preferred;
     if (key === 'slingshot' || key === 'sling') return (state.inventory.pebble || 0) > 0 ? 'pebble' : '';
-    if (key === 'sinewBow' || key === 'bambooCrossbow') {
+    if (key === 'sinewBow' || key === 'bambooCrossbow' || simpleWeaponDef(key)?.ranged) {
         if ((state.inventory.poisonArrow || 0) > 0) return 'poisonArrow';
         if ((state.inventory.simpleArrow || 0) > 0) return 'simpleArrow';
     }
     return '';
 }
 
+function directProjectilePierceForWeapon(weapon) {
+    if (weapon === 'ironwoodArbalest') return 2;
+    if (weapon === 'bambooCrossbow') return 1;
+    return 0;
+}
+
 function directProjectileKindFor(weapon, ammo) {
     if (weapon === 'slingshot') return 'slingshotPebble';
     if (weapon === 'sling') return 'slingStone';
     if (weapon === 'bambooCrossbow') return ammo === 'poisonArrow' ? 'crossbowPoisonBolt' : 'crossbowBolt';
+    const rangedKind = simpleWeaponDef(weapon)?.profile?.rangedKind;
+    if (rangedKind) return ammo === 'poisonArrow' ? `${rangedKind}Poison` : rangedKind;
     return ammo;
 }
 
@@ -8459,7 +8475,7 @@ function findDirectProjectileHit(projectile, previous) {
 }
 
 function projectileCanPierce(projectile) {
-    return (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt')
+    return (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt' || projectile.kind === 'heavyBolt' || projectile.kind === 'heavyBoltPoison')
         && (projectile.pierceRemaining || 0) > 0;
 }
 
@@ -8542,7 +8558,7 @@ function resolveProjectileImpact(projectile) {
 }
 
 function isDirectProjectile(kind) {
-    return ['slingshotPebble', 'simpleArrow', 'poisonArrow', 'crossbowBolt', 'crossbowPoisonBolt', 'bambooKnife'].includes(kind);
+    return ['slingshotPebble', 'simpleArrow', 'poisonArrow', 'crossbowBolt', 'crossbowPoisonBolt', 'heavyBolt', 'heavyBoltPoison', 'recurveArrow', 'recurveArrowPoison', 'elderwoodBolt', 'elderwoodBoltPoison', 'pollenBolt', 'pollenBoltPoison', 'bambooKnife'].includes(kind);
 }
 
 function enemyHitByAttack(e, p, attackDir, attackProfile, strike) {
@@ -9917,12 +9933,16 @@ function hitDirectProjectileTarget(projectile, hitInfo = findDirectProjectileHit
         hit.knockX += knock.x * force;
         hit.knockY += knock.y * force;
     }
-    if ((projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt') && hit.kind !== 'golem') {
+    if (isPoisonDirectProjectile(projectile.kind) && hit.kind !== 'golem') {
         hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + 5200);
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', hit.x, hit.y - 48, '#9cff7a');
     }
-    spawnBurst(hit.x, hit.y, projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt' ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' || projectile.kind === 'slingStone' ? 6 : 12, 70, hit.radius * 0.45);
+    if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') {
+        hit.rootedUntil = Math.max(hit.rootedUntil || 0, now + 800);
+        addFloatText('迟缓', hit.x, hit.y - 52, '#ffd166');
+    }
+    spawnBurst(hit.x, hit.y, isPoisonDirectProjectile(projectile.kind) ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' || projectile.kind === 'slingStone' ? 6 : 12, 70, hit.radius * 0.45);
     addFloatText(`-${damage}`, hit.x, hit.y - 36, '#fff3b0');
     if (hit.hp <= 0) {
         markSpawnAreaCleared(hit.x, hit.y, now);
@@ -9943,12 +9963,20 @@ function hitOutdoorVillagerWithDirectProjectile(projectile, npc) {
         damage,
         dir: projectile.dir || normalize(npc.x - projectile.startX, npc.y - projectile.startY),
     });
-    if ((projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt') && npc.hp > 0) {
+    if (isPoisonDirectProjectile(projectile.kind) && npc.hp > 0) {
         npc.poisonUntil = Math.max(npc.poisonUntil || 0, now + 5200);
         npc.poisonTickAt = Math.min(npc.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', npc.x, npc.y - 54, '#9cff7a');
     }
-    spawnBurst(npc.x, npc.y, projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt' ? '#8cff66' : '#d8e5f2', 12, 80, (npc.radius || 17) * 0.55);
+    if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') {
+        npc.rootedUntil = Math.max(npc.rootedUntil || 0, now + 800);
+        addFloatText('迟缓', npc.x, npc.y - 58, '#ffd166');
+    }
+    spawnBurst(npc.x, npc.y, isPoisonDirectProjectile(projectile.kind) ? '#8cff66' : '#d8e5f2', 12, 80, (npc.radius || 17) * 0.55);
+}
+
+function isPoisonDirectProjectile(kind) {
+    return kind === 'poisonArrow' || kind === 'crossbowPoisonBolt' || kind.endsWith('Poison');
 }
 
 function directProjectileDamage(projectile) {
@@ -9956,6 +9984,9 @@ function directProjectileDamage(projectile) {
     if (projectile.kind === 'slingStone') return Math.max(2, Math.round(1 + (projectile.charge || 0.5) * 3));
     if (projectile.kind === 'bambooKnife') return 1;
     if (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt') return Math.max(4, Math.round(3 + (projectile.charge || 0.5) * 5));
+    if (projectile.kind === 'heavyBolt' || projectile.kind === 'heavyBoltPoison') return Math.max(6, Math.round(5 + (projectile.charge || 0.5) * 7));
+    if (projectile.kind === 'elderwoodBolt' || projectile.kind === 'elderwoodBoltPoison') return Math.max(5, Math.round(4 + (projectile.charge || 0.5) * 6));
+    if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') return Math.max(3, Math.round(2 + (projectile.charge || 0.5) * 4));
     if (projectile.kind === 'poisonArrow') return 3;
     return Math.max(3, Math.round(2 + (projectile.charge || 0.5) * 4));
 }
@@ -9966,6 +9997,10 @@ function directProjectileName(projectile) {
     if (projectile.kind === 'bambooKnife') return '竹片飞刀';
     if (projectile.kind === 'crossbowBolt') return '竹弩箭';
     if (projectile.kind === 'crossbowPoisonBolt') return '竹弩毒箭';
+    if (projectile.kind === 'heavyBolt' || projectile.kind === 'heavyBoltPoison') return '铁木重弩箭';
+    if (projectile.kind === 'recurveArrow' || projectile.kind === 'recurveArrowPoison') return '柳木反曲箭';
+    if (projectile.kind === 'elderwoodBolt' || projectile.kind === 'elderwoodBoltPoison') return '古木魔晶弹';
+    if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') return '花粉木杖弹';
     if (projectile.kind === 'poisonArrow') return '毒箭';
     return '箭矢';
 }
