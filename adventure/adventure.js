@@ -10369,7 +10369,7 @@ function recipeStatusText(item, disabled) {
 }
 
 function recipeStationVisible(item) {
-    return !stationRequirement(item) || hasRequiredStation(item);
+    return recipeHasDiscoveryProgress(item) || !stationRequirement(item) || hasRequiredStation(item);
 }
 
 function renderHotbarDropZone() {
@@ -10717,8 +10717,14 @@ function canUseInventoryItem(key) {
 }
 
 function recipeHasKnownMaterial(recipe) {
-    if (!recipeUnlocked(recipe)) return false;
-    return Object.keys(recipe.cost).some(key => availableItemAmount(key) > 0);
+    return recipeHasDiscoveryProgress(recipe) || Object.keys(recipe.cost).some(key => availableItemAmount(key) > 0 || hasDiscoveredUnlock(key));
+}
+
+function recipeHasDiscoveryProgress(recipe) {
+    return !!state.knownRecipes?.[recipe.id]
+        || recipeDiscoveredFromOutput(recipe)
+        || recipe.learn?.teachers?.some(role => state.learnedRecipeTeachers?.[role])
+        || !!(recipe.learn?.note && state.foundRecipeNotes?.[recipe.learn.note]);
 }
 
 function itemIconColors(key) {
