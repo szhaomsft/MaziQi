@@ -17357,12 +17357,8 @@ function drawCultToxinVisualEffects(now) {
 
 function drawHotbar() {
     syncHotbarItems();
-    const slot = 48;
-    const gap = 6;
-    const hotbarItems = state.hotbarItems || HOTBAR_ITEMS;
-    const total = hotbarItems.length * slot + (hotbarItems.length - 1) * gap;
-    const startX = Math.round((VIEW.width - total) / 2);
-    const y = VIEW.height - slot - 18;
+    const layout = hotbarLayout();
+    const { slot, gap, hotbarItems, total, startX, y } = layout;
     ctx.save();
     ctx.fillStyle = 'rgba(8, 14, 21, 0.82)';
     ctx.fillRect(startX - 10, y - 10, total + 20, slot + 20);
@@ -17394,6 +17390,16 @@ function drawHotbar() {
         ctx.fillText(`${RESOURCE_LABELS[selectedKey]}：按 ${state.selectedHotbar + 1} 使用/装备`, VIEW.width / 2, y - 16);
     }
     ctx.restore();
+}
+
+function hotbarLayout() {
+    const slot = 48;
+    const gap = 6;
+    const hotbarItems = state.hotbarItems || HOTBAR_ITEMS;
+    const total = hotbarItems.length * slot + (hotbarItems.length - 1) * gap;
+    const startX = Math.round((VIEW.width - total) / 2);
+    const y = VIEW.height - slot - 18;
+    return { slot, gap, hotbarItems, total, startX, y };
 }
 
 function drawTopBar(x, y, width, height, percent, color, label) {
@@ -17587,6 +17593,26 @@ function canvasPointFromClient(clientX, clientY) {
     };
 }
 
+function hotbarSlotAtCanvasPoint(point) {
+    const { slot, gap, hotbarItems, startX, y } = hotbarLayout();
+    const hitPadding = 8;
+    if (point.y < y - hitPadding || point.y > y + slot + hitPadding) return -1;
+    for (let index = 0; index < hotbarItems.length; index++) {
+        const x = startX + index * (slot + gap);
+        if (point.x >= x - hitPadding && point.x <= x + slot + hitPadding) return index;
+    }
+    return -1;
+}
+
+function handleMobileHotbarTap(clientX, clientY) {
+    const slot = hotbarSlotAtCanvasPoint(canvasPointFromClient(clientX, clientY));
+    if (slot < 0) return false;
+    selectHotbarSlot(slot);
+    const item = selectedHotbarItem();
+    showToast(item ? `切换到快捷栏 ${slot + 1}：${RESOURCE_LABELS[item] || item}` : `快捷栏 ${slot + 1} 为空。`);
+    return true;
+}
+
 function setMouseFromClientPoint(clientX, clientY) {
     const point = canvasPointFromClient(clientX, clientY);
     mouse.x = point.x;
@@ -17599,6 +17625,10 @@ function setMouseFromClientPoint(clientX, clientY) {
 function beginMobileAimGesture(event) {
     if (state.inventoryOpen || state.win || state.lose) return;
     event.preventDefault();
+    if (handleMobileHotbarTap(event.clientX, event.clientY)) {
+        touchInput.lastAimEndedAt = performance.now();
+        return;
+    }
     touchInput.aimPointerId = event.pointerId;
     touchInput.aimStartedAt = performance.now();
     touchInput.aiming = false;
