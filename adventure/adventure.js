@@ -492,6 +492,30 @@ const PIXEL_ICON_PALETTES = {
     armorPotion: ['#26384d', '#c5d6df', '#ffffff'], bandage: ['#5d4934', '#f8fbff', '#d8e5f2'], key: ['#5a3c13', '#ffd166', '#fff3b0'], default: ['#26384d', '#9fb3c8', '#ffffff'],
 };
 
+const RESOURCE_BREAKDOWN_DEFS = [
+    { id: 'breakdownThickFur', source: 'thickFur', outputs: { hide: 2, fiber: 1 } },
+    { id: 'breakdownRabbitFur', source: 'rabbitFur', outputs: { hide: 1, fiber: 1 } },
+    { id: 'breakdownReedShell', source: 'reedShell', outputs: { hide: 1, fiber: 2 } },
+    { id: 'breakdownScorpionShell', source: 'scorpionShell', outputs: { hide: 2, venom: 1 } },
+    { id: 'breakdownBatWing', source: 'batWing', outputs: { hide: 1, fiber: 1 } },
+    { id: 'breakdownSinew', source: 'sinew', outputs: { fiber: 3 } },
+    { id: 'breakdownAntler', source: 'antler', outputs: { boneShard: 2 } },
+    { id: 'breakdownBeastClaw', source: 'beastClaw', outputs: { fang: 2 } },
+    { id: 'breakdownCrystalFang', source: 'crystalFang', outputs: { crystal: 1, fang: 1 } },
+    { id: 'breakdownFrogTongue', source: 'frogTongue', outputs: { slimeGel: 2 } },
+    { id: 'breakdownFrogLeg', source: 'frogLeg', outputs: { meat: 1 } },
+    { id: 'breakdownToxicMushroom', source: 'toxicMushroom', outputs: { mushroom: 1, venom: 1 } },
+    { id: 'breakdownStoneCore', source: 'stoneCore', outputs: { stone: 4, ore: 1 } },
+    { id: 'breakdownMireCore', source: 'mireCore', outputs: { mud: 3, stoneCore: 1 } },
+    { id: 'breakdownShadowShard', source: 'shadowShard', outputs: { crystal: 1 } },
+    { id: 'breakdownBeeStinger', source: 'beeStinger', outputs: { venom: 1 } },
+    { id: 'breakdownIronwood', source: 'ironwood', outputs: { wood: 2, ore: 1 } },
+    { id: 'breakdownElderWood', source: 'elderWood', outputs: { wood: 3, crystal: 1 } },
+    { id: 'breakdownButtressWood', source: 'buttressWood', outputs: { wood: 3, vine: 1 } },
+    { id: 'breakdownDarkWood', source: 'darkWood', outputs: { wood: 2, shadowShard: 1 } },
+    { id: 'breakdownCypressWood', source: 'cypressWood', outputs: { wood: 2, mud: 1 } },
+];
+
 const RECIPES = [
     recipe('axe', '石斧', '砍树更快', { wood: 4, stone: 3 }, game => {
         game.inventory.stoneAxe += 1;
@@ -505,6 +529,7 @@ const RECIPES = [
     recipe('bambooShard', '竹片', '把 1 个竹材削成 3 个竹片，供竹片飞刀发射', { bamboo: 1 }, game => {
         game.inventory.bambooShard = (game.inventory.bambooShard || 0) + 3;
     }, () => false),
+    ...RESOURCE_BREAKDOWN_DEFS.map(breakdownRecipe),
     recipe('workbench', '工作台', '放置后制作复杂物品', { wood: 8, stone: 2 }, game => {
         game.inventory.workbench += 1;
     }, () => false),
@@ -1077,6 +1102,23 @@ const SPRITES = {
 
 function recipe(id, name, desc, cost, apply, owned) {
     return { id, name, desc, cost, apply, owned };
+}
+
+function breakdownRecipe(def) {
+    const sourceName = RESOURCE_LABELS[def.source] || def.source;
+    const outputText = itemListText(def.outputs);
+    const outputKey = Object.keys(def.outputs)[0] || def.source;
+    return {
+        ...recipe(def.id, `分解：${sourceName}`, `把多余的${sourceName}拆成${outputText}`, { [def.source]: 1 }, game => {
+            Object.entries(def.outputs).forEach(([key, amount]) => {
+                game.inventory[key] = (game.inventory[key] || 0) + amount;
+                rememberItemDiscovery(key);
+            });
+        }, () => false),
+        output: outputKey,
+        outputs: def.outputs,
+        breakdown: true,
+    };
 }
 
 function createState() {
@@ -2938,12 +2980,17 @@ function updateIndoorNpcs(dt, now) {
             fleeToGuardHouseFromIndoor(npc, dt);
             continue;
         }
+        if (!npc.playerAggro && npc.animalAggressor) {
+            npc.animalAggressor = null;
+            if (npc.mood === 'angry') npc.mood = 'annoyed';
+            if (npc.pendingAttack?.target && npc.pendingAttack.target !== state.player) npc.pendingAttack = null;
+        }
         if (!npc.playerAggro && !npc.animalAggressor && moveIndoorVillagerAwayFromDoor(npc, dt)) continue;
         if (updateCultHealerSupport(npc, dt, now)) continue;
         if (npc.role === 'guard' && nightAmount() > 0.12 && !npc.outside && !npc.playerAggro) {
             npc.mood = 'annoyed';
         }
-        if (npc.mood === 'angry') {
+        if (npc.playerAggro && npc.mood === 'angry') {
             updateAngryIndoorNpc(npc, dt, now);
             continue;
         }
@@ -3741,6 +3788,10 @@ function updateOutdoorVillagerCombat(npc, dt, now) {
         updateVillagerAnimalCounter(npc, animal, dt, now);
         return true;
     }
+    if (!npc.playerAggro) {
+        if (npc.mood === 'angry') npc.mood = 'annoyed';
+        return false;
+    }
     const dist = distance(npc, state.player);
     const profile = villagerAttackProfile(npc, dist);
     if (['apothecary', 'elder', 'cultPriest', 'cultHerbalist', 'cultHealer'].includes(npc.role)) {
@@ -4312,16 +4363,18 @@ function updateVillagerPendingAttack(npc, now) {
     const pending = npc.pendingAttack;
     npc.pendingAttack = null;
     if (pending.guardArrow) {
-        const target = pending.target?.hp > 0 ? pending.target : state.player;
+        if (pending.target && pending.target !== state.player && pending.target.hp <= 0) return;
+        const target = pending.target?.hp > 0 ? pending.target : (npc.playerAggro ? state.player : null);
+        if (!target) return;
         shootGuardArrowAt(npc, target, now, pending.profile, pending.dir);
         return;
     }
     if (villagerMeleeCanHit(npc, pending)) {
         if (pending.target?.kind === 'npc') damageVillagerByVillager(pending.target, npc, pending.profile);
         else if (pending.target && pending.target !== state.player) damageAnimalByVillagerMelee(pending.target, npc, pending.profile);
-        else driveOutPlayer(npc, pending.profile);
+        else if (npc.playerAggro) driveOutPlayer(npc, pending.profile);
     } else {
-        const target = pending.target || state.player;
+        const target = pending.target || (npc.playerAggro ? state.player : npc);
         addFloatText('躲开', target.x, target.y - 42, '#d8e5f2');
     }
 }
@@ -4389,7 +4442,8 @@ function applyAnimalKnockback(animal, dir, force, style = '') {
 }
 
 function villagerMeleeCanHit(npc, pending) {
-    const p = pending.target?.hp > 0 ? pending.target : state.player;
+    const p = pending.target?.hp > 0 ? pending.target : (pending.target === state.player || npc.playerAggro ? state.player : null);
+    if (!p) return false;
     const profile = pending.profile;
     const dx = p.x - npc.x;
     const dy = p.y - npc.y;
@@ -6567,6 +6621,16 @@ function separateEnemies() {
 
 function applyEnemyDamage(e, rawDamage, verb) {
     const p = state.player;
+    if (state.indoor) {
+        e.attackTarget = e.attackTarget === p ? null : e.attackTarget;
+        e.windupUntil = 0;
+        e.strikeAt = 0;
+        e.leapHit = true;
+        e.chargeHit = true;
+        e.swoopHit = true;
+        e.contactCooldown = Math.max(e.contactCooldown || 0, 1.2);
+        return false;
+    }
     if (shouldNeutralizeCultMonsterAgainstPlayer(e)) {
         e.attackTarget = null;
         e.windupUntil = 0;
@@ -9387,6 +9451,7 @@ function canCraft(item) {
 }
 
 function recipeOutputKey(item) {
+    if (item.output) return item.output;
     return {
         axe: 'stoneAxe',
         pickaxe: 'stonePickaxe',
@@ -9398,9 +9463,21 @@ function recipeOutputKey(item) {
 }
 
 function canReceiveRecipeOutput(item) {
+    if (item.outputs) return canReceiveRecipeOutputs(item);
     const output = recipeOutputKey(item);
     if (hasBackpackSpaceFor(output)) return true;
     return Object.entries(item.cost).some(([key, amount]) => key !== output && availableItemAmount(key) <= amount && !isHotbarItem(key));
+}
+
+function canReceiveRecipeOutputs(item) {
+    const outputKeys = Object.keys(item.outputs || {});
+    const newOutputSlots = outputKeys.filter(key => (state.inventory[key] || 0) <= 0 && !isHotbarItem(key)).length;
+    if (newOutputSlots === 0) return true;
+    const currentSlots = backpackItemKeys().length;
+    const freedSlots = Object.entries(item.cost)
+        .filter(([key, amount]) => (state.inventory[key] || 0) > 0 && (state.inventory[key] || 0) <= amount && !isHotbarItem(key) && !outputKeys.includes(key))
+        .length;
+    return currentSlots + newOutputSlots - freedSlots <= BACKPACK_SLOT_LIMIT;
 }
 
 function recipeUnlocked(item) {
@@ -9510,7 +9587,7 @@ function craft(id) {
     state.knownRecipes ||= {};
     state.knownRecipes[item.id] = true;
     rememberItemDiscovery(recipeOutputKey(item));
-    showToast(`合成成功：${item.name}`);
+    showToast(item.breakdown ? `${item.name}完成。` : `合成成功：${item.name}`);
     renderHud();
 }
 
