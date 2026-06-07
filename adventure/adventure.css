@@ -967,8 +967,8 @@ ol {
     #game-canvas {
         width: 100%;
         height: 100%;
-        object-fit: fill;
-        background: #102033;
+        object-fit: contain;
+        background: #050b12;
     }
 
     #hud {
@@ -1117,49 +1117,68 @@ ol {
     }
 
     #inventory-main {
-        grid-template-columns: 1fr;
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 8px;
     }
 
     #equipment-panel {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px;
-        padding: 8px;
+        grid-template-columns: 1fr;
+        gap: 5px;
+        padding: 6px;
     }
 
     #equipment-panel h3 {
         grid-column: 1 / -1;
+        font-size: 12px;
+        margin-bottom: 2px;
+    }
+
+    .equipment-slot {
+        min-height: 52px;
+        padding: 5px 2px;
+        border-width: 1px;
+        border-radius: 8px;
+    }
+
+    .equipment-icon {
+        width: 24px;
+        height: 24px;
     }
 
     #inventory,
     .chest-grid {
-        grid-template-columns: repeat(4, minmax(54px, 1fr));
-        gap: 6px;
+        grid-template-columns: repeat(9, minmax(28px, 1fr));
+        gap: 4px;
         max-height: none;
         overflow: visible;
     }
 
     .inventory-row {
-        min-height: 66px;
-        grid-template-rows: 28px 14px 16px;
-        padding: 5px 3px 3px;
+        min-height: 52px;
+        grid-template-rows: 24px 11px 13px;
+        padding: 4px 2px 2px;
+        border-width: 1px;
+        border-radius: 7px;
     }
 
     .inventory-icon {
-        width: 32px;
-        height: 32px;
+        width: 26px;
+        height: 26px;
     }
 
     .inventory-name {
-        font-size: 9px;
+        font-size: 8px;
     }
 
     #hotbar-drop-zone {
-        grid-template-columns: repeat(5, minmax(46px, 1fr));
-        gap: 5px;
+        grid-template-columns: repeat(9, minmax(28px, 1fr));
+        gap: 4px;
     }
 
     .hotbar-drop-slot {
-        min-height: 48px;
+        min-height: 44px;
+        padding: 10px 2px 2px;
+        border-width: 1px;
     }
 
     #trade-panel .chest-grid,
