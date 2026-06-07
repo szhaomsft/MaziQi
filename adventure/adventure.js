@@ -216,6 +216,22 @@ const RESOURCE_LABELS = {
     recipeNoteGuard: '武备笔记',
     recipeNoteElder: '古老笔记',
     recipeNoteWorkbench: '工匠笔记',
+    vineRoundShield: '藤编圆盾',
+    buttressShield: '板根盾',
+    jungleLeafCloak: '丛林叶披肩',
+    buttressArmor: '板根木甲',
+    toxicMask: '毒菇面罩',
+    parasiticVineArmor: '绿母寄生甲',
+    vineRope: '藤蔓绳索',
+    toxicVineGlue: '毒藤胶',
+    buttressPlate: '板根甲片',
+    vineNetTrap: '藤网陷阱',
+    toxicVineSnare: '毒藤绊索',
+    poisonBambooTrap: '竹刺毒陷阱',
+    jungleSalve: '丛林愈合膏',
+    vineStaminaDrink: '藤汁体力饮',
+    poisonLeafWrap: '毒抗叶包',
+    jungleTotem: '丛林图腾',
 };
 
 const SIMPLE_WEAPON_DEFS = [
@@ -251,6 +267,13 @@ const SIMPLE_WEAPON_DEFS = [
     { id: 'buttressRootMaul', name: '板根木槌', desc: '板根木重槌，击退强并短暂缠绕', cost: { buttressWood: 4, vine: 3, stone: 3 }, icon: 'hammer', station: 'workbench', unlock: ['buttressWood'], profile: { damage: 5, range: 58, stamina: 18, cooldown: 0.66, arc: 0.04, style: 'chop', cleave: true, knock: 1.45, root: 850 } },
     { id: 'cypressMudSaber', name: '沼柏泥刃', desc: '沼柏木加泥沼材料，命中附带迟缓', cost: { cypressWood: 3, mud: 2, reedShell: 1 }, icon: 'blade', station: 'workbench', unlock: ['cypressWood', 'reedShell'], profile: { damage: 4, range: 62, stamina: 13, cooldown: 0.38, arc: 0.05, style: 'slash', root: 950 } },
     { id: 'blossomwoodWand', name: '花冠木杖', desc: '花冠木与花粉尘制成，轻击会减速敌人', cost: { blossomWood: 3, pollenDust: 2, flower: 2 }, icon: 'hammer', station: 'workbench', unlock: ['blossomWood', 'pollenDust'], ranged: true, profile: { damage: 3, range: 430, stamina: 12, cooldown: 0.58, arc: 0.2, style: 'thrust', rangedKind: 'pollenBolt', root: 800 } },
+    { id: 'vineWrappedSpear', name: '藤缠短矛', desc: '藤蔓缠住矛头，刺击会短暂减速', cost: { stoneSpear: 1, vine: 3, jungleLeaf: 2 }, icon: 'spear', station: 'workbench', unlock: ['vine', 'jungleLeaf'], profile: { damage: 4, range: 94, stamina: 13, cooldown: 0.44, arc: 0.3, style: 'thrust', root: 650 } },
+    { id: 'poisonVineWhip', name: '毒藤长鞭', desc: '长距离甩击，低直伤但叠毒和减速', cost: { vine: 6, toxicMushroom: 2, venom: 1, fiber: 3 }, icon: 'whip', station: 'workbench', unlock: ['vine', 'toxicMushroom'], profile: { damage: 3, range: 132, stamina: 15, cooldown: 0.48, arc: -0.02, style: 'slash', poison: true, root: 900, interrupt: true } },
+    { id: 'jungleMachete', name: '丛林砍刀', desc: '硬木砍刀，适合开路和横扫藤蔓怪', cost: { hardwood: 3, vine: 2, ore: 2 }, icon: 'blade', station: 'forge', unlock: ['hardwood', 'vine'], profile: { damage: 5, range: 66, stamina: 14, cooldown: 0.4, arc: 0.02, style: 'slash', cleave: true, interrupt: true } },
+    { id: 'vineBambooCrossbow', name: '竹藤弩', desc: '竹藤复合弩，装填比竹弩快但伤害略低', cost: { bamboo: 4, vine: 3, hardwood: 2, simpleArrow: 4 }, icon: 'bow', station: 'workbench', unlock: ['bamboo', 'vine', 'simpleArrow'], ranged: true, profile: { damage: 4, range: 500, stamina: 16, cooldown: 0.9, arc: 0.18, style: 'thrust', rangedKind: 'vineBolt', maxHits: 2 } },
+    { id: 'poisonVineBlowpipe', name: '毒藤吹管', desc: '低直伤的毒针远程武器，适合安全上毒', cost: { bamboo: 3, vine: 2, venom: 1 }, icon: 'bow', station: 'workbench', unlock: ['bamboo', 'vine', 'venom'], ranged: true, profile: { damage: 2, range: 440, stamina: 9, cooldown: 0.42, arc: 0.18, style: 'thrust', rangedKind: 'vineDart' } },
+    { id: 'greenMotherRootStaff', name: '绿母根杖', desc: '禁忌根杖，发射藤根弹并消耗更多体力', cost: { vine: 8, crystal: 2, toxicMushroom: 2, buttressWood: 2 }, icon: 'hammer', station: 'forge', unlock: ['vine', 'crystal', 'toxicMushroom'], ranged: true, profile: { damage: 4, range: 520, stamina: 22, cooldown: 1.05, arc: 0.2, style: 'thrust', rangedKind: 'greenRootBolt', root: 1300 } },
+    { id: 'sacrificialVineHorn', name: '祭藤号角', desc: '甩击时发出藤哨，击退并吸引附近受控怪', cost: { vine: 6, antler: 1, venom: 1 }, icon: 'horn', station: 'workbench', unlock: ['vine', 'antler'], profile: { damage: 3, range: 72, stamina: 14, cooldown: 0.62, arc: 0.04, style: 'club', knock: 1.65, root: 450 } },
 ];
 
 Object.assign(RESOURCE_LABELS, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, weapon.name])));
@@ -474,6 +497,8 @@ const ITEM_ICON_TYPES = {
     honeySalve: 'salve', nightVisionPotion: 'potion', jumpPotion: 'speed', poisonResistPotion: 'antidote', shadowPotion: 'shadow', bandage: 'bandage', strongBandage: 'bandage',
     sinewBow: 'bow', simpleArrow: 'arrow', poisonArrow: 'arrow', beeDart: 'dart', antlerSpear: 'spear', stoneCoreHammer: 'hammer', rabbitCloak: 'cloak', scorpionArmor: 'armor',
     antlerCharm: 'charm', waxTorch: 'torch', beehiveBox: 'honey', antlerHorn: 'horn', shadowLantern: 'shadow', stoneCoreTotem: 'stoneCore', reedMat: 'grass', chest: 'stationWorkbench', resinGlue: 'resin',
+    vineRope: 'vine', toxicVineGlue: 'toxicMushroom', buttressPlate: 'buttressWood', vineRoundShield: 'shield', buttressShield: 'shield', jungleLeafCloak: 'cloak', buttressArmor: 'armor', toxicMask: 'toxicMushroom', parasiticVineArmor: 'armorPotion',
+    vineNetTrap: 'trap', toxicVineSnare: 'trap', poisonBambooTrap: 'trap', jungleSalve: 'salve', vineStaminaDrink: 'speed', poisonLeafWrap: 'antidote', jungleTotem: 'jungleLeaf',
     mapleSnack: 'sap', honeyRoastMeat: 'meat', roastMeat: 'meat', key: 'key',
     recipeNoteBlacksmith: 'stationWorkbench', recipeNoteApothecary: 'stationPotion', recipeNoteGuard: 'arrow', recipeNoteElder: 'charm', recipeNoteWorkbench: 'stationWorkbench',
 };
@@ -538,6 +563,22 @@ const RECIPES = [
         game.inventory.bambooShard = (game.inventory.bambooShard || 0) + 3;
     }, () => false),
     ...RESOURCE_BREAKDOWN_DEFS.map(breakdownRecipe),
+    recipe('vineRope', '藤蔓绳索', '高级丛林装备的基础材料', { vine: 2, fiber: 1 }, game => { game.inventory.vineRope = (game.inventory.vineRope || 0) + 1; }, () => false),
+    recipe('toxicVineGlue', '毒藤胶', '毒藤装备和陷阱的黏性材料', { vine: 2, toxicMushroom: 1, resin: 1 }, game => { game.inventory.toxicVineGlue = (game.inventory.toxicVineGlue || 0) + 1; }, () => false),
+    recipe('buttressPlate', '板根甲片', '板根盾甲的硬质甲片', { buttressWood: 2, stone: 1 }, game => { game.inventory.buttressPlate = (game.inventory.buttressPlate || 0) + 1; }, () => false),
+    { ...recipe('vineRoundShield', '藤编圆盾', '轻盾，格挡较弱但不笨重', { vine: 4, bamboo: 2, fiber: 2 }, game => { game.inventory.vineRoundShield = (game.inventory.vineRoundShield || 0) + 1; }, game => game.inventory.vineRoundShield > 0 || game.equipment.shield === '藤编圆盾'), station: 'workbench', unlock: ['vine'] },
+    { ...recipe('buttressShield', '板根盾', '强抗击退的板根木盾', { buttressPlate: 2, vineRope: 1, woodShield: 1 }, game => { game.inventory.buttressShield = (game.inventory.buttressShield || 0) + 1; }, game => game.inventory.buttressShield > 0 || game.equipment.shield === '板根盾'), station: 'workbench', unlock: ['buttressPlate'] },
+    { ...recipe('jungleLeafCloak', '丛林叶披肩', '丛林行走更轻，防御较低', { jungleLeaf: 5, vineRope: 1, fiber: 3 }, game => { game.inventory.jungleLeafCloak = (game.inventory.jungleLeafCloak || 0) + 1; }, game => game.inventory.jungleLeafCloak > 0 || game.equipment.armor === '丛林叶披肩'), station: 'workbench', unlock: ['jungleLeaf'] },
+    { ...recipe('buttressArmor', '板根木甲', '抗击退和远程强，但比较沉', { buttressPlate: 3, vineRope: 2, leatherArmor: 1 }, game => { game.inventory.buttressArmor = (game.inventory.buttressArmor || 0) + 1; }, game => game.inventory.buttressArmor > 0 || game.equipment.armor === '板根木甲'), station: 'forge', unlock: ['buttressPlate'] },
+    { ...recipe('toxicMask', '毒菇面罩', '降低中毒和神经毒影响', { toxicMushroom: 3, jungleLeaf: 2, fiber: 4 }, game => { game.inventory.toxicMask = (game.inventory.toxicMask || 0) + 1; }, game => game.inventory.toxicMask > 0 || game.equipment.armor === '毒菇面罩'), station: 'workbench', unlock: ['toxicMushroom'] },
+    { ...recipe('parasiticVineArmor', '绿母寄生甲', '缓慢回血但饥饿消耗更高', { vine: 10, toxicMushroom: 3, jungleFruit: 3, leatherArmor: 1 }, game => { game.inventory.parasiticVineArmor = (game.inventory.parasiticVineArmor || 0) + 1; }, game => game.inventory.parasiticVineArmor > 0 || game.equipment.armor === '绿母寄生甲'), station: 'forge', unlock: ['vine', 'toxicMushroom'] },
+    { ...recipe('vineNetTrap', '藤网陷阱', '放置后范围缠绕敌人', { vineRope: 2, jungleLeaf: 4, bambooShard: 3 }, game => { game.inventory.vineNetTrap = (game.inventory.vineNetTrap || 0) + 1; }, () => false), station: 'workbench', unlock: ['vineRope'] },
+    { ...recipe('toxicVineSnare', '毒藤绊索', '放置后中毒并减速敌人', { toxicVineGlue: 1, vine: 3, fiber: 2 }, game => { game.inventory.toxicVineSnare = (game.inventory.toxicVineSnare || 0) + 1; }, () => false), station: 'workbench', unlock: ['toxicVineGlue'] },
+    { ...recipe('poisonBambooTrap', '竹刺毒陷阱', '竹刺陷阱的毒化版本', { bambooTrap: 1, venom: 1, vine: 2 }, game => { game.inventory.poisonBambooTrap = (game.inventory.poisonBambooTrap || 0) + 1; }, () => false), station: 'workbench', unlock: ['bambooTrap', 'venom'] },
+    recipe('jungleSalve', '丛林愈合膏', '恢复生命并短暂提高毒抗', { jungleLeaf: 4, jungleFruit: 2, herb: 2 }, game => { game.inventory.jungleSalve = (game.inventory.jungleSalve || 0) + 1; }, () => false),
+    recipe('vineStaminaDrink', '藤汁体力饮', '恢复体力并短暂提速', { vine: 2, jungleFruit: 2, honey: 1 }, game => { game.inventory.vineStaminaDrink = (game.inventory.vineStaminaDrink || 0) + 1; }, () => false),
+    recipe('poisonLeafWrap', '毒抗叶包', '清除中毒并短暂抗毒', { jungleLeaf: 3, toxicMushroom: 1, lotus: 1 }, game => { game.inventory.poisonLeafWrap = (game.inventory.poisonLeafWrap || 0) + 1; }, () => false),
+    { ...recipe('jungleTotem', '丛林图腾', '放置后小范围降低怪物感知', { buttressWood: 3, jungleLeaf: 5, crystal: 1 }, game => { game.inventory.jungleTotem = (game.inventory.jungleTotem || 0) + 1; }, () => false), station: 'workbench', unlock: ['buttressWood', 'jungleLeaf'] },
     recipe('workbench', '工作台', '放置后制作复杂物品', { wood: 8, stone: 2 }, game => {
         game.inventory.workbench += 1;
     }, () => false),
@@ -1138,10 +1179,15 @@ function createState() {
     const villages = [jungleCult, village, secondVillage, thirdVillage].filter(Boolean);
     const resources = createResources(village);
     const spawnDens = createSpawnDens();
+    const decorations = createDecorations();
+    const jungleRuin = decorations.find(item => item.kind === 'jungleRuin');
+    const playerSpawn = jungleRuin ? jungleRuinSpawnPoint(jungleRuin) : village.spawn;
+    const enemies = createEnemies(spawnDens);
+    if (jungleRuin) enemies.push(createJungleRuinGuardian(jungleRuin));
     const gameState = {
         player: {
-            x: village.spawn.x,
-            y: village.spawn.y,
+            x: playerSpawn.x,
+            y: playerSpawn.y,
             radius: 17,
             speed: 190,
             hp: 100,
@@ -1184,7 +1230,7 @@ function createState() {
             meleeCharge: null,
             pendingMeleeCharge: null,
         },
-        inventory: { wood: 0, oakWood: 0, blossomWood: 0, birchWood: 0, pineWood: 0, mapleWood: 0, deadWood: 0, darkWood: 0, cypressWood: 0, willowWood: 0, ironwood: 0, elderWood: 0, buttressWood: 0, bamboo: 0, bambooShard: 0, jungleLeaf: 0, vine: 0, jungleFruit: 0, hardwood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, beastClaw: 0, pollenDust: 0, thickFur: 0, reedShell: 0, mireCore: 0, crystalFang: 0, boneShard: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, rabbitCloak: 0, scorpionArmor: 0, thickFurCoat: 0, reedShellArmor: 0, mireCoreArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0 },
+        inventory: { wood: 0, oakWood: 0, blossomWood: 0, birchWood: 0, pineWood: 0, mapleWood: 0, deadWood: 0, darkWood: 0, cypressWood: 0, willowWood: 0, ironwood: 0, elderWood: 0, buttressWood: 0, bamboo: 0, bambooShard: 0, jungleLeaf: 0, vine: 0, jungleFruit: 0, hardwood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, beastClaw: 0, pollenDust: 0, thickFur: 0, reedShell: 0, mireCore: 0, crystalFang: 0, boneShard: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 1, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, rabbitCloak: 0, scorpionArmor: 0, thickFurCoat: 0, reedShellArmor: 0, mireCoreArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0 },
         equipment: {
             tool: '徒手',
             weapon: '木棍',
@@ -1203,13 +1249,13 @@ function createState() {
         villages,
         roadLamps: createVillageRoadLamps(villages),
         roadSigns: createVillageRoadSigns(villages),
-        enemies: createEnemies(spawnDens),
+        enemies,
         outdoorVillagers: [],
         pendingVillagerExits: [],
         pendingVillagerEntries: [],
         camp: { x: CAMP_POSITION.x, y: CAMP_POSITION.y, radius: 70, repaired: true },
         ruins: { x: worldRegionSet().ruins[0].x, y: worldRegionSet().ruins[0].y, radius: 58, opened: false },
-        decorations: createDecorations(),
+        decorations,
         decorationGrid: null,
         particles: [],
         floatTexts: [],
@@ -1219,7 +1265,7 @@ function createState() {
         placedFences: [],
         placedStations: [],
         bambooTraps: [],
-        hotbarItems: Array(9).fill(null),
+        hotbarItems: ['crystalBlade', ...Array(8).fill(null)],
         draggedInventoryItem: null,
         draggedHotbarSlot: null,
         selectedBackpackItem: null,
@@ -2594,7 +2640,50 @@ function createDecorations() {
     [
         [1120, 1010], [1300, 910], [1660, 1190], [1910, 1040], [2040, 790],
     ].forEach(([x, y], index) => add(index % 2 ? 'pebbles' : 'crack', x, y, 1));
+    items.push(createJungleRuinEntrance());
     return items;
+}
+
+function createJungleRuinEntrance() {
+    const jungles = (worldRegionSet().jungle || []).slice();
+    const cult = activeJungleCultVillage;
+    const region = jungles
+        .sort((a, b) => {
+            const aDistance = cult ? distance(a, cult) : a.radius;
+            const bDistance = cult ? distance(b, cult) : b.radius;
+            return (bDistance + b.radius * 0.35) - (aDistance + a.radius * 0.35);
+        })[0] || { x: WORLD.width * 0.72, y: WORLD.height * 0.62, radius: 860, seed: 42 };
+    const angle = seededUnit(region.seed || 42, 91.7) * Math.PI * 2;
+    const dist = Math.max(260, region.radius * (0.28 + seededUnit(region.seed || 42, 13.2) * 0.26));
+    const point = nearestJunglePoint(region.x + Math.cos(angle) * dist, region.y + Math.sin(angle) * dist, region);
+    return {
+        kind: 'jungleRuin',
+        label: '丛林遗迹祭坛',
+        x: snapToGroundGrid(point.x),
+        y: snapToGroundGrid(point.y),
+        radius: 76,
+        scale: 1,
+        vineHp: 18,
+        maxVineHp: 18,
+        guardianId: 'jungleRuinGuardian',
+        clueRead: false,
+    };
+}
+
+function jungleRuinSpawnPoint(ruin) {
+    const point = nearestJunglePoint(ruin.x - 140, ruin.y + 110, ruin);
+    return {
+        x: snapToGroundGrid(clamp(point.x, 80, WORLD.width - 80)),
+        y: snapToGroundGrid(clamp(point.y, 80, WORLD.height - 80)),
+    };
+}
+
+function createJungleRuinGuardian(ruin) {
+    const guardian = enemy('jungleRuinGuardian', '根缠石像守卫', ruin.x + 78, ruin.y + 34, 25, 68, 7, 82, 112, { vine: { min: 3, max: 5 }, jungleLeaf: { min: 2, max: 4 }, boneShard: { min: 1, max: 2 }, buttressWood: { min: 0, max: 1, chance: 0.5 }, toxicMushroom: { min: 0, max: 1, chance: 0.4 } }, 1, true);
+    guardian.ruinGuardian = true;
+    guardian.ruinId = ruin.guardianId;
+    guardian.attackCooldown = 0.8;
+    return guardian;
 }
 
 function createVillageTasks() {
@@ -2819,6 +2908,7 @@ function closeInventoryOnPlayerHit() {
 function update(dt, now) {
     if (!state.win && !state.lose) {
         updateItemUse(now);
+        updatePlacedStationEffects(now);
         updatePlayer(dt, now);
         updatePendingVillagerEntries(now);
         updateAllVillagerHomeHealing(dt, now);
@@ -2897,8 +2987,10 @@ function updatePlayer(dt, now) {
         const armorMudSlow = inMud && (state.equipment.armor === '铁甲' || state.equipment.armor === '魔晶甲') ? 0.76 : 1;
         const aimSlow = isAimingDirectRanged() ? 0.48 : 1;
         const slowFactor = now < (p.slowUntil || 0) ? 0.5 : 1;
-        const terrainSlow = now < (p.jumpPotionUntil || 0) ? 0.82 : 0.58;
-        const speed = p.speed * boost * slowFactor * blockSlow * hungerFactor * aimSlow * (sprinting ? 1.55 : 1) * (inWater ? terrainSlow : 1) * (inMud ? terrainSlow : 1) * (inBamboo ? 0.9 : 1) * (inJungle ? 0.84 : 1) * armorMudSlow;
+        const nearReedMat = isNearPlacedStation('reedMat', 115);
+        const terrainSlow = nearReedMat ? 0.94 : (now < (p.jumpPotionUntil || 0) ? 0.82 : 0.58);
+        const jungleArmorFactor = inJungle && state.equipment.armor === '丛林叶披肩' ? 0.94 : 0.84;
+        const speed = p.speed * boost * slowFactor * blockSlow * hungerFactor * aimSlow * (sprinting ? 1.55 : 1) * (inWater ? terrainSlow : 1) * (inMud ? terrainSlow : 1) * (inBamboo ? 0.9 : 1) * (inJungle ? jungleArmorFactor : 1) * armorMudSlow;
         p.facing = dir;
         if (state.indoor) moveIndoorPlayer(p, dir.x * speed * dt, dir.y * speed * dt);
         else moveCircle(p, dir.x * speed * dt, dir.y * speed * dt);
@@ -2950,6 +3042,67 @@ function updateCampHealing(dt, now) {
         p.campHealTextAt = now + 1600;
         addFloatText('+营火', p.x, p.y - 54, '#ffd166');
         renderHud();
+    }
+}
+
+function updatePlacedStationEffects(now) {
+    if (!state.placedStations?.length || state.indoor) return;
+    for (const station of state.placedStations) {
+        if (station.kind === 'beehiveBox' && now >= (station.nextProduceAt || 0)) {
+            station.nextProduceAt = now + 52000;
+            if (distance(state.player, station) > 900) continue;
+            const product = Math.random() < 0.72 ? 'honey' : 'beeswax';
+            if (addInventoryItem(product, 1)) {
+                spawnBurst(station.x, station.y - 16, product === 'honey' ? '#ffd166' : '#fff3b0', 10, 80, 16);
+                showToast(`蜂箱产出：${RESOURCE_LABELS[product]} x1。`);
+            }
+        }
+        if ((station.kind === 'stoneCoreTotem' || station.kind === 'jungleTotem') && now >= (station.nextPulseAt || 0)) {
+            station.nextPulseAt = now + 1800;
+            const color = station.kind === 'stoneCoreTotem' ? '#b77dff' : '#8cff66';
+            spawnBurst(station.x, station.y - 18, color, 4, 70, 18);
+        }
+        if (isAggroTotemStation(station)) updateAggroTotemCombat(station, now);
+    }
+    state.placedStations = state.placedStations.filter(station => !isAggroTotemStation(station) || (station.hp || 0) > 0);
+}
+
+function isAggroTotemStation(station) {
+    return station?.kind === 'stoneCoreTotem' || station?.kind === 'jungleTotem';
+}
+
+function updateAggroTotemCombat(station, now) {
+    station.hp ??= station.kind === 'stoneCoreTotem' ? 38 : 30;
+    station.maxHp ??= station.hp;
+    const range = station.kind === 'stoneCoreTotem' ? 245 : 285;
+    const target = state.enemies
+        .filter(enemy => enemy.hp > 0 && !isPassiveCreature(enemy.kind) && distance(enemy, station) <= range + enemy.radius)
+        .sort((a, b) => distance(a, station) - distance(b, station))[0];
+    if (!target) return;
+    target.attackTarget = station;
+    target.villagerTarget = null;
+    if (now < (station.nextAttackAt || 0)) return;
+    station.nextAttackAt = now + (station.kind === 'stoneCoreTotem' ? 1350 : 1700);
+    const damage = station.kind === 'stoneCoreTotem' ? 4 : 2;
+    target.hp -= damage;
+    target.hurtUntil = now + 180;
+    target.attackCooldown = Math.max(target.attackCooldown || 0, 0.35);
+    if (station.kind === 'jungleTotem') {
+        target.rootedUntil = Math.max(target.rootedUntil || 0, now + 750);
+        if (target.kind !== 'golem') {
+            target.poisonUntil = Math.max(target.poisonUntil || 0, now + 3200);
+            target.poisonTickAt = Math.min(target.poisonTickAt || now + 800, now + 800);
+        }
+    }
+    const dir = normalize(target.x - station.x, target.y - station.y);
+    target.knockX = (target.knockX || 0) + dir.x * (station.kind === 'stoneCoreTotem' ? 150 : 85);
+    target.knockY = (target.knockY || 0) + dir.y * (station.kind === 'stoneCoreTotem' ? 150 : 85);
+    spawnBurst(target.x, target.y, station.kind === 'stoneCoreTotem' ? '#b77dff' : '#8cff66', 12, 130, target.radius * 0.55);
+    addFloatText(station.kind === 'stoneCoreTotem' ? `-${damage} 震击` : `-${damage} 藤刺`, target.x, target.y - 42, '#fff3b0');
+    if (target.hp <= 0) {
+        markSpawnAreaCleared(target.x, target.y, now);
+        const drops = grantEnemyDrops(target);
+        showToast(`${RESOURCE_LABELS[station.kind]}击败 ${target.name}，获得 ${drops.toastText}`);
     }
 }
 
@@ -4687,6 +4840,10 @@ function isJungleCultControlledMonster(enemy) {
 }
 
 function markJungleMonsterControlled(enemy, attackPlayer = false) {
+    if (enemy?.ruinGuardian) {
+        addFloatText('不可控制', enemy.x, enemy.y - 58, '#d8e5f2');
+        return;
+    }
     enemy.controlledByCult = true;
     enemy.villagerTarget = null;
     enemy.attackTarget = attackPlayer ? state.player : null;
@@ -5092,7 +5249,11 @@ function updateHunger(dt, now) {
         || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight')
         || Math.abs(touchInput.moveX) > 0.05 || Math.abs(touchInput.moveY) > 0.05;
     const idleDrain = 33 / state.dayLength;
-    const drain = idleDrain * (1 + (moving ? 0.7 : 0) + (keys.has('Shift') ? 0.8 : 0) + (isAimingDirectRanged() ? 0.35 : 0));
+    const parasiteDrain = state.equipment.armor === '绿母寄生甲' ? 0.35 : 0;
+    const drain = idleDrain * (1 + parasiteDrain + (moving ? 0.7 : 0) + (keys.has('Shift') ? 0.8 : 0) + (isAimingDirectRanged() ? 0.35 : 0));
+    if (state.equipment.armor === '绿母寄生甲' && p.hp < p.maxHp && p.hunger > 18) {
+        p.hp = Math.min(p.maxHp, p.hp + 0.75 * dt);
+    }
     p.hunger = clamp(p.hunger - drain * dt, 0, p.maxHunger);
     if (p.hunger <= 0) {
         p.hp = 0;
@@ -5425,6 +5586,10 @@ function updateEnemies(dt, now) {
         }
         const p = state.player;
         const dist = distance(e, p);
+        if (e.ruinGuardian && dist < 420 && now >= (e.nextRuinGuardianTextAt || 0)) {
+            e.nextRuinGuardianTextAt = now + 1800;
+            addFloatText('遗迹守卫', e.x, e.y - 58, '#ffd166');
+        }
         const enemyTerrain = terrainInfoAt(e.x, e.y);
         const playerTerrain = terrainInfoAt(p.x, p.y);
         const ambushing = tallGrassCoverAt(e) && (e.kind === 'wolf' || e.kind === 'scorpion');
@@ -5460,6 +5625,10 @@ function updateEnemies(dt, now) {
             continue;
         }
         if (updateMonsterAgainstControlledMonster(e, dt, now)) {
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
+        }
+        if (updateEnemyAgainstAggroTotem(e, dt, now)) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
         }
@@ -5567,8 +5736,16 @@ function updateEnemies(dt, now) {
         let aggroRange = 330 + nightAmount() * (e.kind === 'bat' ? 190 : (e.kind === 'shade' ? 190 : 90)) + (ambushing ? 120 : 0) + (frogInMud ? 70 : 0);
         if (e.kind === 'shade') aggroRange += shadeNightPower() * 120;
         if (performance.now() < p.shadowUntil) aggroRange *= 0.38;
+        const nearStoneCoreTotem = isNearPlacedStation('stoneCoreTotem', 210, e);
+        const nearJungleTotem = isNearPlacedStation('jungleTotem', 260, e);
+        if (!e.boss && nearStoneCoreTotem) {
+            aggroRange *= 0.58;
+            e.attackCooldown = Math.max(e.attackCooldown || 0, 0.18);
+        }
+        if (!e.boss && nearJungleTotem) aggroRange *= 0.44;
         const nightSpeed = 1 + nightAmount() * (e.kind === 'bat' ? 0.35 : (e.kind === 'shade' ? 0.42 : 0.16));
-        const biomeSpeed = (ambushing ? 1.16 : 1) * (frogInMud ? 1.22 : 1);
+        const totemSpeed = !e.boss && nearStoneCoreTotem ? 0.72 : 1;
+        const biomeSpeed = (ambushing ? 1.16 : 1) * (frogInMud ? 1.22 : 1) * totemSpeed;
         if (!e.windupUntil && dist < aggroRange) {
             let dir = normalize(p.x - e.x, p.y - e.y);
             if (e.kind === 'wolf' && dist < 170 && e.attackCooldown > 0.25) {
@@ -5652,6 +5829,32 @@ function updateMonsterAgainstControlledMonster(e, dt, now) {
     if (now > (e.nextControlledTargetTextAt || 0)) {
         e.nextControlledTargetTextAt = now + 1800;
         addFloatText('反击受控', e.x, e.y - 44, '#ffd166');
+    }
+    return true;
+}
+
+function updateEnemyAgainstAggroTotem(e, dt, now) {
+    const target = e.attackTarget;
+    if (!isAggroTotemStation(target)) return false;
+    if ((target.hp || 0) <= 0 || !state.placedStations.includes(target)) {
+        e.attackTarget = null;
+        return false;
+    }
+    if (distance(e, target) > 620 || isPassiveCreature(e.kind)) {
+        e.attackTarget = null;
+        return false;
+    }
+    const dist = distance(e, target);
+    const dir = normalize(target.x - e.x, target.y - e.y);
+    e.facing = dir;
+    if (enemyHasActiveSkill(e)) {
+        resolveActiveEnemySkillAgainstTarget(e, target, dt, now);
+        return true;
+    }
+    if (dist > e.radius + target.radius + e.range) {
+        moveEnemy(e, dir.x * e.speed * 1.18 * dt, dir.y * e.speed * 1.18 * dt);
+    } else if ((e.attackCooldown || 0) <= 0 && !e.windupUntil) {
+        startEnemyAttack(e, now, target);
     }
     return true;
 }
@@ -5853,7 +6056,23 @@ function drainCombatTargetStamina(target, amount) {
 
 function applyEnemyDamageToTarget(e, target, damage, verb, now = performance.now()) {
     if (target === state.player) return applyEnemyDamage(e, damage, verb);
+    if (isAggroTotemStation(target)) return damageAggroTotemByEnemy(target, e, damage, verb, now);
     return damageVillagerByAnimal(target, e, now, verb);
+}
+
+function damageAggroTotemByEnemy(totem, enemy, damage, verb = '', now = performance.now()) {
+    if (!totem || (totem.hp || 0) <= 0) return false;
+    const dealt = Math.max(1, Math.floor(damage || enemy.attack || 1));
+    totem.hp = Math.max(0, (totem.hp || totem.maxHp || 30) - dealt);
+    totem.hurtUntil = now + 220;
+    enemy.attackTarget = totem.hp > 0 ? totem : null;
+    spawnBurst(totem.x, totem.y - 18, '#ff6b6b', 10, 110, totem.radius || 24);
+    addFloatText(`-${dealt}`, totem.x, totem.y - 44, '#ffb3b3');
+    if (totem.hp <= 0) {
+        spawnBurst(totem.x, totem.y - 12, '#ffffff', 22, 180, totem.radius || 24);
+        showToast(`${enemy.name}${verb ? ` ${verb}` : ''}摧毁了${RESOURCE_LABELS[totem.kind]}！`);
+    }
+    return true;
 }
 
 function updateAnimalVillagerConflict(e, dt, now) {
@@ -6164,12 +6383,16 @@ function markSpawnAreaCleared(x, y, now = performance.now()) {
 }
 
 function updateEnemyPoison(e, dt, now) {
-    if (!e.poisonUntil || e.poisonUntil <= now) return;
+    if (!e.poisonUntil || e.poisonUntil <= now) {
+        e.poisonPower = 0;
+        return;
+    }
     if (Math.random() < 0.1) spawnBurst(e.x, e.y - 8, '#8cff66', 1, 42, e.radius * 0.35);
     if (now < (e.poisonTickAt || 0)) return;
     e.poisonTickAt = now + 1000;
-    e.hp -= 1;
-    addFloatText('-1 毒', e.x, e.y - 46, '#9cff7a');
+    const damage = e.poisonPower || 1;
+    e.hp -= damage;
+    addFloatText(`-${damage} 毒`, e.x, e.y - 46, '#9cff7a');
     if (e.hp <= 0) {
         e.deathAt = now;
         markSpawnAreaCleared(e.x, e.y, now);
@@ -6181,13 +6404,17 @@ function updateEnemyPoison(e, dt, now) {
 }
 
 function updateVillagerStatusEffects(npc, dt, now) {
-    if (!npc.poisonUntil || npc.poisonUntil <= now) return;
+    if (!npc.poisonUntil || npc.poisonUntil <= now) {
+        npc.poisonPower = 0;
+        return;
+    }
     if (Math.random() < 0.08) spawnBurst(npc.x, npc.y - 8, '#8cff66', 1, 38, (npc.radius || 17) * 0.35);
     if (now < (npc.poisonTickAt || 0)) return;
     npc.poisonTickAt = now + 1000;
-    npc.hp = Math.max(0, (npc.hp ?? 80) - 1);
+    const damage = npc.poisonPower || 1;
+    npc.hp = Math.max(0, (npc.hp ?? 80) - damage);
     npc.hurtUntil = now + 160;
-    addFloatText('-1 毒', npc.x, npc.y - 46, '#9cff7a');
+    addFloatText(`-${damage} 毒`, npc.x, npc.y - 46, '#9cff7a');
     if (npc.hp <= 0) {
         npc.mood = 'down';
         npc.solid = false;
@@ -6284,7 +6511,12 @@ function startEnemyAttack(e, now, target = state.player) {
     const terrain = terrainInfoAt(e.x, e.y);
     const ambush = tallGrassCoverAt(e) && (e.kind === 'wolf' || e.kind === 'scorpion');
     const mudFrog = terrain.kind === 'mud' && e.kind === 'frog';
-    if (e.kind === 'slime') {
+    if (e.kind === 'jungleRuinGuardian') {
+        const roll = hash2(e.x * 0.017 + now * 0.0009, e.y * 0.019);
+        e.ruinSkill = roll > 0.58 ? 'rootSlam' : 'vineLash';
+        e.windupUntil = now + (e.ruinSkill === 'rootSlam' ? 760 : 520);
+        e.strikeAt = now + (e.ruinSkill === 'rootSlam' ? 560 : 370);
+    } else if (e.kind === 'slime') {
         e.windupUntil = now + 460;
         e.strikeAt = now + 360;
     } else if (e.kind === 'frog') {
@@ -6344,9 +6576,22 @@ function startEnemyAttack(e, now, target = state.player) {
 
 function resolveEnemyAttack(e, now) {
     const p = e.attackTarget?.hp > 0 ? e.attackTarget : state.player;
+    if (isAggroTotemStation(p)) {
+        const inRange = distance(e, p) <= e.radius + p.radius + e.range + 16;
+        if (inRange) damageAggroTotemByEnemy(p, e, e.attack + (e.chargeUntil ? 1 : 0), '攻击', now);
+        e.windupUntil = 0;
+        e.strikeAt = 0;
+        e.leapUntil = 0;
+        e.chargeUntil = 0;
+        e.swoopUntil = 0;
+        e.attackCooldown = Math.max(e.attackCooldown || 0, e.boss ? 1.4 : 0.95);
+        return;
+    }
     const targetIsVillager = p !== state.player;
     tryAccidentalEnemyHitVillager(e, e.range + 8, now, '攻击误伤');
-    if (e.kind === 'slime') {
+    if (e.kind === 'jungleRuinGuardian') {
+        resolveJungleRuinGuardianAttack(e, p, now);
+    } else if (e.kind === 'slime') {
         e.leapStartAt = now;
         e.leapUntil = now + 420;
         e.leapStartX = e.x;
@@ -6559,6 +6804,33 @@ function resolveEnemyAttack(e, now) {
     e.windupUntil = 0;
 }
 
+function resolveJungleRuinGuardianAttack(e, target, now) {
+    const slam = e.ruinSkill === 'rootSlam';
+    const radius = slam ? 128 : 92;
+    state.cameraShake = Math.max(state.cameraShake, slam ? 13 : 8);
+    spawnBurst(e.x, e.y, slam ? '#b77dff' : '#8cff66', slam ? 30 : 18, 190, radius * 0.42);
+    const forward = (target.x - e.x) * e.attackDir.x + (target.y - e.y) * e.attackDir.y;
+    const side = Math.abs((target.x - e.x) * -e.attackDir.y + (target.y - e.y) * e.attackDir.x);
+    const hit = slam
+        ? distance(e, target) < radius + (target.radius || 17)
+        : (forward > -12 && forward < 156 && side < (target.radius || 17) + 34);
+    if (hit) {
+        applyEnemyDamageToTarget(e, target, slam ? e.attack + 2 : e.attack, slam ? '藤根震裂' : '根鞭横扫', now);
+        slowCombatTarget(target, now, slam ? 1900 : 1300);
+        const dir = normalize(target.x - e.x, target.y - e.y);
+        target.knockX = (target.knockX || 0) + dir.x * (slam ? 240 : 150);
+        target.knockY = (target.knockY || 0) + dir.y * (slam ? 240 : 150);
+        addFloatText(slam ? '藤根震裂' : '根鞭缠绕', target.x, target.y - 58, '#d7f28a');
+    }
+    for (const enemy of state.enemies) {
+        if (enemy === e || enemy.hp <= 0 || enemy.ruinGuardian) continue;
+        if (distance(enemy, e) > radius + enemy.radius) continue;
+        enemy.rootedUntil = Math.max(enemy.rootedUntil || 0, now + (slam ? 900 : 650));
+    }
+    e.ruinSkill = '';
+    e.attackCooldown = slam ? 2.25 : 1.65;
+}
+
 function resolveBossGolemSkill(e, now) {
     const p = enemyAttackTarget(e);
     const targetIsVillager = p !== state.player;
@@ -6706,16 +6978,21 @@ function armorReduction() {
         : (state.equipment.armor === '蝎壳甲' ? 0.34
             : (state.equipment.armor === '泥沼护甲' ? 0.36
                 : (state.equipment.armor === '湿地甲壳甲' ? 0.28
-                    : (state.equipment.armor === '厚毛皮衣' ? 0.22
-            : (state.equipment.armor === '铁甲' ? 0.32
-                : (state.equipment.armor === '皮甲' ? 0.18
-                    : (state.equipment.armor === '兔毛披肩' ? 0.08 : 0)))))));
+                    : (state.equipment.armor === '板根木甲' ? 0.3
+                        : (state.equipment.armor === '绿母寄生甲' ? 0.26
+                            : (state.equipment.armor === '厚毛皮衣' ? 0.22
+                                : (state.equipment.armor === '铁甲' ? 0.32
+                                    : (state.equipment.armor === '皮甲' ? 0.18
+                                        : (state.equipment.armor === '毒菇面罩' ? 0.12
+                                            : (state.equipment.armor === '丛林叶披肩' || state.equipment.armor === '兔毛披肩' ? 0.08 : 0))))))))));
     return Math.min(0.62, base + boost);
 }
 
 function passiveShieldReduction() {
     if (state.equipment.shield === '铁盾') return 0.12;
+    if (state.equipment.shield === '板根盾') return 0.1;
     if (state.equipment.shield === '木盾') return 0.08;
+    if (state.equipment.shield === '藤编圆盾') return 0.06;
     return 0;
 }
 
@@ -6725,6 +7002,7 @@ function poisonPlayer(now, duration) {
         addFloatText('抗毒', p.x, p.y - 58, '#d6ff9c');
         return;
     }
+    if (state.equipment.armor === '毒菇面罩') duration = Math.floor(duration * 0.62);
     p.poisonUntil = Math.max(p.poisonUntil, now + duration);
     p.poisonTickAt = Math.min(p.poisonTickAt || now + 700, now + 700);
     spawnBurst(p.x, p.y - 10, '#8cff66', 14, 120, p.radius * 0.65);
@@ -6741,8 +7019,8 @@ function getBlockResult(e, rawDamage, verb) {
     const toEnemy = normalize(e.x - state.player.x, e.y - state.player.y);
     const dot = toEnemy.x * state.player.attackDir.x + toEnemy.y * state.player.attackDir.y;
     if (dot < -0.1) return { damage: rawDamage, blocked: false, staminaCost: 0 };
-    const reduction = weaponGuard ? 0.42 : (state.equipment.shield === '铁盾' ? 0.7 : 0.5);
-    const staminaCost = weaponGuard ? 5 : (state.equipment.shield === '铁盾' ? 8 : 9);
+    const reduction = weaponGuard ? 0.42 : (state.equipment.shield === '铁盾' ? 0.7 : (state.equipment.shield === '板根盾' ? 0.64 : (state.equipment.shield === '藤编圆盾' ? 0.42 : 0.5)));
+    const staminaCost = weaponGuard ? 5 : (state.equipment.shield === '铁盾' ? 8 : (state.equipment.shield === '藤编圆盾' ? 6 : 9));
     if (state.player.stamina < staminaCost) return { damage: rawDamage, blocked: false, staminaCost: 0 };
     return { damage: rawDamage * (1 - reduction), blocked: true, staminaCost };
 }
@@ -6896,6 +7174,7 @@ function interact() {
     if (target.type === 'villageNotice') readVillageNotice(target.item);
     if (target.type === 'villageBell') ringVillageBell(target.item);
     if (target.type === 'greenMotherAltar') interactGreenMotherAltar(target.item);
+    if (target.type === 'jungleRuin') interactJungleRuin(target.item);
 }
 
 function interactPromptText(target) {
@@ -6906,6 +7185,11 @@ function interactPromptText(target) {
     if (target.type === 'villageNotice') return '按 E 查看村庄告示';
     if (target.type === 'villageBell') return '按 E 敲响警钟';
     if (target.type === 'greenMotherAltar') return '按 E 阅读绿母祭坛文字';
+    if (target.type === 'jungleRuin') {
+        if ((target.item.vineHp || 0) > 0) return `藤蔓封住入口：攻击或清理藤蔓 ${Math.ceil(target.item.vineHp)}/${target.item.maxVineHp}`;
+        if (!jungleRuinGuardianDefeated(target.item)) return '击败根缠石像守卫后可进入';
+        return '按 E 进入丛林遗迹';
+    }
     if (target.type === 'chest') return '按 E 打开木箱';
     if (target.type === 'camp') return '按 E 使用营地';
     if (target.type === 'ruins') return state.ruins.opened ? '废墟门已打开' : '按 E 打开废墟门';
@@ -6960,7 +7244,66 @@ function nearestInteractable() {
     state.placedStations
         .filter(station => station.kind === 'chest' && distance(p, station) <= station.radius + 46)
         .forEach(station => specials.push({ type: 'chest', item: station, d: distance(p, station) }));
+    (state.decorations || [])
+        .filter(item => item.kind === 'jungleRuin' && distance(p, item) <= item.radius + 42)
+        .forEach(item => specials.push({ type: 'jungleRuin', item, d: distance(p, item) - 20 }));
     return [...resources, ...specials].sort((a, b) => a.d - b.d)[0] || null;
+}
+
+function jungleRuinGuardianDefeated(ruin) {
+    return !state.enemies.some(enemy => enemy.ruinId === ruin.guardianId && enemy.hp > 0);
+}
+
+function interactJungleRuin(ruin) {
+    if ((ruin.vineHp || 0) > 0) {
+        const held = selectedHotbarItem();
+        const power = held === 'stoneSickle' ? 4 : (['jungleMachete', 'ironwoodMachete', 'stoneAxe'].includes(held) ? 3 : 1);
+        ruin.vineHp = Math.max(0, (ruin.vineHp || 0) - power);
+        spawnBurst(ruin.x, ruin.y - 24, '#5fae49', 12, 110, 32);
+        addFloatText(`藤蔓 -${power}`, ruin.x, ruin.y - 62, '#d7f28a');
+        showToast(ruin.vineHp > 0 ? `清理入口藤蔓，还剩 ${Math.ceil(ruin.vineHp)}。石镰/砍刀更快。` : '入口藤蔓断开了，根缠石像守卫被惊醒！');
+        return;
+    }
+    if (!jungleRuinGuardianDefeated(ruin)) {
+        showToast('根缠石像守卫仍在守护入口。先击败它。');
+        return;
+    }
+    enterJungleRuin(ruin);
+}
+
+function enterJungleRuin(ruin) {
+    const building = ruin.interiorBuilding || createJungleRuinInteriorBuilding(ruin);
+    ruin.interiorBuilding = building;
+    building.interiorObjects ||= createIndoorObjects(building.kind, building);
+    state.openChest = null;
+    state.openIndoorContainer = null;
+    state.indoorProjectiles = [];
+    state.indoor = {
+        building,
+        outsideX: ruin.x - 86,
+        outsideY: ruin.y + 92,
+        objects: building.interiorObjects,
+    };
+    state.player.x = VIEW.width / 2;
+    state.player.y = VIEW.height - 178;
+    camera.x = 0;
+    camera.y = 0;
+    showToast('进入丛林遗迹。空气里有绿母祭坛留下的潮湿气味。');
+}
+
+function createJungleRuinInteriorBuilding(ruin) {
+    return {
+        kind: 'jungleRuinInterior',
+        label: '丛林遗迹内殿',
+        x: ruin.x,
+        y: ruin.y,
+        doorX: ruin.x - 86,
+        doorY: ruin.y + 92,
+        outsideX: ruin.x - 86,
+        outsideY: ruin.y + 92,
+        village: activeJungleCultVillage || state.village,
+        ruin,
+    };
 }
 
 function enterVillageHouse(building) {
@@ -7054,8 +7397,10 @@ function leaveVillageHouse() {
     if (!indoor) return;
     state.openIndoorContainer = null;
     state.indoorProjectiles = [];
-    sendIndoorPursuersOutside(indoor);
-    const exitPoint = villageHouseExitPoint(indoor.building);
+    if (indoor.building.kind !== 'jungleRuinInterior') sendIndoorPursuersOutside(indoor);
+    const exitPoint = indoor.building.kind === 'jungleRuinInterior'
+        ? { x: indoor.outsideX, y: indoor.outsideY }
+        : villageHouseExitPoint(indoor.building);
     state.player.x = exitPoint.x;
     state.player.y = exitPoint.y;
     state.indoor = null;
@@ -7159,6 +7504,14 @@ function createIndoorObjects(kind, building = null) {
         moduleAt(560, 82, { kind: 'brokenShelf', label: '破架子', solid: true }),
     ];
     const byKind = {
+        jungleRuinInterior: [
+            { kind: 'door', label: '藤根出口', x: VIEW.width / 2, y: VIEW.height - 58, w: 86, h: 28, solid: true, action: 'leave' },
+            moduleAt(216, 132, { kind: 'altar', label: '碎裂绿母祭台', solid: true, action: 'jungleRuinClue' }),
+            moduleAt(380, 118, { kind: 'bookshelf', label: '潮湿碑文', solid: true, action: 'jungleRuinClue' }),
+            moduleAt(540, 112, { kind: 'ruinChest', label: '遗迹藤箱', solid: true, action: 'steal', loot: randomContainerLoot('jungleRuin', building), stolen: false, ruinOwned: true, mark: 'herb' }),
+            moduleAt(622, 108, { kind: 'ruinRelicBox', label: '守卫遗物箱', solid: true, action: 'steal', loot: randomContainerLoot('jungleRuinGear', building), stolen: false, ruinOwned: true, mark: 'guard' }),
+            { kind: 'ruinStatue', label: '根缠石像', x: 448, y: 332, w: 86, h: 72, solid: true, action: 'jungleRuinClue' },
+        ],
         blacksmith: [
             moduleAt(224, 104, { kind: 'forge', label: '熔炉', solid: true, action: 'forge' }),
             moduleAt(328, 160, { kind: 'rack', label: '武器架', solid: true, action: 'weaponRack', storage: { simpleArrow: 6 }, taken: false }),
@@ -7256,7 +7609,7 @@ function createIndoorObjects(kind, building = null) {
             { kind: 'npc', role: 'cultVillager', label: '献祭教徒', x: 330, y: 286, homeX: 330, homeY: 286, w: 34, h: 46, radius: 17, hp: 64, maxHp: 64, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
         ],
     };
-    const base = ['basicVillager', 'basicElder'].includes(kind) ? basicCommon : common;
+    const base = kind === 'jungleRuinInterior' ? [] : (['basicVillager', 'basicElder'].includes(kind) ? basicCommon : common);
     return [...base, ...(byKind[kind] || [])];
 }
 
@@ -7284,18 +7637,32 @@ function randomContainerLoot(profile, building = null) {
         shop: [['copperCoin', 4, 12], ['bandage', 1, 4], ['potion', 0, 2], ['simpleArrow', 4, 12], ['torch', 0, 2], ['slingshot', 0, 1], ['mapleSnack', 0, 2], ['antlerHorn', 0, 1]],
         basic: [['copperCoin', 0, 3], ['stone', 0, 5], ['fiber', 2, 7], ['wood', 1, 5], ['pebble', 0, 6], ['clothArmor', 0, 1], ['stoneSpear', 0, 1]],
         elder: [['copperCoin', 3, 8], ['crystal', 0, 2], ['antlerCharm', 0, 1], ['campCharm', 0, 1], ['speedPotion', 0, 1], ['nightVisionPotion', 0, 1], ['shadowLantern', 0, 1], ['bandage', 1, 3]],
+        jungleRuin: [['vine', 6, 12], ['jungleLeaf', 6, 12], ['jungleFruit', 2, 6], ['toxicMushroom', 2, 5], ['herb', 2, 5], ['jungleSalve', 1, 3], ['poisonLeafWrap', 1, 2], ['vineStaminaDrink', 0, 2], ['vineRope', 1, 3], ['toxicVineGlue', 0, 2], ['jungleTotem', 0, 1], ['recipeNoteWorkbench', 0, 1], ['recipeNoteApothecary', 0, 1]],
+        jungleRuinGear: [['buttressWood', 2, 5], ['buttressPlate', 0, 2], ['crystal', 1, 3], ['venom', 2, 5], ['beeDart', 2, 8], ['poisonArrow', 4, 12], ['vineNetTrap', 0, 2], ['poisonBambooTrap', 0, 2], ['poisonVineBlowpipe', 0, 1], ['vineBambooCrossbow', 0, 1], ['vineRoundShield', 0, 1], ['buttressShield', 0, 1], ['jungleLeafCloak', 0, 1], ['toxicMask', 0, 1], ['greenMotherRootStaff', 0, 1], ['recipeNoteGuard', 0, 1], ['recipeNoteElder', 0, 1]],
     };
     const source = recipeNoteSourceForKind(building?.kind || '', profile);
     const noteEntry = source && RECIPE_NOTE_KEYS[source] ? [[RECIPE_NOTE_KEYS[source], 0, 1]] : [];
     const table = [...local.table, ...products, ...(otherTables[profile] || otherTables.villager), ...noteEntry];
     const loot = {};
-    const localPicks = profile === 'villager' || profile === 'small' || profile === 'basic' ? 5 : 4;
-    const otherPicks = profile === 'villager' || profile === 'small' ? 3 : 4;
+    const localPicks = profile === 'jungleRuin' || profile === 'jungleRuinGear' ? 5 : (profile === 'villager' || profile === 'small' || profile === 'basic' ? 5 : 4);
+    const otherPicks = profile === 'jungleRuin' || profile === 'jungleRuinGear' ? 7 : (profile === 'villager' || profile === 'small' ? 3 : 4);
     const localPool = [...local.table, ...products].sort(() => Math.random() - 0.5);
     const otherPool = [...(otherTables[profile] || otherTables.villager), ...noteEntry].sort(() => Math.random() - 0.5);
     for (const [key, min, max] of [...localPool.slice(0, localPicks), ...otherPool.slice(0, otherPicks)]) {
         const amount = min + Math.floor(Math.random() * (max - min + 1));
         if (amount > 0) loot[key] = (loot[key] || 0) + amount;
+    }
+    if (profile === 'jungleRuin') {
+        loot.jungleSalve = Math.max(1, loot.jungleSalve || 0);
+        loot.vineRope = Math.max(1, loot.vineRope || 0);
+    }
+    if (profile === 'jungleRuinGear') {
+        loot.beeDart = Math.max(3, loot.beeDart || 0);
+        loot.poisonArrow = Math.max(6, loot.poisonArrow || 0);
+        if (!['poisonVineBlowpipe', 'vineBambooCrossbow', 'vineRoundShield', 'buttressShield', 'jungleLeafCloak', 'toxicMask', 'greenMotherRootStaff'].some(key => (loot[key] || 0) > 0)) {
+            const guaranteed = ['poisonVineBlowpipe', 'vineBambooCrossbow', 'vineRoundShield', 'jungleLeafCloak'][Math.floor(Math.random() * 4)];
+            loot[guaranteed] = 1;
+        }
     }
     if (source && RECIPE_NOTE_KEYS[source] && Math.random() < (profile === 'small' || profile === 'basic' ? 0.28 : 0.55)) {
         const key = RECIPE_NOTE_KEYS[source];
@@ -7415,6 +7782,9 @@ function interactIndoor() {
         case 'map':
             showToast('地图标记着矿区、黑森林和废墟的大致方向。');
             break;
+        case 'jungleRuinClue':
+            readJungleRuinClue(object);
+            break;
         case 'weaponRack':
             takeIndoorResource(object, 'simpleArrow', 1, '从武器架取下 1 支备用箭。');
             break;
@@ -7440,18 +7810,30 @@ function interactIndoor() {
     }
 }
 
+function readJungleRuinClue(object) {
+    const ruin = state.indoor?.building?.ruin;
+    if (ruin && !ruin.clueRead) {
+        ruin.clueRead = true;
+        const learned = recipeLearningSuffix(learnOneRecipeByIds(['vineWrappedSpear', 'poisonVineWhip', 'vineBambooCrossbow', 'poisonVineBlowpipe', 'jungleLeafCloak', 'vineNetTrap', 'jungleTotem']));
+        showToast(`碑文：绿母不是树，她是根下仍在呼吸的城。${learned || '这些纹路指向更深的丛林。'}`);
+        return;
+    }
+    showToast('碑文残句：清藤、献果、避开会动的石像。');
+}
+
 function stealFromIndoorContainer(object) {
     object.storage ||= { ...(object.loot || {}) };
     object.opened = true;
     state.openChest = null;
     state.openIndoorContainer = {
         storage: object.storage,
-        villageOwned: true,
+        villageOwned: !object.ruinOwned,
+        ruinOwned: !!object.ruinOwned,
         ownerObject: object,
         label: object.label,
     };
     toggleInventory(true);
-    showToast(`打开${object.label}。拿走物品会降低村庄声誉。里面可能藏有配方笔记。`);
+    showToast(object.ruinOwned ? `打开${object.label}。这是遗迹物资，不影响村庄声誉。` : `打开${object.label}。拿走物品会降低村庄声誉。里面可能藏有配方笔记。`);
 }
 
 function learnRecipesFromVillageContainer(object) {
@@ -8185,7 +8567,7 @@ function isThrowableItem(key) {
 }
 
 function isDirectRangedItem(key) {
-    return key === 'slingshot' || key === 'sinewBow' || !!simpleWeaponDef(key)?.ranged;
+    return key === 'venom' || key === 'beeDart' || key === 'slingshot' || key === 'sinewBow' || !!simpleWeaponDef(key)?.ranged;
 }
 
 function isChargeMeleeItem(key) {
@@ -8272,7 +8654,7 @@ function startDirectRangedAim(now = performance.now()) {
     if (state.player.rangedAim?.key === key) return;
     const ammo = directRangedAmmoFor(key);
     if (!ammo) {
-        showToast(key === 'slingshot' || key === 'sling' ? `${RESOURCE_LABELS[key]}需要小石子作为弹药。` : `${RESOURCE_LABELS[key]}需要箭矢。`);
+        showToast(key === 'venom' ? '没有毒刺可投掷。' : (key === 'beeDart' ? '没有蜂刺飞镖可投掷。' : (key === 'slingshot' || key === 'sling' ? `${RESOURCE_LABELS[key]}需要小石子作为弹药。` : `${RESOURCE_LABELS[key]}需要箭矢。`)));
         return;
     }
     if (state.player.attackCooldown > 0) return;
@@ -8290,13 +8672,13 @@ function releaseDirectRanged(now = performance.now()) {
     keys.delete(' ');
     const ammo = directRangedAmmoFor(aim.key, aim.ammo);
     if (!ammo) {
-        showToast(aim.key === 'slingshot' || aim.key === 'sling' ? '没有小石子。' : '没有箭矢。');
+        showToast(aim.key === 'venom' ? '没有毒刺。' : (aim.key === 'beeDart' ? '没有蜂刺飞镖。' : (aim.key === 'slingshot' || aim.key === 'sling' ? '没有小石子。' : '没有箭矢。')));
         return true;
     }
     const held = directRangedCharge(aim, now);
     const p = state.player;
     const rangedDef = simpleWeaponDef(aim.key);
-    const cost = rangedDef?.profile?.stamina || (aim.key === 'slingshot' ? 10 : 16);
+    const cost = rangedDef?.profile?.stamina || (aim.key === 'slingshot' ? 10 : (aim.key === 'venom' || aim.key === 'beeDart' ? 7 : 16));
     if (p.stamina < cost) {
         showToast('体力不足，无法稳定发射。');
         return true;
@@ -8369,6 +8751,8 @@ function directRangedCharge(aim, now = performance.now()) {
 
 function directRangedAmmoFor(key, preferred = '') {
     if (preferred && (state.inventory[preferred] || 0) > 0) return preferred;
+    if (key === 'venom') return (state.inventory.venom || 0) > 0 ? 'venom' : '';
+    if (key === 'beeDart') return (state.inventory.beeDart || 0) > 0 ? 'beeDart' : '';
     if (key === 'slingshot' || key === 'sling') return (state.inventory.pebble || 0) > 0 ? 'pebble' : '';
     if (key === 'sinewBow' || key === 'bambooCrossbow' || simpleWeaponDef(key)?.ranged) {
         if ((state.inventory.poisonArrow || 0) > 0) return 'poisonArrow';
@@ -8384,6 +8768,8 @@ function directProjectilePierceForWeapon(weapon) {
 }
 
 function directProjectileKindFor(weapon, ammo) {
+    if (weapon === 'venom') return 'venomStinger';
+    if (weapon === 'beeDart') return 'beeDart';
     if (weapon === 'slingshot') return 'slingshotPebble';
     if (weapon === 'sling') return 'slingStone';
     if (weapon === 'bambooCrossbow') return ammo === 'poisonArrow' ? 'crossbowPoisonBolt' : 'crossbowBolt';
@@ -8590,7 +8976,7 @@ function resolveProjectileImpact(projectile) {
 }
 
 function isDirectProjectile(kind) {
-    return ['slingshotPebble', 'simpleArrow', 'poisonArrow', 'crossbowBolt', 'crossbowPoisonBolt', 'heavyBolt', 'heavyBoltPoison', 'recurveArrow', 'recurveArrowPoison', 'elderwoodBolt', 'elderwoodBoltPoison', 'pollenBolt', 'pollenBoltPoison', 'bambooKnife'].includes(kind);
+    return ['venomStinger', 'beeDart', 'slingshotPebble', 'simpleArrow', 'poisonArrow', 'crossbowBolt', 'crossbowPoisonBolt', 'heavyBolt', 'heavyBoltPoison', 'recurveArrow', 'recurveArrowPoison', 'elderwoodBolt', 'elderwoodBoltPoison', 'pollenBolt', 'pollenBoltPoison', 'vineBolt', 'vineBoltPoison', 'vineDart', 'vineDartPoison', 'greenRootBolt', 'greenRootBoltPoison', 'bambooKnife'].includes(kind);
 }
 
 function enemyHitByAttack(e, p, attackDir, attackProfile, strike) {
@@ -9299,6 +9685,9 @@ function consumableUseConfig(key) {
         strongBandage: 1400,
         mapleSnack: 900,
         honeyRoastMeat: 1700,
+        jungleSalve: 1300,
+        vineStaminaDrink: 900,
+        poisonLeafWrap: 1100,
     };
     return durations[key] ? { duration: durations[key] } : null;
 }
@@ -9475,6 +9864,26 @@ function applyConsumableEffect(key) {
             state.inventory.honeyRoastMeat -= 1;
             showToast('吃下蜂蜜烤肉，大量补充饥饿并恢复生命。');
             break;
+        case 'jungleSalve':
+            p.hp = Math.min(p.maxHp, p.hp + 28);
+            p.poisonResistUntil = Math.max(p.poisonResistUntil || 0, performance.now() + 12000);
+            state.inventory.jungleSalve -= 1;
+            showToast('使用丛林愈合膏，恢复生命并短暂提高毒抗。');
+            break;
+        case 'vineStaminaDrink':
+            p.stamina = Math.min(100, p.stamina + 45);
+            p.speedBoostUntil = Math.max(p.speedBoostUntil || 0, performance.now() + 8000);
+            p.speedBoostPower = Math.max(p.speedBoostPower || 1, 1.28);
+            state.inventory.vineStaminaDrink -= 1;
+            showToast('饮下藤汁体力饮，体力恢复并短暂提速。');
+            break;
+        case 'poisonLeafWrap':
+            p.poisonUntil = 0;
+            p.poisonTickAt = 0;
+            p.poisonResistUntil = Math.max(p.poisonResistUntil || 0, performance.now() + 18000);
+            state.inventory.poisonLeafWrap -= 1;
+            showToast('敷上毒抗叶包，中毒解除并暂时抗毒。');
+            break;
     }
 }
 
@@ -9601,6 +10010,10 @@ function isNearStation(kind) {
     return state.placedStations.some(station => station.kind === kind && distance(state.player, station) <= station.radius + 90);
 }
 
+function isNearPlacedStation(kind, range = 90, point = state.player) {
+    return state.placedStations?.some(station => station.kind === kind && distance(point, station) <= (station.radius || 24) + range);
+}
+
 function stationRequirementText(item) {
     const station = stationRequirement(item);
     if (!station || isNearStation(station)) return '';
@@ -9721,11 +10134,41 @@ function useInventoryItem(key) {
         case 'ironShield':
             equipShield('铁盾', 2, '已装备铁盾。');
             break;
+        case 'vineRoundShield':
+            equipShield('藤编圆盾', 1, '已装备藤编圆盾，轻便但格挡较弱。');
+            break;
+        case 'buttressShield':
+            equipShield('板根盾', 2, '已装备板根盾，抗击退更强。');
+            break;
+        case 'jungleLeafCloak':
+            equipArmor('丛林叶披肩', 1, '已装备丛林叶披肩，丛林行动更轻。');
+            break;
+        case 'buttressArmor':
+            equipArmor('板根木甲', 2, '已装备板根木甲，抗击退强。');
+            break;
+        case 'toxicMask':
+            equipArmor('毒菇面罩', 1, '已装备毒菇面罩，毒素影响降低。');
+            break;
+        case 'parasiticVineArmor':
+            equipArmor('绿母寄生甲', 2, '已装备绿母寄生甲，会缓慢恢复但更容易饥饿。');
+            break;
+        case 'shadowEssence':
+            state.player.shadowUntil = Math.max(state.player.shadowUntil || 0, performance.now() + 45000);
+            state.player.nightVisionUntil = Math.max(state.player.nightVisionUntil || 0, performance.now() + 22000);
+            state.inventory.shadowEssence -= 1;
+            showToast('吸收暗影精华，长时间降低怪物感知并获得短暂夜视。');
+            break;
         case 'coalBomb':
             useCoalBomb();
             break;
         case 'poisonVial':
             showToast('按住攻击键瞄准毒药，松开后投出。');
+            break;
+        case 'venom':
+            showToast('手持毒刺。点击攻击可投掷，命中会造成少量伤害并中毒。');
+            break;
+        case 'beeDart':
+            showToast('手持蜂刺飞镖。点击攻击可投掷，命中麻痹并施加强毒。');
             break;
         case 'campfire':
             placeStation(key);
@@ -9770,6 +10213,11 @@ function useInventoryItem(key) {
         case 'bambooTrap':
             placeBambooTrap();
             break;
+        case 'vineNetTrap':
+        case 'toxicVineSnare':
+        case 'poisonBambooTrap':
+            deployJungleTrap(key);
+            break;
         case 'potionTable':
         case 'workbench':
         case 'forge':
@@ -9777,6 +10225,7 @@ function useInventoryItem(key) {
         case 'stoneCoreTotem':
         case 'reedMat':
         case 'chest':
+        case 'jungleTotem':
             placeStation(key);
             break;
         case 'campFlag':
@@ -9810,6 +10259,9 @@ function useInventoryItem(key) {
         case 'mapleSnack':
         case 'honeyRoastMeat':
         case 'roastMeat':
+        case 'jungleSalve':
+        case 'vineStaminaDrink':
+        case 'poisonLeafWrap':
             if (!beginConsumableUse(key)) return;
             break;
         default:
@@ -9966,13 +10418,21 @@ function hitDirectProjectileTarget(projectile, hitInfo = findDirectProjectileHit
         hit.knockY += knock.y * force;
     }
     if (isPoisonDirectProjectile(projectile.kind) && hit.kind !== 'golem') {
-        hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + 5200);
+        hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + (projectile.kind === 'beeDart' ? 9000 : 5200));
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', hit.x, hit.y - 48, '#9cff7a');
     }
-    if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') {
-        hit.rootedUntil = Math.max(hit.rootedUntil || 0, now + 800);
-        addFloatText('迟缓', hit.x, hit.y - 52, '#ffd166');
+    if (projectile.kind === 'beeDart') {
+        hit.poisonPower = Math.max(hit.poisonPower || 1, 2);
+        hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 500, now + 500);
+        hit.rootedUntil = Math.max(hit.rootedUntil || 0, now + 1250);
+        hit.attackCooldown = Math.max(hit.attackCooldown || 0, 1.1);
+        addFloatText('麻痹', hit.x, hit.y - 58, '#ffd166');
+    }
+    if (['pollenBolt', 'pollenBoltPoison', 'vineBolt', 'vineBoltPoison', 'vineDart', 'vineDartPoison', 'greenRootBolt', 'greenRootBoltPoison'].includes(projectile.kind)) {
+        const rootTime = projectile.kind.startsWith('greenRoot') ? 1350 : (projectile.kind.startsWith('vine') ? 950 : 800);
+        hit.rootedUntil = Math.max(hit.rootedUntil || 0, now + rootTime);
+        addFloatText(projectile.kind.startsWith('greenRoot') ? '藤根束缚' : '迟缓', hit.x, hit.y - 52, '#ffd166');
     }
     spawnBurst(hit.x, hit.y, isPoisonDirectProjectile(projectile.kind) ? '#8cff66' : '#d8e5f2', projectile.kind === 'slingshotPebble' || projectile.kind === 'slingStone' ? 6 : 12, 70, hit.radius * 0.45);
     addFloatText(`-${damage}`, hit.x, hit.y - 36, '#fff3b0');
@@ -9996,34 +10456,48 @@ function hitOutdoorVillagerWithDirectProjectile(projectile, npc) {
         dir: projectile.dir || normalize(npc.x - projectile.startX, npc.y - projectile.startY),
     });
     if (isPoisonDirectProjectile(projectile.kind) && npc.hp > 0) {
-        npc.poisonUntil = Math.max(npc.poisonUntil || 0, now + 5200);
+        npc.poisonUntil = Math.max(npc.poisonUntil || 0, now + (projectile.kind === 'beeDart' ? 9000 : 5200));
         npc.poisonTickAt = Math.min(npc.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', npc.x, npc.y - 54, '#9cff7a');
     }
-    if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') {
-        npc.rootedUntil = Math.max(npc.rootedUntil || 0, now + 800);
-        addFloatText('迟缓', npc.x, npc.y - 58, '#ffd166');
+    if (projectile.kind === 'beeDart' && npc.hp > 0) {
+        npc.poisonPower = Math.max(npc.poisonPower || 1, 2);
+        npc.poisonTickAt = Math.min(npc.poisonTickAt || now + 500, now + 500);
+        npc.rootedUntil = Math.max(npc.rootedUntil || 0, now + 1250);
+        addFloatText('麻痹', npc.x, npc.y - 62, '#ffd166');
+    }
+    if (['pollenBolt', 'pollenBoltPoison', 'vineBolt', 'vineBoltPoison', 'vineDart', 'vineDartPoison', 'greenRootBolt', 'greenRootBoltPoison'].includes(projectile.kind)) {
+        const rootTime = projectile.kind.startsWith('greenRoot') ? 1350 : (projectile.kind.startsWith('vine') ? 950 : 800);
+        npc.rootedUntil = Math.max(npc.rootedUntil || 0, now + rootTime);
+        addFloatText(projectile.kind.startsWith('greenRoot') ? '藤根束缚' : '迟缓', npc.x, npc.y - 58, '#ffd166');
     }
     spawnBurst(npc.x, npc.y, isPoisonDirectProjectile(projectile.kind) ? '#8cff66' : '#d8e5f2', 12, 80, (npc.radius || 17) * 0.55);
 }
 
 function isPoisonDirectProjectile(kind) {
-    return kind === 'poisonArrow' || kind === 'crossbowPoisonBolt' || kind.endsWith('Poison');
+    return kind === 'venomStinger' || kind === 'beeDart' || kind === 'poisonArrow' || kind === 'crossbowPoisonBolt' || kind.endsWith('Poison');
 }
 
 function directProjectileDamage(projectile) {
     if (projectile.kind === 'slingshotPebble') return 1;
+    if (projectile.kind === 'venomStinger') return 2;
+    if (projectile.kind === 'beeDart') return 2;
     if (projectile.kind === 'slingStone') return Math.max(2, Math.round(1 + (projectile.charge || 0.5) * 3));
     if (projectile.kind === 'bambooKnife') return 1;
     if (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt') return Math.max(4, Math.round(3 + (projectile.charge || 0.5) * 5));
     if (projectile.kind === 'heavyBolt' || projectile.kind === 'heavyBoltPoison') return Math.max(6, Math.round(5 + (projectile.charge || 0.5) * 7));
     if (projectile.kind === 'elderwoodBolt' || projectile.kind === 'elderwoodBoltPoison') return Math.max(5, Math.round(4 + (projectile.charge || 0.5) * 6));
     if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') return Math.max(3, Math.round(2 + (projectile.charge || 0.5) * 4));
+    if (projectile.kind === 'vineBolt' || projectile.kind === 'vineBoltPoison') return Math.max(4, Math.round(3 + (projectile.charge || 0.5) * 5));
+    if (projectile.kind === 'vineDart' || projectile.kind === 'vineDartPoison') return Math.max(2, Math.round(1 + (projectile.charge || 0.5) * 3));
+    if (projectile.kind === 'greenRootBolt' || projectile.kind === 'greenRootBoltPoison') return Math.max(4, Math.round(3 + (projectile.charge || 0.5) * 6));
     if (projectile.kind === 'poisonArrow') return 3;
     return Math.max(3, Math.round(2 + (projectile.charge || 0.5) * 4));
 }
 
 function directProjectileName(projectile) {
+    if (projectile.kind === 'venomStinger') return '投掷毒刺';
+    if (projectile.kind === 'beeDart') return '蜂刺飞镖';
     if (projectile.kind === 'slingshotPebble') return '弹弓石子';
     if (projectile.kind === 'slingStone') return '投石带石子';
     if (projectile.kind === 'bambooKnife') return '竹片飞刀';
@@ -10033,6 +10507,9 @@ function directProjectileName(projectile) {
     if (projectile.kind === 'recurveArrow' || projectile.kind === 'recurveArrowPoison') return '柳木反曲箭';
     if (projectile.kind === 'elderwoodBolt' || projectile.kind === 'elderwoodBoltPoison') return '古木魔晶弹';
     if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') return '花粉木杖弹';
+    if (projectile.kind === 'vineBolt' || projectile.kind === 'vineBoltPoison') return '竹藤弩箭';
+    if (projectile.kind === 'vineDart' || projectile.kind === 'vineDartPoison') return '毒藤吹针';
+    if (projectile.kind === 'greenRootBolt' || projectile.kind === 'greenRootBoltPoison') return '绿母藤根弹';
     if (projectile.kind === 'poisonArrow') return '毒箭';
     return '箭矢';
 }
@@ -10055,6 +10532,41 @@ function deploySnare() {
     spawnBurst(target.x, target.y, '#ffd166', 18, 120, target.radius);
     addFloatText('束缚', target.x, target.y - 42, '#fff3b0');
     showToast(`${target.name} 被捕兽夹困住了。`);
+}
+
+function deployJungleTrap(key) {
+    const p = state.player;
+    const radius = key === 'vineNetTrap' ? 178 : 145;
+    const targets = state.enemies.filter(enemy => enemy.hp > 0 && distance(enemy, p) < radius);
+    if (!targets.length) {
+        showToast('附近没有可触发丛林陷阱的敌人。');
+        return;
+    }
+    state.inventory[key] -= 1;
+    const now = performance.now();
+    const maxTargets = key === 'vineNetTrap' ? 4 : 2;
+    targets
+        .sort((a, b) => distance(a, p) - distance(b, p))
+        .slice(0, maxTargets)
+        .forEach(enemy => {
+            enemy.rootedUntil = Math.max(enemy.rootedUntil || 0, now + (key === 'vineNetTrap' ? 2200 : 1300));
+            enemy.windupUntil = 0;
+            enemy.strikeAt = 0;
+            if (key !== 'vineNetTrap' && enemy.kind !== 'golem') {
+                enemy.poisonUntil = Math.max(enemy.poisonUntil || 0, now + 4800);
+                enemy.poisonTickAt = Math.min(enemy.poisonTickAt || now + 800, now + 800);
+                addFloatText('中毒', enemy.x, enemy.y - 52, '#9cff7a');
+            }
+            if (key === 'poisonBambooTrap') {
+                enemy.hp -= 4;
+                enemy.hurtUntil = now + 180;
+                addFloatText('-4', enemy.x, enemy.y - 38, '#fff3b0');
+            }
+            spawnBurst(enemy.x, enemy.y, key === 'vineNetTrap' ? '#cde77b' : '#8cff66', 14, 120, enemy.radius);
+            addFloatText('缠绕', enemy.x, enemy.y - 42, '#d7f28a');
+        });
+    showToast(`${RESOURCE_LABELS[key]}困住了 ${Math.min(maxTargets, targets.length)} 个敌人。`);
+    renderHud();
 }
 
 function placeTorch() {
@@ -10133,6 +10645,11 @@ function placeStation(kind) {
     }
     const station = { kind, x: preview.x, y: preview.y, radius: preview.radius };
     if (kind === 'chest') station.storage = {};
+    if (isAggroTotemStation(station)) {
+        station.hp = kind === 'stoneCoreTotem' ? 38 : 30;
+        station.maxHp = station.hp;
+        station.nextAttackAt = performance.now() + 900;
+    }
     state.inventory[kind] -= 1;
     state.placedStations.push(station);
     spawnBurst(preview.x, preview.y, kind === 'forge' ? '#ff9f1c' : '#ffd166', 14, 90, 18);
@@ -10164,7 +10681,7 @@ function stationPlacementPosition(kind) {
 
 function placementPreviewForItem(kind) {
     if (!isPlaceableItem(kind)) return null;
-    if (kind === 'potionTable' || kind === 'workbench' || kind === 'forge' || kind === 'beehiveBox' || kind === 'stoneCoreTotem' || kind === 'reedMat' || kind === 'chest' || kind === 'campfire') {
+    if (kind === 'potionTable' || kind === 'workbench' || kind === 'forge' || kind === 'beehiveBox' || kind === 'stoneCoreTotem' || kind === 'jungleTotem' || kind === 'reedMat' || kind === 'chest' || kind === 'campfire') {
         const pos = stationPlacementPosition(kind);
         if (!pos) return { kind, valid: false, reason: '附近没有足够空间放置工作设施。', ...placementPosition(52), radius: kind === 'forge' ? 28 : 24 };
         return { kind, valid: true, x: pos.x, y: pos.y, radius: kind === 'forge' ? 28 : 24 };
@@ -10179,7 +10696,7 @@ function placementPreviewForItem(kind) {
 }
 
 function isPlaceableItem(kind) {
-    return ['torch', 'waxTorch', 'shadowLantern', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'reedMat', 'chest', 'campfire'].includes(kind);
+    return ['torch', 'waxTorch', 'shadowLantern', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'campfire'].includes(kind);
 }
 
 function placementPosition(distanceAhead) {
@@ -10389,7 +10906,7 @@ function renderChestStorage() {
     const keys = chestItemKeys(chest);
     const title = document.createElement('div');
     title.className = 'chest-title';
-    title.textContent = `${chest.villageOwned ? chest.label : '木箱'} ${keys.length}/${CHEST_SLOT_LIMIT} 格`;
+    title.textContent = `${(chest.villageOwned || chest.ruinOwned) ? chest.label : '木箱'} ${keys.length}/${CHEST_SLOT_LIMIT} 格`;
     panel.appendChild(title);
     const grid = document.createElement('div');
     grid.className = 'chest-grid';
@@ -10573,8 +11090,8 @@ function handleVillagerTaskAction(npc) {
 }
 
 function equippedItemKey(type) {
-    if (type === 'offhand') return { 木盾: 'woodShield', 铁盾: 'ironShield' }[state.equipment.shield] || '';
-    return { 布衣: 'clothArmor', 皮甲: 'leatherArmor', 铁甲: 'ironArmor', 魔晶甲: 'crystalArmor', 兔毛披肩: 'rabbitCloak', 蝎壳甲: 'scorpionArmor', 厚毛皮衣: 'thickFurCoat', 湿地甲壳甲: 'reedShellArmor', 泥沼护甲: 'mireCoreArmor' }[state.equipment.armor] || '';
+    if (type === 'offhand') return { 木盾: 'woodShield', 铁盾: 'ironShield', 藤编圆盾: 'vineRoundShield', 板根盾: 'buttressShield' }[state.equipment.shield] || '';
+    return { 布衣: 'clothArmor', 皮甲: 'leatherArmor', 铁甲: 'ironArmor', 魔晶甲: 'crystalArmor', 兔毛披肩: 'rabbitCloak', 蝎壳甲: 'scorpionArmor', 厚毛皮衣: 'thickFurCoat', 湿地甲壳甲: 'reedShellArmor', 泥沼护甲: 'mireCoreArmor', 丛林叶披肩: 'jungleLeafCloak', 板根木甲: 'buttressArmor', 毒菇面罩: 'toxicMask', 绿母寄生甲: 'parasiticVineArmor' }[state.equipment.armor] || '';
 }
 
 function equipmentSummaryText() {
@@ -10585,11 +11102,11 @@ function equipmentSummaryText() {
 }
 
 function isArmorKey(key) {
-    return ['clothArmor', 'leatherArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor'].includes(key);
+    return ['clothArmor', 'leatherArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor'].includes(key);
 }
 
 function isShieldKey(key) {
-    return ['woodShield', 'ironShield'].includes(key);
+    return ['woodShield', 'ironShield', 'vineRoundShield', 'buttressShield'].includes(key);
 }
 
 function recipeStatusText(item, disabled) {
@@ -10826,11 +11343,38 @@ function autoEquipSelectedItem(key, notify = true) {
         case 'scorpionArmor':
             equipArmor('蝎壳甲', 2, silent ? '' : '已装备蝎壳甲。');
             break;
+        case 'thickFurCoat':
+            equipArmor('厚毛皮衣', 1, silent ? '' : '已装备厚毛皮衣。');
+            break;
+        case 'reedShellArmor':
+            equipArmor('湿地甲壳甲', 2, silent ? '' : '已装备湿地甲壳甲。');
+            break;
+        case 'mireCoreArmor':
+            equipArmor('泥沼护甲', 2, silent ? '' : '已装备泥沼护甲。');
+            break;
+        case 'jungleLeafCloak':
+            equipArmor('丛林叶披肩', 1, silent ? '' : '已装备丛林叶披肩。');
+            break;
+        case 'buttressArmor':
+            equipArmor('板根木甲', 2, silent ? '' : '已装备板根木甲。');
+            break;
+        case 'toxicMask':
+            equipArmor('毒菇面罩', 1, silent ? '' : '已装备毒菇面罩。');
+            break;
+        case 'parasiticVineArmor':
+            equipArmor('绿母寄生甲', 2, silent ? '' : '已装备绿母寄生甲。');
+            break;
         case 'woodShield':
             equipShield('木盾', 1, silent ? '' : '已装备木盾。');
             break;
         case 'ironShield':
             equipShield('铁盾', 2, silent ? '' : '已装备铁盾。');
+            break;
+        case 'vineRoundShield':
+            equipShield('藤编圆盾', 1, silent ? '' : '已装备藤编圆盾。');
+            break;
+        case 'buttressShield':
+            equipShield('板根盾', 2, silent ? '' : '已装备板根盾。');
             break;
         default:
             if (!silent) showToast(`手持${RESOURCE_LABELS[key] || key}。按 Q 使用可消耗/可放置物。`);
@@ -10885,7 +11429,7 @@ function makePebblesFromHeldStone() {
 }
 
 function isEquipmentItem(key) {
-    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'woodShield', 'ironShield'].includes(key);
+    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield'].includes(key);
 }
 
 function createPixelIconElement(key, className = 'pixel-icon') {
@@ -10951,7 +11495,8 @@ function updateMobileInventoryScale() {
 }
 
 function canUseInventoryItem(key) {
-    return (!!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'woodShield', 'ironShield', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat'].includes(key)) && (state.inventory[key] || 0) > 0;
+    const usable = ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield', 'venom', 'beeDart', 'shadowEssence', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'vineNetTrap', 'toxicVineSnare', 'poisonBambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat', 'jungleSalve', 'vineStaminaDrink', 'poisonLeafWrap'];
+    return (!!simpleWeaponDef(key) || usable.includes(key)) && (state.inventory[key] || 0) > 0;
 }
 
 function recipeHasKnownMaterial(recipe) {
@@ -11023,6 +11568,14 @@ function detailedPixelIconRects(key, type) {
         mireCore: [[3, 3, 6, 6, 0], [4, 2, 4, 2, 1], [4, 7, 4, 2, 1], [5, 4, 2, 2, 2], [3, 6, 6, 1, 2]],
         crystalFang: [[5, 0, 2, 2, 2], [4, 2, 4, 6, 1], [5, 8, 2, 3, 0], [6, 3, 1, 4, 2], [3, 5, 6, 1, 2]],
         boneShard: [[5, 1, 2, 9, 1], [4, 2, 4, 2, 2], [3, 5, 6, 2, 0], [4, 9, 3, 1, 2]],
+        venom: [[8, 0, 2, 2, 2], [7, 2, 2, 2, 1], [6, 4, 2, 2, 1], [5, 6, 2, 2, 0], [4, 8, 2, 2, 0], [3, 10, 2, 1, 2], [8, 3, 1, 4, 2], [5, 7, 1, 3, 2]],
+        beeStinger: [[8, 0, 2, 2, 2], [7, 2, 2, 3, 1], [6, 5, 2, 3, 1], [5, 8, 2, 2, 0], [4, 10, 2, 1, 2], [8, 4, 2, 1, 2], [6, 7, 2, 1, 2]],
+        fang: [[5, 0, 2, 2, 2], [4, 2, 4, 5, 1], [5, 7, 2, 4, 0], [6, 3, 1, 5, 2], [3, 5, 2, 1, 2]],
+        frogTongue: [[2, 7, 2, 2, 0], [4, 6, 2, 2, 1], [6, 5, 2, 2, 1], [8, 4, 2, 2, 1], [9, 2, 2, 2, 2], [7, 8, 3, 1, 0]],
+        frogLeg: [[4, 2, 3, 6, 1], [6, 7, 4, 2, 0], [8, 9, 2, 2, 2], [3, 5, 2, 3, 0], [5, 3, 1, 4, 2]],
+        vineRope: [[2, 4, 2, 2, 1], [4, 5, 2, 2, 2], [6, 4, 2, 2, 1], [8, 5, 2, 2, 2], [3, 7, 6, 2, 0], [5, 2, 2, 2, 1]],
+        toxicVineGlue: [[2, 5, 8, 4, 0], [3, 4, 6, 2, 1], [4, 7, 4, 2, 2], [5, 2, 2, 3, 2], [8, 5, 2, 2, 1]],
+        buttressPlate: [[2, 3, 8, 5, 0], [3, 2, 6, 2, 1], [2, 8, 8, 2, 1], [4, 4, 1, 4, 2], [7, 4, 1, 4, 2], [5, 5, 2, 2, 2]],
         potion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [5, 8, 2, 2, 2]],
         regenPotion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [6, 4, 1, 4, 2]],
         nightVisionPotion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [4, 5, 1, 1, 2], [7, 5, 1, 1, 2]],
@@ -11046,6 +11599,19 @@ function detailedPixelIconRects(key, type) {
         scorpionArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [3, 5, 2, 2, 2], [7, 5, 2, 2, 2], [5, 3, 2, 6, 1]],
         woodShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 0], [3, 8, 6, 2, 1], [5, 3, 2, 6, 2]],
         ironShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 0], [3, 8, 6, 2, 1], [4, 3, 4, 5, 2], [2, 5, 8, 1, 1]],
+        vineRoundShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 1], [3, 8, 6, 2, 0], [5, 3, 2, 6, 2], [3, 4, 6, 1, 0], [4, 6, 4, 1, 0]],
+        buttressShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 0], [3, 8, 6, 2, 1], [4, 3, 1, 5, 2], [7, 3, 1, 5, 2], [3, 5, 6, 1, 1]],
+        jungleLeafCloak: [[5, 1, 2, 2, 2], [2, 3, 8, 7, 1], [3, 4, 3, 3, 0], [6, 3, 4, 4, 0], [5, 6, 2, 4, 2]],
+        buttressArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [4, 4, 1, 5, 2], [7, 4, 1, 5, 2], [3, 8, 6, 1, 1], [5, 5, 2, 2, 2]],
+        toxicMask: [[3, 2, 6, 2, 1], [2, 4, 8, 4, 0], [3, 8, 6, 1, 1], [4, 5, 1, 1, 2], [7, 5, 1, 1, 2], [5, 6, 2, 1, 2]],
+        parasiticVineArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [5, 3, 2, 6, 2], [3, 5, 6, 1, 2], [2, 8, 8, 1, 1], [7, 2, 2, 8, 2]],
+        vineNetTrap: [[1, 2, 10, 1, 1], [1, 5, 10, 1, 1], [1, 8, 10, 1, 1], [2, 1, 1, 9, 0], [5, 1, 1, 9, 0], [8, 1, 1, 9, 0], [3, 3, 2, 2, 2], [7, 6, 2, 2, 2]],
+        toxicVineSnare: [[2, 3, 8, 1, 1], [3, 5, 6, 1, 0], [4, 7, 4, 1, 1], [2, 8, 2, 2, 2], [8, 2, 2, 2, 2], [6, 6, 2, 2, 2]],
+        poisonBambooTrap: [[2, 9, 8, 1, 0], [3, 5, 1, 4, 1], [5, 3, 1, 6, 1], [7, 5, 1, 4, 1], [4, 4, 2, 2, 2], [8, 6, 2, 2, 2]],
+        jungleSalve: [[2, 5, 8, 4, 0], [3, 4, 6, 2, 1], [4, 6, 4, 2, 2], [5, 2, 2, 3, 2], [7, 4, 2, 2, 1]],
+        vineStaminaDrink: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [3, 7, 6, 1, 2], [7, 2, 2, 2, 1]],
+        poisonLeafWrap: [[2, 4, 8, 4, 1], [3, 3, 6, 2, 2], [4, 7, 4, 2, 0], [5, 5, 2, 1, 2], [8, 4, 2, 2, 2]],
+        jungleTotem: [[5, 1, 2, 10, 0], [3, 3, 6, 2, 1], [2, 6, 8, 2, 1], [4, 2, 1, 8, 2], [7, 2, 1, 8, 2], [5, 5, 2, 2, 2]],
         sinewBow: [[2, 1, 3, 10, 0], [4, 2, 3, 2, 1], [5, 5, 2, 2, 1], [4, 8, 3, 2, 1], [8, 2, 1, 8, 2]],
         slingshot: [[5, 6, 2, 5, 0], [3, 2, 2, 5, 0], [7, 2, 2, 5, 0], [4, 5, 4, 1, 1], [5, 7, 2, 2, 2]],
         simpleArrow: [[1, 5, 8, 2, 0], [9, 4, 2, 4, 1], [2, 4, 2, 1, 2], [2, 7, 2, 1, 2]],
@@ -11071,6 +11637,13 @@ function detailedPixelIconRects(key, type) {
         frogWhip: [[2, 7, 2, 2, 0], [4, 5, 2, 2, 1], [6, 6, 2, 2, 1], [8, 4, 2, 2, 1], [10, 3, 1, 2, 2]],
         scorpionHook: [[2, 7, 7, 2, 0], [8, 4, 2, 4, 1], [10, 3, 1, 3, 2]],
         shadowWoodBlade: [[5, 1, 2, 8, 1], [4, 8, 4, 2, 0], [7, 3, 2, 5, 2], [3, 4, 2, 2, 2]],
+        vineWrappedSpear: [[2, 8, 8, 1, 0], [8, 4, 2, 4, 1], [9, 2, 2, 3, 2], [4, 6, 5, 1, 2], [5, 7, 4, 1, 2]],
+        poisonVineWhip: [[2, 8, 2, 2, 0], [4, 6, 2, 2, 1], [6, 5, 2, 2, 2], [8, 3, 2, 2, 1], [10, 2, 1, 2, 2], [7, 7, 2, 1, 2]],
+        jungleMachete: [[4, 1, 3, 8, 1], [3, 8, 5, 2, 0], [6, 2, 2, 6, 2], [2, 5, 2, 2, 2]],
+        vineBambooCrossbow: [[2, 6, 8, 2, 0], [5, 3, 2, 7, 1], [2, 3, 8, 1, 2], [1, 5, 10, 1, 2], [4, 8, 5, 1, 2]],
+        poisonVineBlowpipe: [[1, 6, 9, 2, 0], [3, 4, 6, 1, 1], [8, 3, 2, 2, 2], [2, 8, 2, 1, 2]],
+        greenMotherRootStaff: [[5, 1, 2, 10, 0], [3, 4, 6, 2, 1], [6, 2, 3, 3, 2], [2, 7, 3, 2, 2], [7, 8, 3, 1, 1]],
+        sacrificialVineHorn: [[2, 6, 8, 3, 0], [3, 4, 3, 2, 1], [7, 4, 3, 2, 1], [5, 8, 2, 2, 2], [1, 5, 2, 1, 2]],
     };
     return details[key] || null;
 }
@@ -11134,6 +11707,10 @@ function worldX(x) { return Math.round(x - camera.x); }
 function worldY(y) { return Math.round(y - camera.y); }
 
 function drawIndoor(now) {
+    if (state.indoor?.building?.kind === 'jungleRuinInterior') {
+        drawJungleRuinInterior(now);
+        return;
+    }
     const cultInterior = state.indoor?.building?.village?.tier === 'jungleCult';
     ctx.fillStyle = cultInterior ? '#10170e' : '#18110c';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
@@ -11183,6 +11760,54 @@ function drawIndoor(now) {
         ctx.textAlign = 'center';
         const suffix = target.action === 'steal' ? ' / 打开箱子' : '';
         ctx.fillText(`按 E 互动：${target.label}${suffix}`, VIEW.width / 2, VIEW.height - 21);
+        ctx.textAlign = 'left';
+    }
+}
+
+function drawJungleRuinInterior(now) {
+    ctx.fillStyle = '#090d10';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    ctx.fillStyle = '#2f3945';
+    ctx.fillRect(172, 108, VIEW.width - 344, VIEW.height - 226);
+    ctx.fillStyle = '#1b242c';
+    ctx.fillRect(202, 138, VIEW.width - 404, VIEW.height - 286);
+    for (let x = 210; x < VIEW.width - 210; x += 42) {
+        for (let y = 146; y < VIEW.height - 154; y += 42) {
+            ctx.fillStyle = ((x + y) / 42) % 2 ? 'rgba(104,116,129,0.18)' : 'rgba(16,24,32,0.2)';
+            ctx.fillRect(x, y, 38, 38);
+            ctx.fillStyle = 'rgba(216,229,242,0.08)';
+            ctx.fillRect(x + 4, y + 4, 14, 3);
+        }
+    }
+    ctx.fillStyle = '#101820';
+    ctx.fillRect(172, 108, VIEW.width - 344, 34);
+    ctx.fillRect(172, 108, 34, VIEW.height - 226);
+    ctx.fillRect(VIEW.width - 206, 108, 34, VIEW.height - 226);
+    ctx.fillRect(172, VIEW.height - 118, VIEW.width - 344, 34);
+    ctx.fillStyle = '#5fae49';
+    ctx.fillRect(198, 142, VIEW.width - 396, 5);
+    ctx.fillRect(198, VIEW.height - 126, VIEW.width - 396, 4);
+    ctx.fillStyle = 'rgba(140,255,102,0.08)';
+    ctx.fillRect(206, 146, VIEW.width - 412, VIEW.height - 272);
+    ctx.fillStyle = '#b77dff';
+    ctx.fillRect(VIEW.width / 2 - 18, 124, 36, 8);
+    state.indoor.objects
+        .slice()
+        .sort((a, b) => a.y - b.y)
+        .forEach(drawIndoorObject);
+    drawIndoorPlayer(now);
+    drawIndoorProjectiles();
+    drawIndoorLighting(now);
+    drawItemUseProgress();
+    drawIndoorObjectLabels();
+    const target = nearestIndoorObject();
+    if (target) {
+        ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
+        ctx.fillRect(VIEW.width / 2 - 190, VIEW.height - 40, 380, 28);
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 13px "Microsoft YaHei"';
+        ctx.textAlign = 'center';
+        ctx.fillText(indoorPromptText(target), VIEW.width / 2, VIEW.height - 21);
         ctx.textAlign = 'left';
     }
 }
@@ -12552,6 +13177,14 @@ function drawIndoorObject(object) {
         drawVillageTotem(object);
         return;
     }
+    if (object.action === 'jungleRuinClue') {
+        drawJungleRuinInteriorObject(object);
+        return;
+    }
+    if (object.kind === 'ruinChest' || object.kind === 'ruinRelicBox') {
+        drawJungleRuinContainer(object);
+        return;
+    }
     if (object.wallModule) {
         drawWallModuleObject(object);
         return;
@@ -12827,6 +13460,70 @@ function drawIndoorObject(object) {
     } else {
         ctx.fillStyle = '#7a6040';
         ctx.fillRect(x - object.w / 2, y - object.h / 2, object.w, object.h);
+    }
+}
+
+function drawJungleRuinInteriorObject(object) {
+    const x = object.x;
+    const y = object.y;
+    if (object.kind === 'altar') {
+        ctx.fillStyle = '#26313a';
+        ctx.fillRect(x - object.w / 2 + 8, y - 20, object.w - 16, 34);
+        ctx.fillStyle = '#687481';
+        ctx.fillRect(x - object.w / 2 + 14, y - 28, object.w - 28, 12);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 12, y - 32, 24, 5);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 5, y - 18, 10, 10);
+        return;
+    }
+    if (object.kind === 'bookshelf') {
+        ctx.fillStyle = '#202a33';
+        ctx.fillRect(x - object.w / 2 + 10, y - 32, object.w - 20, 56);
+        ctx.fillStyle = '#5a5146';
+        ctx.fillRect(x - object.w / 2 + 18, y - 24, object.w - 36, 8);
+        ctx.fillRect(x - object.w / 2 + 18, y - 5, object.w - 36, 8);
+        ctx.fillStyle = '#d8d0bd';
+        ctx.fillRect(x - 14, y - 26, 4, 28);
+        ctx.fillRect(x + 8, y - 22, 5, 24);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 3, y - 13, 6, 4);
+        return;
+    }
+    if (object.kind === 'ruinStatue') {
+        ctx.fillStyle = '#101820';
+        ctx.fillRect(x - 30, y - 26, 60, 52);
+        ctx.fillStyle = '#3f4c57';
+        ctx.fillRect(x - 22, y - 42, 44, 24);
+        ctx.fillRect(x - 18, y - 18, 36, 42);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 26, y - 16, 52, 5);
+        ctx.fillRect(x - 5, y - 34, 10, 8);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 3, y - 4, 6, 6);
+    }
+}
+
+function drawJungleRuinContainer(object) {
+    const x = object.x;
+    const y = object.y;
+    const left = x - object.w / 2;
+    const top = y - object.h / 2;
+    const storage = object.storage || object.loot || {};
+    const empty = Object.values(storage).every(amount => amount <= 0);
+    ctx.fillStyle = empty ? '#172027' : '#26313a';
+    ctx.fillRect(left + 8, top + 12, object.w - 16, object.h - 22);
+    ctx.fillStyle = object.kind === 'ruinRelicBox' ? '#5a5146' : '#2f4b3a';
+    ctx.fillRect(left + 12, top + 18, object.w - 24, 18);
+    ctx.fillRect(left + 12, y + 4, object.w - 24, object.h / 2 - 18);
+    ctx.fillStyle = object.kind === 'ruinRelicBox' ? '#d8d0bd' : '#8cff66';
+    ctx.fillRect(left + 16, top + 22, object.w - 32, 4);
+    ctx.fillRect(x - 5, top + 44, 10, 10);
+    ctx.fillStyle = '#b77dff';
+    ctx.fillRect(x - 3, top + 47, 6, 4);
+    if (object.opened && !empty) {
+        ctx.fillStyle = '#687481';
+        ctx.fillRect(left + 10, top + 3, object.w - 20, 9);
     }
 }
 
@@ -14142,6 +14839,21 @@ function drawStation(station) {
         ctx.fillRect(x - 4, y - 24, 8, 8);
     } else if (station.kind === 'campfire') {
         drawSpriteGrounded('campfire', x, y + 4, 4);
+    } else if (station.kind === 'stoneCoreTotem') {
+        ctx.fillStyle = '#2f3945';
+        ctx.fillRect(x - 16, y - 42, 32, 42);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 8, y - 32, 16, 10);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 4, y - 18, 8, 8);
+    } else if (station.kind === 'jungleTotem') {
+        ctx.fillStyle = '#2a1a10';
+        ctx.fillRect(x - 14, y - 44, 28, 44);
+        ctx.fillStyle = '#5fae49';
+        ctx.fillRect(x - 22, y - 34, 44, 8);
+        ctx.fillRect(x - 18, y - 18, 36, 6);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 5, y - 29, 10, 10);
     } else {
         ctx.fillStyle = '#3d4650';
         ctx.fillRect(x - 28, y - 30, 56, 30);
@@ -14156,6 +14868,9 @@ function drawStation(station) {
     ctx.font = 'bold 12px "Microsoft YaHei"';
     ctx.textAlign = 'center';
     ctx.fillText(RESOURCE_LABELS[station.kind], x, y + 18);
+    if (isAggroTotemStation(station) && station.maxHp) {
+        drawMiniBar(x, y - 52, Math.max(0, station.hp || 0) / station.maxHp, '#8cff66');
+    }
     ctx.textAlign = 'left';
 }
 
@@ -15893,9 +16608,10 @@ function drawEnemy(e, now) {
     if (concealed && !revealed) ctx.globalAlpha = 0.18;
     drawShadow(x, y + 1, e.radius * (flying ? 1.1 : 1.62), e.radius * (flying ? 0.25 : 0.42));
     ctx.globalAlpha = 1;
-    if (e.windupUntil && !BIOME_MONSTER_TERRAIN[e.kind]) {
+    if (e.windupUntil && e.kind !== 'jungleRuinGuardian' && !BIOME_MONSTER_TERRAIN[e.kind]) {
         drawEnemyTelegraph(e, x, y, now);
     }
+    if (e.windupUntil && e.kind === 'jungleRuinGuardian') drawJungleRuinGuardianTelegraph(e, x, y, now);
     if (BIOME_MONSTER_TERRAIN[e.kind]) {
         drawBiomeEnemyAttackAnimation(e, x, y, now);
     }
@@ -15982,6 +16698,78 @@ function drawCultControlledMonsterMarker(e, x, y, now) {
     ctx.restore();
 }
 
+function drawJungleRuinGuardianEnemy(e, x, y, now, tint = '') {
+    const pulse = Math.sin(now / 180) * 2;
+    const facing = e.facing?.x || 1;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(facing < 0 ? -1 : 1, 1);
+    ctx.fillStyle = tint || '#26313a';
+    ctx.fillRect(-22, -58 + pulse, 44, 52);
+    ctx.fillStyle = tint || '#687481';
+    ctx.fillRect(-18, -64 + pulse, 36, 12);
+    ctx.fillRect(-15, -46 + pulse, 30, 10);
+    ctx.fillRect(-12, -8 + pulse, 10, 18);
+    ctx.fillRect(4, -8 + pulse, 10, 18);
+    ctx.fillStyle = '#101820';
+    ctx.fillRect(-10, -52 + pulse, 6, 6);
+    ctx.fillRect(5, -52 + pulse, 6, 6);
+    ctx.fillStyle = '#8cff66';
+    ctx.fillRect(-4, -39 + pulse, 8, 8);
+    ctx.fillStyle = '#5fae49';
+    ctx.fillRect(-30, -42 + pulse, 8, 44);
+    ctx.fillRect(22, -38 + pulse, 8, 40);
+    ctx.fillRect(-26, -28 + pulse, 52, 5);
+    ctx.fillRect(-20, -18 + pulse, 40, 5);
+    ctx.fillStyle = '#b77dff';
+    ctx.fillRect(-6, -62 + pulse, 12, 4);
+    if (e.windupUntil > now) {
+        ctx.strokeStyle = e.ruinSkill === 'rootSlam' ? 'rgba(183,125,255,0.85)' : 'rgba(140,255,102,0.85)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(-27, -68 + pulse, 54, 72);
+    }
+    ctx.restore();
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 11px "Microsoft YaHei"';
+    ctx.textAlign = 'center';
+    ctx.fillText('遗迹守卫', x, y - 76 + pulse);
+    ctx.textAlign = 'left';
+}
+
+function drawJungleRuinGuardianTelegraph(e, x, y, now) {
+    const pulse = 0.5 + Math.sin(now / 70) * 0.5;
+    ctx.save();
+    if (e.ruinSkill === 'rootSlam') {
+        ctx.strokeStyle = `rgba(140,255,102,${0.45 + pulse * 0.28})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(x, y + 2, 128 + pulse * 10, 48 + pulse * 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(95,174,73,${0.08 + pulse * 0.08})`;
+        ctx.fillRect(x - 90, y - 8, 180, 8);
+        ctx.fillRect(x - 60, y - 28, 120, 5);
+        ctx.fillRect(x - 60, y + 14, 120, 5);
+    } else {
+        const dir = e.attackDir || { x: 1, y: 0 };
+        const angle = Math.atan2(dir.y, dir.x);
+        ctx.translate(x, y - 8);
+        ctx.rotate(angle);
+        ctx.strokeStyle = `rgba(140,255,102,${0.52 + pulse * 0.28})`;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(58, -24, 150, -4);
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(215,242,138,${0.4 + pulse * 0.25})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(12, 8);
+        ctx.quadraticCurveTo(70, 22, 148, 7);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
 function drawEnemyDeathAnimation(e, x, y, now) {
     const progress = clamp((now - (e.deathAt || now)) / 1200, 0, 1);
     ctx.save();
@@ -15995,6 +16783,10 @@ function drawEnemyDeathAnimation(e, x, y, now) {
 }
 
 function drawEnemySprite(e, x, y, scale, now, tint = '') {
+    if (e.kind === 'jungleRuinGuardian') {
+        drawJungleRuinGuardianEnemy(e, x, y, now, tint);
+        return;
+    }
     if (e.kind === 'bee') {
         drawBeeEnemy(x, y, now, tint);
         return;
@@ -17016,12 +17808,43 @@ function drawDecorations() {
             ctx.lineTo(x + 8, y - 2);
             ctx.lineTo(x + 18, y + 8);
             ctx.stroke();
+        } else if (item.kind === 'jungleRuin') {
+            drawJungleRuinEntrance(item, x, y);
         } else {
             ctx.fillStyle = COLORS.grass2;
             ctx.fillRect(x - 8, y - 6, 4, 12);
             ctx.fillRect(x, y - 10, 4, 16);
             ctx.fillRect(x + 8, y - 5, 4, 10);
         }
+    }
+}
+
+function drawJungleRuinEntrance(ruin, x, y) {
+    drawShadow(x, y + 20, 128, 22);
+    ctx.fillStyle = '#2f3945';
+    ctx.fillRect(x - 54, y - 42, 108, 60);
+    ctx.fillStyle = '#687481';
+    ctx.fillRect(x - 44, y - 52, 88, 16);
+    ctx.fillStyle = '#101820';
+    ctx.fillRect(x - 20, y - 28, 40, 48);
+    ctx.fillStyle = '#b77dff';
+    ctx.fillRect(x - 7, y - 44, 14, 10);
+    ctx.fillStyle = '#5fae49';
+    ctx.fillRect(x - 64, y - 32, 128, 7);
+    ctx.fillRect(x - 50, y - 4, 100, 6);
+    ctx.fillRect(x - 34, y - 58, 6, 80);
+    ctx.fillRect(x + 30, y - 54, 6, 76);
+    if ((ruin.vineHp || 0) > 0) {
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 28, y - 24, 56, 8);
+        ctx.fillRect(x - 22, y - 13, 44, 8);
+        drawMiniBar(x, y - 70, Math.max(0, ruin.vineHp || 0) / (ruin.maxVineHp || 18), '#8cff66');
+    } else if (!jungleRuinGuardianDefeated(ruin)) {
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 26, y - 18, 52, 5);
+    } else {
+        ctx.fillStyle = '#d8e5f2';
+        ctx.fillRect(x - 14, y - 18, 28, 4);
     }
 }
 
