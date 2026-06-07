@@ -635,6 +635,99 @@ const RECIPES = [
     }, game => game.inventory.key > 0 || game.ruinsOpened),
 ];
 
+const STARTING_RECIPE_IDS = new Set(['axe', 'pickaxe', 'sickle', 'workbench', 'spear', 'pebble', 'clothArmor', 'bandage', 'potion']);
+const RECIPE_LEARNING_RULES = {
+    bambooShard: { materials: ['bamboo'] },
+    potionTable: { materials: ['lotus'], teachers: ['apothecary'], note: 'apothecary' },
+    forge: { materials: ['ore', 'coal'], teachers: ['blacksmith'], note: 'blacksmith' },
+    vineStoneHammer: { teachers: ['unemployed', 'blacksmith'], note: 'workbench' },
+    torchClub: { materials: ['resin', 'coal'] },
+    bambooCrossbow: { materials: ['bamboo'], teachers: ['guard'], note: 'guard' },
+    ropeSickle: { teachers: ['unemployed'], note: 'workbench' },
+    resinHammer: { materials: ['resin'], note: 'blacksmith' },
+    frogWhip: { materials: ['frogTongue'], note: 'apothecary' },
+    scorpionHook: { materials: ['scorpionShell', 'venom'], note: 'guard' },
+    shadowWoodBlade: { materials: ['shadowShard'], note: 'elder' },
+    clawHookBlade: { materials: ['beastClaw'], note: 'guard' },
+    pollenDartFan: { materials: ['pollenDust'], note: 'apothecary' },
+    crystalFangSpear: { materials: ['crystalFang'], note: 'blacksmith' },
+    boneShardMace: { materials: ['boneShard'], note: 'elder' },
+    slingshot: { materials: ['lotus'], teachers: ['guard'] },
+    bambooSpear: { materials: ['bamboo'], teachers: ['guard'] },
+    sword: { materials: ['ore'], teachers: ['blacksmith'], note: 'blacksmith' },
+    armor: { materials: ['hide'], teachers: ['guard'] },
+    stew: { materials: ['mushroom'], teachers: ['kitchen'] },
+    salve: { materials: ['slimeGel'], teachers: ['apothecary'] },
+    antidote: { materials: ['lotus'], teachers: ['apothecary'] },
+    speedPotion: { materials: ['cactusFruit'], teachers: ['apothecary'], note: 'apothecary' },
+    regenPotion: { materials: ['lotus', 'slimeGel'], teachers: ['apothecary'], note: 'apothecary' },
+    ironSkinPotion: { materials: ['mud', 'coal'], teachers: ['apothecary', 'guard'], note: 'guard' },
+    honeySalve: { materials: ['honey'], teachers: ['apothecary'] },
+    nightVisionPotion: { materials: ['batWing'], note: 'elder' },
+    jumpPotion: { materials: ['frogLeg'], teachers: ['apothecary'] },
+    poisonResistPotion: { materials: ['scorpionShell'], teachers: ['apothecary'], note: 'apothecary' },
+    shadowPotion: { materials: ['shadowShard'], note: 'elder' },
+    poisonVial: { materials: ['toxicMushroom', 'venom'], teachers: ['apothecary'], note: 'apothecary' },
+    strongBandage: { materials: ['honey'], teachers: ['apothecary'] },
+    ironArmor: { materials: ['ore'], teachers: ['blacksmith'], note: 'blacksmith' },
+    campfire: { materials: ['coal'], teachers: ['kitchen'] },
+    torch: { materials: ['coal'], teachers: ['guard'] },
+    bedroll: { materials: ['hide'], teachers: ['unemployed'] },
+    campCharm: { materials: ['crystal'], teachers: ['elder'], note: 'elder' },
+    snare: { materials: ['fang'], teachers: ['guard'] },
+    bambooFence: { materials: ['bamboo'], teachers: ['unemployed'] },
+    bambooTrap: { materials: ['bamboo', 'fang'], teachers: ['guard'], note: 'guard' },
+    campFlag: { teachers: ['elder'] },
+    crystalBlade: { materials: ['crystal'], teachers: ['blacksmith'], note: 'elder' },
+    sinewBow: { materials: ['sinew'], teachers: ['guard'], note: 'guard' },
+    simpleArrow: { materials: ['bamboo'], teachers: ['guard'] },
+    poisonArrow: { materials: ['venom'], teachers: ['guard', 'apothecary'], note: 'guard' },
+    beeDart: { materials: ['beeStinger'], teachers: ['guard'] },
+    antlerSpear: { materials: ['antler'], teachers: ['guard'], note: 'guard' },
+    stoneCoreHammer: { materials: ['stoneCore'], teachers: ['blacksmith'], note: 'blacksmith' },
+    venomDagger: { materials: ['fang', 'venom'], teachers: ['blacksmith'], note: 'guard' },
+    woodShield: { materials: ['hide'], teachers: ['guard'] },
+    ironShield: { materials: ['ore'], teachers: ['blacksmith', 'guard'], note: 'blacksmith' },
+    crystalArmor: { materials: ['crystal'], teachers: ['blacksmith'], note: 'elder' },
+    rabbitCloak: { materials: ['rabbitFur'], teachers: ['unemployed'] },
+    scorpionArmor: { materials: ['scorpionShell'], teachers: ['blacksmith'], note: 'blacksmith' },
+    thickFurCoat: { materials: ['thickFur'], teachers: ['unemployed'] },
+    reedShellArmor: { materials: ['reedShell'], teachers: ['unemployed'], note: 'workbench' },
+    mireCoreArmor: { materials: ['mireCore'], teachers: ['blacksmith'], note: 'elder' },
+    antlerCharm: { materials: ['antler'], teachers: ['elder'], note: 'elder' },
+    waxTorch: { materials: ['beeswax'], teachers: ['unemployed'] },
+    beehiveBox: { materials: ['beeswax'], note: 'workbench' },
+    antlerHorn: { materials: ['antler'], teachers: ['guard'] },
+    shadowLantern: { materials: ['shadowShard'], note: 'elder' },
+    stoneCoreTotem: { materials: ['stoneCore'], teachers: ['elder'], note: 'elder' },
+    reedMat: { materials: ['lotus'], teachers: ['unemployed'] },
+    chest: { teachers: ['unemployed'] },
+    resinGlue: { materials: ['resin'], teachers: ['blacksmith'] },
+    mapleSnack: { materials: ['sap'], teachers: ['kitchen'] },
+    honeyRoastMeat: { materials: ['honey'], teachers: ['kitchen'] },
+    coalBomb: { materials: ['coal'], teachers: ['guard'], note: 'guard' },
+    roastMeat: { materials: ['meat', 'coal'], teachers: ['kitchen'] },
+    key: { materials: ['crystal'], teachers: ['elder'], note: 'elder' },
+};
+RECIPES.forEach(item => {
+    if (!STARTING_RECIPE_IDS.has(item.id)) item.learn = RECIPE_LEARNING_RULES[item.id] || null;
+});
+
+const TEACHER_RECIPE_IDS = Object.entries(RECIPE_LEARNING_RULES).reduce((acc, [id, rule]) => {
+    (rule.teachers || []).forEach(role => {
+        acc[role] ||= [];
+        acc[role].push(id);
+    });
+    return acc;
+}, {});
+const NOTE_RECIPE_IDS = Object.entries(RECIPE_LEARNING_RULES).reduce((acc, [id, rule]) => {
+    if (rule.note) {
+        acc[rule.note] ||= [];
+        acc[rule.note].push(id);
+    }
+    return acc;
+}, {});
+
 const COLORS = {
     outline: '#101820',
     skin: '#ffd39b',
@@ -1052,6 +1145,7 @@ function createState() {
         hotbarItems: Array(9).fill(null),
         draggedInventoryItem: null,
         draggedHotbarSlot: null,
+        selectedBackpackItem: null,
         nextDynamicSpawnAt: 0,
         spawnCooldowns: new Map(),
         cameraShake: 0,
@@ -1063,6 +1157,10 @@ function createState() {
         pendingTrader: null,
         activeVillageTaskRole: null,
         villageTaskCompletions: {},
+        discoveredMaterials: {},
+        knownRecipes: {},
+        learnedRecipeTeachers: {},
+        foundRecipeNotes: {},
         indoor: null,
         villageReputation: 2,
         villageTasks: createVillageTasks(),
@@ -7207,6 +7305,7 @@ function interactIndoor() {
 function stealFromIndoorContainer(object) {
     object.storage ||= { ...(object.loot || {}) };
     object.opened = true;
+    const learned = recipeLearningSuffix(learnRecipesFromVillageContainer(object));
     state.openChest = null;
     state.openIndoorContainer = {
         storage: object.storage,
@@ -7215,7 +7314,28 @@ function stealFromIndoorContainer(object) {
         label: object.label,
     };
     toggleInventory(true);
-    showToast(`打开${object.label}。拿走物品会降低村庄声誉。`);
+    showToast(`打开${object.label}。拿走物品会降低村庄声誉。${learned}`);
+}
+
+function learnRecipesFromVillageContainer(object) {
+    if (!object || object.recipeNotesSearched) return [];
+    object.recipeNotesSearched = true;
+    const source = recipeNoteSourceForObject(object);
+    if (!source) return [];
+    state.foundRecipeNotes ||= {};
+    state.foundRecipeNotes[source] = true;
+    return learnRecipesByIds(NOTE_RECIPE_IDS[source] || []);
+}
+
+function recipeNoteSourceForObject(object) {
+    const kind = state.indoor?.building?.kind || '';
+    const mark = object.mark || '';
+    if (mark === 'guard' || kind === 'guard' || kind === 'guardFortress') return 'guard';
+    if (mark === 'herb' || kind === 'apothecary' || kind === 'cultPriest' || kind === 'cultHerbalist' || kind === 'cultHealer') return 'apothecary';
+    if (mark === 'elder' || kind === 'elder' || kind === 'basicElder') return 'elder';
+    if (kind === 'blacksmith' || mark === 'ore') return 'blacksmith';
+    if (kind === 'unemployed' || kind === 'basicVillager') return 'workbench';
+    return '';
 }
 
 function lootText(loot = {}) {
@@ -7384,7 +7504,8 @@ function interactOutdoorVillager(npc) {
         showToast(`${npc.label} 正在回家休息。`);
         return;
     }
-    showToast(`${npc.label}：${advanceVillagerDialogue(npc)}${dialogueSuffixForNpc(npc)}`);
+    const learned = recipeLearningSuffix(learnRecipesFromTeacher(npc.role));
+    showToast(`${npc.label}：${advanceVillagerDialogue(npc)}${dialogueSuffixForNpc(npc)}${learned}`);
     prepareVillagerTrade(npc);
 }
 
@@ -7395,7 +7516,8 @@ function interactVillageNpc(role) {
     const taskVillage = villageForTrader(npc);
     const dialogue = advanceVillagerDialogue(npc);
     if (!task) {
-        showToast(`${name}：${dialogue || '最近不太平，出门小心。'}${dialogueSuffixForNpc(npc)}`);
+        const learned = recipeLearningSuffix(learnRecipesFromTeacher(role));
+        showToast(`${name}：${dialogue || '最近不太平，出门小心。'}${dialogueSuffixForNpc(npc)}${learned}`);
         return;
     }
     if (npc && (npc.hp ?? 80) <= 0) {
@@ -7420,19 +7542,20 @@ function interactVillageNpc(role) {
         npc.mood = 'annoyed';
         return;
     }
+    const learned = recipeLearningSuffix(learnRecipesFromTeacher(role));
     if (task.status === 'done') {
-        showToast(`${name}：${dialogue} 声誉 ${villageReputation(taskVillage).toFixed(1)}。${dialogueSuffixForNpc(npc)}`);
+        showToast(`${name}：${dialogue} 声誉 ${villageReputation(taskVillage).toFixed(1)}。${dialogueSuffixForNpc(npc)}${learned}`);
         return;
     }
     if (task.status === 'new') {
-        showToast(`${name}：${dialogue}${dialogueSuffixForNpc(npc)}`);
+        showToast(`${name}：${dialogue}${dialogueSuffixForNpc(npc)}${learned}`);
         return;
     }
     if (!hasItems(task.need)) {
-        showToast(`${name}：${dialogue} 任务还差：${missingItemsText(task.need)}。`);
+        showToast(`${name}：${dialogue} 任务还差：${missingItemsText(task.need)}。${learned}`);
         return;
     }
-    showToast(`${name}：${dialogue} 材料齐了，可提交任务。`);
+    showToast(`${name}：${dialogue} 材料齐了，可提交任务。${learned}`);
 }
 
 function readVillageNotice(board) {
@@ -8721,7 +8844,51 @@ function addInventoryItem(key, amount = 1) {
     if (amount <= 0) return true;
     if (!hasBackpackSpaceFor(key)) return false;
     state.inventory[key] = (state.inventory[key] || 0) + amount;
+    rememberItemDiscovery(key);
     return true;
+}
+
+function rememberItemDiscovery(key) {
+    state.discoveredMaterials ||= {};
+    state.knownRecipes ||= {};
+    state.discoveredMaterials[key] = true;
+    learnRecipeFromOutputItem(key);
+}
+
+function learnRecipeFromOutputItem(key) {
+    const learned = [];
+    RECIPES.forEach(item => {
+        if (recipeOutputKey(item) !== key && item.id !== key) return;
+        if (state.knownRecipes[item.id]) return;
+        state.knownRecipes[item.id] = true;
+        learned.push(item.name);
+    });
+    return learned;
+}
+
+function learnRecipesByIds(ids = []) {
+    state.knownRecipes ||= {};
+    const learned = [];
+    ids.forEach(id => {
+        const item = RECIPES.find(recipe => recipe.id === id);
+        if (!item || state.knownRecipes[id]) return;
+        state.knownRecipes[id] = true;
+        learned.push(item.name);
+    });
+    return learned;
+}
+
+function learnRecipesFromTeacher(role) {
+    if (!role) return [];
+    state.learnedRecipeTeachers ||= {};
+    if (state.learnedRecipeTeachers[role]) return [];
+    state.learnedRecipeTeachers[role] = true;
+    return learnRecipesByIds(TEACHER_RECIPE_IDS[role] || []);
+}
+
+function recipeLearningSuffix(names) {
+    if (!names?.length) return '';
+    return ` 学会配方：${names.slice(0, 3).join('、')}${names.length > 3 ? `等 ${names.length} 种` : ''}。`;
 }
 
 function discardInventoryItem(key, amount = 1) {
@@ -9148,8 +9315,23 @@ function canReceiveRecipeOutput(item) {
 }
 
 function recipeUnlocked(item) {
-    if (!item.unlock?.length) return true;
-    return item.unlock.every(key => (state.inventory[key] || 0) > 0 || isPlacedOrEquippedUnlock(key));
+    if (item.unlock?.length && !item.unlock.every(hasDiscoveredUnlock)) return false;
+    if (!item.learn) return true;
+    if (state.knownRecipes?.[item.id]) return true;
+    if (recipeDiscoveredFromOutput(item)) return true;
+    if (item.learn.materials?.length && item.learn.materials.every(hasDiscoveredUnlock)) return true;
+    if (item.learn.teachers?.some(role => state.learnedRecipeTeachers?.[role])) return true;
+    if (item.learn.note && state.foundRecipeNotes?.[item.learn.note]) return true;
+    return false;
+}
+
+function hasDiscoveredUnlock(key) {
+    return !!state.discoveredMaterials?.[key] || (state.inventory[key] || 0) > 0 || isPlacedOrEquippedUnlock(key);
+}
+
+function recipeDiscoveredFromOutput(item) {
+    const output = recipeOutputKey(item);
+    return (state.inventory[output] || 0) > 0 || (state.inventory[item.id] || 0) > 0 || item.owned(state);
 }
 
 function isPlacedOrEquippedUnlock(key) {
@@ -9160,9 +9342,19 @@ function isPlacedOrEquippedUnlock(key) {
 }
 
 function unlockRequirementText(item) {
-    if (!item.unlock?.length || recipeUnlocked(item)) return '';
-    const missing = item.unlock.filter(key => !(state.inventory[key] || 0) && !isPlacedOrEquippedUnlock(key));
-    return missing.length ? `需发现${missing.map(key => RESOURCE_LABELS[key] || key).join('、')}` : '';
+    if (recipeUnlocked(item)) return '';
+    if (item.unlock?.length) {
+        const missing = item.unlock.filter(key => !hasDiscoveredUnlock(key));
+        if (missing.length) return `需发现${missing.map(key => RESOURCE_LABELS[key] || key).join('、')}`;
+    }
+    const rule = item.learn;
+    if (!rule) return '';
+    const parts = [];
+    if (rule.materials?.length) parts.push(`发现${rule.materials.map(key => RESOURCE_LABELS[key] || key).join('、')}`);
+    if (rule.teachers?.length) parts.push(`请教${rule.teachers.map(npcName).join('或')}`);
+    if (rule.note) parts.push('找到配方笔记');
+    parts.push(`获得${item.name}成品`);
+    return `需${parts.join(' / ')}`;
 }
 
 function requiresCamp(item) {
@@ -9225,6 +9417,9 @@ function craft(id) {
     if (!canCraft(item)) return;
     Object.entries(item.cost).forEach(([key, amount]) => consumeItemAmount(key, amount));
     item.apply(state);
+    state.knownRecipes ||= {};
+    state.knownRecipes[item.id] = true;
+    rememberItemDiscovery(recipeOutputKey(item));
     showToast(`合成成功：${item.name}`);
     renderHud();
 }
@@ -9811,9 +10006,10 @@ function renderHud() {
         const row = document.createElement('div');
         row.className = 'inventory-row';
         row.classList.toggle('usable', canUseInventoryItem(key));
+        row.classList.toggle('selected-for-hotbar', state.selectedBackpackItem === key);
         row.classList.add('draggable');
         row.dataset.itemKey = key;
-        row.title = `${label} x${state.inventory[key] || 0}`;
+        row.title = `${label} x${state.inventory[key] || 0}。点击选择后，再点击快捷栏放入。`;
         row.appendChild(createPixelIconElement(key, 'inventory-icon'));
         const name = document.createElement('span');
         name.className = 'inventory-name';
@@ -9859,7 +10055,7 @@ function renderHud() {
             state.draggedInventoryItem = null;
             state.draggedHotbarSlot = null;
         });
-        if (canUseInventoryItem(key)) row.addEventListener('click', () => useInventoryItem(key));
+        row.addEventListener('click', () => selectBackpackItemForHotbar(key));
         inventory.appendChild(row);
     });
     for (let i = backpackKeys.length; i < BACKPACK_SLOT_LIMIT; i++) {
@@ -10200,6 +10396,10 @@ function renderHotbarDropZone() {
             assignHotbarItem(index, itemKey);
         });
         slot.addEventListener('click', () => {
+            if (state.selectedBackpackItem) {
+                assignHotbarItem(index, state.selectedBackpackItem);
+                return;
+            }
             state.selectedHotbar = index;
             renderHud();
         });
@@ -10262,7 +10462,20 @@ function assignHotbarItem(index, itemKey) {
     state.hotbarItems[index] = itemKey;
     selectHotbarSlot(index, false);
     state.draggedInventoryItem = null;
+    state.selectedBackpackItem = null;
     showToast(`${RESOURCE_LABELS[itemKey]} 已放到快捷栏 ${index + 1}。`);
+    renderHud();
+}
+
+function selectBackpackItemForHotbar(key) {
+    if (!key || (state.inventory[key] || 0) <= 0) return;
+    if (state.selectedBackpackItem === key) {
+        state.selectedBackpackItem = null;
+        showToast(`取消选择 ${RESOURCE_LABELS[key] || key}。`);
+    } else {
+        state.selectedBackpackItem = key;
+        showToast(`已选择 ${RESOURCE_LABELS[key] || key}，再点击下方快捷栏位置。`);
+    }
     renderHud();
 }
 
@@ -10287,6 +10500,7 @@ function moveHotbarItemToBackpack(index) {
 function clearHotbarItem(key) {
     if (!key) return;
     state.hotbarItems = (state.hotbarItems || []).map(item => item === key ? null : item);
+    if (state.selectedBackpackItem === key && (state.inventory[key] || 0) <= 0) state.selectedBackpackItem = null;
 }
 
 function isHotbarItem(key) {
@@ -10297,6 +10511,7 @@ function syncHotbarItems() {
     state.hotbarItems = (state.hotbarItems || Array(9).fill(null)).map(key => key && (state.inventory[key] || 0) > 0 ? key : null);
     while (state.hotbarItems.length < 9) state.hotbarItems.push(null);
     if (state.hotbarItems.length > 9) state.hotbarItems.length = 9;
+    if (state.selectedBackpackItem && (state.inventory[state.selectedBackpackItem] || 0) <= 0) state.selectedBackpackItem = null;
 }
 
 function selectedHotbarItem() {
@@ -10476,6 +10691,7 @@ function updateInventoryOverlay() {
 
 function toggleInventory(force = null) {
     state.inventoryOpen = force === null ? !state.inventoryOpen : !!force;
+    if (state.inventoryOpen) updateMobileInventoryScale();
     if (state.inventoryOpen) {
         mouse.down = false;
         state.player.rangedAim = null;
@@ -10489,6 +10705,11 @@ function toggleInventory(force = null) {
     }
     updateVillagerTradeButton();
     renderHud();
+}
+
+function updateMobileInventoryScale() {
+    const scale = Math.min(1, (window.innerWidth - 12) / 1260, (window.innerHeight - 12) / 820);
+    document.documentElement.style.setProperty('--mobile-inventory-scale', String(Math.max(0.28, scale)));
 }
 
 function canUseInventoryItem(key) {
@@ -17264,6 +17485,9 @@ function setupMobileControls() {
     if (!controls || !joystick || !thumb) return;
 
     document.body.classList.add('mobile-control-active');
+    updateMobileInventoryScale();
+    window.addEventListener('resize', updateMobileInventoryScale);
+    window.addEventListener('orientationchange', updateMobileInventoryScale);
     document.addEventListener('touchmove', event => {
         if (!document.body.classList.contains('mobile-control-active')) return;
         if (state.inventoryOpen) return;

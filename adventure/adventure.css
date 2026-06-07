@@ -410,6 +410,12 @@ h2 {
     background: rgba(255, 209, 102, 0.12);
 }
 
+.inventory-row.selected-for-hotbar {
+    border-color: rgba(255, 209, 102, 0.92);
+    background: rgba(255, 209, 102, 0.2);
+    box-shadow: inset 0 0 0 2px rgba(255, 209, 102, 0.22), 0 0 18px rgba(255, 209, 102, 0.16);
+}
+
 .inventory-row.usable .inventory-icon {
     background: rgba(255, 209, 102, 0.18);
 }
@@ -1067,123 +1073,20 @@ ol {
     }
 
     #inventory-overlay {
+        display: block;
         padding: 0;
         z-index: 80;
     }
 
     #inventory-window {
-        width: 100%;
-        height: 100dvh;
-        border: 0;
-        border-radius: 0;
-    }
-
-    #inventory-header {
-        min-height: 54px;
-        padding: 8px 10px;
-    }
-
-    #inventory-header h2 {
-        margin: 0;
-        font-size: 18px;
-    }
-
-    #inventory-header .eyebrow,
-    #inventory-header p {
-        display: none;
-    }
-
-    #inventory-layout {
-        grid-template-columns: 1fr;
-        height: calc(100% - 54px);
-        overflow: auto;
-        gap: 8px;
-        padding: 8px;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .inventory-section {
-        padding: 9px;
-        border-radius: 12px;
-    }
-
-    .inventory-section h3 {
-        margin-bottom: 7px;
-        font-size: 14px;
-    }
-
-    .inventory-hint {
-        display: none;
-    }
-
-    #inventory-main {
-        grid-template-columns: 76px minmax(0, 1fr);
-        gap: 8px;
-    }
-
-    #equipment-panel {
-        grid-template-columns: 1fr;
-        gap: 5px;
-        padding: 6px;
-    }
-
-    #equipment-panel h3 {
-        grid-column: 1 / -1;
-        font-size: 12px;
-        margin-bottom: 2px;
-    }
-
-    .equipment-slot {
-        min-height: 52px;
-        padding: 5px 2px;
-        border-width: 1px;
-        border-radius: 8px;
-    }
-
-    .equipment-icon {
-        width: 24px;
-        height: 24px;
-    }
-
-    #inventory,
-    .chest-grid {
-        grid-template-columns: repeat(9, minmax(28px, 1fr));
-        gap: 4px;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 1260px;
+        height: 820px;
+        max-width: none;
         max-height: none;
-        overflow: visible;
-    }
-
-    .inventory-row {
-        min-height: 52px;
-        grid-template-rows: 24px 11px 13px;
-        padding: 4px 2px 2px;
-        border-width: 1px;
-        border-radius: 7px;
-    }
-
-    .inventory-icon {
-        width: 26px;
-        height: 26px;
-    }
-
-    .inventory-name {
-        font-size: 8px;
-    }
-
-    #hotbar-drop-zone {
-        grid-template-columns: repeat(9, minmax(28px, 1fr));
-        gap: 4px;
-    }
-
-    .hotbar-drop-slot {
-        min-height: 44px;
-        padding: 10px 2px 2px;
-        border-width: 1px;
-    }
-
-    #trade-panel .chest-grid,
-    .inventory-section #recipes {
-        max-height: 45dvh;
-        overflow-y: auto;
+        transform: translate(-50%, -50%) scale(var(--mobile-inventory-scale, 0.5));
+        transform-origin: center center;
     }
 }
