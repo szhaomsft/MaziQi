@@ -52,7 +52,7 @@ const VILLAGER_HOSTILE_MONSTERS = new Set([
 ]);
 const keys = new Set();
 const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false, blocking: false };
-const touchInput = { moveX: 0, moveY: 0, interact: false, joystickPointerId: null };
+const touchInput = { moveX: 0, moveY: 0, interact: false, joystickPointerId: null, aimPointerId: null, aimStartedAt: 0, aimLongPressTimer: null, aiming: false, lastAimEndedAt: 0 };
 const camera = { x: 0, y: 0 };
 const terrainChunkCache = new Map();
 const vegetationSpriteCache = {
@@ -211,6 +211,11 @@ const RESOURCE_LABELS = {
     roastMeat: '烤肉',
     key: '废墟钥匙',
     copperCoin: '铜币',
+    recipeNoteBlacksmith: '锻造笔记',
+    recipeNoteApothecary: '药剂笔记',
+    recipeNoteGuard: '武备笔记',
+    recipeNoteElder: '古老笔记',
+    recipeNoteWorkbench: '工匠笔记',
 };
 
 const SIMPLE_WEAPON_DEFS = [
@@ -422,6 +427,11 @@ const RESOURCE_ICONS = {
     roastMeat: '🍖',
     key: '🗝',
     copperCoin: '◎',
+    recipeNoteBlacksmith: '▤',
+    recipeNoteApothecary: '▤',
+    recipeNoteGuard: '▤',
+    recipeNoteElder: '▤',
+    recipeNoteWorkbench: '▤',
 };
 Object.assign(RESOURCE_ICONS, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, {
     spear: '🔱',
@@ -457,6 +467,7 @@ const ITEM_ICON_TYPES = {
     sinewBow: 'bow', simpleArrow: 'arrow', poisonArrow: 'arrow', beeDart: 'dart', antlerSpear: 'spear', stoneCoreHammer: 'hammer', rabbitCloak: 'cloak', scorpionArmor: 'armor',
     antlerCharm: 'charm', waxTorch: 'torch', beehiveBox: 'honey', antlerHorn: 'horn', shadowLantern: 'shadow', stoneCoreTotem: 'stoneCore', reedMat: 'grass', chest: 'stationWorkbench', resinGlue: 'resin',
     mapleSnack: 'sap', honeyRoastMeat: 'meat', roastMeat: 'meat', key: 'key',
+    recipeNoteBlacksmith: 'stationWorkbench', recipeNoteApothecary: 'stationPotion', recipeNoteGuard: 'arrow', recipeNoteElder: 'charm', recipeNoteWorkbench: 'stationWorkbench',
 };
 Object.assign(ITEM_ICON_TYPES, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, weapon.icon])));
 const PIXEL_ICON_PALETTES = {
@@ -642,16 +653,16 @@ const RECIPE_LEARNING_RULES = {
     forge: { materials: ['ore', 'coal'], teachers: ['blacksmith'], note: 'blacksmith' },
     vineStoneHammer: { teachers: ['unemployed', 'blacksmith'], note: 'workbench' },
     torchClub: { materials: ['resin', 'coal'] },
-    bambooCrossbow: { materials: ['bamboo'], teachers: ['guard'], note: 'guard' },
+    bambooCrossbow: { materials: ['bamboo'], task: 'guard' },
     ropeSickle: { teachers: ['unemployed'], note: 'workbench' },
     resinHammer: { materials: ['resin'], note: 'blacksmith' },
     frogWhip: { materials: ['frogTongue'], note: 'apothecary' },
-    scorpionHook: { materials: ['scorpionShell', 'venom'], note: 'guard' },
+    scorpionHook: { materials: ['scorpionShell', 'venom'], task: 'guard' },
     shadowWoodBlade: { materials: ['shadowShard'], note: 'elder' },
     clawHookBlade: { materials: ['beastClaw'], note: 'guard' },
     pollenDartFan: { materials: ['pollenDust'], note: 'apothecary' },
-    crystalFangSpear: { materials: ['crystalFang'], note: 'blacksmith' },
-    boneShardMace: { materials: ['boneShard'], note: 'elder' },
+    crystalFangSpear: { materials: ['crystalFang'], task: 'blacksmith' },
+    boneShardMace: { materials: ['boneShard'], task: 'elder' },
     slingshot: { materials: ['lotus'], teachers: ['guard'] },
     bambooSpear: { materials: ['bamboo'], teachers: ['guard'] },
     sword: { materials: ['ore'], teachers: ['blacksmith'], note: 'blacksmith' },
@@ -660,16 +671,16 @@ const RECIPE_LEARNING_RULES = {
     salve: { materials: ['slimeGel'], teachers: ['apothecary'] },
     antidote: { materials: ['lotus'], teachers: ['apothecary'] },
     speedPotion: { materials: ['cactusFruit'], teachers: ['apothecary'], note: 'apothecary' },
-    regenPotion: { materials: ['lotus', 'slimeGel'], teachers: ['apothecary'], note: 'apothecary' },
+    regenPotion: { materials: ['lotus', 'slimeGel'], task: 'apothecary' },
     ironSkinPotion: { materials: ['mud', 'coal'], teachers: ['apothecary', 'guard'], note: 'guard' },
     honeySalve: { materials: ['honey'], teachers: ['apothecary'] },
     nightVisionPotion: { materials: ['batWing'], note: 'elder' },
     jumpPotion: { materials: ['frogLeg'], teachers: ['apothecary'] },
-    poisonResistPotion: { materials: ['scorpionShell'], teachers: ['apothecary'], note: 'apothecary' },
+    poisonResistPotion: { materials: ['scorpionShell'], task: 'apothecary' },
     shadowPotion: { materials: ['shadowShard'], note: 'elder' },
     poisonVial: { materials: ['toxicMushroom', 'venom'], teachers: ['apothecary'], note: 'apothecary' },
     strongBandage: { materials: ['honey'], teachers: ['apothecary'] },
-    ironArmor: { materials: ['ore'], teachers: ['blacksmith'], note: 'blacksmith' },
+    ironArmor: { materials: ['ore'], task: 'blacksmith' },
     campfire: { materials: ['coal'], teachers: ['kitchen'] },
     torch: { materials: ['coal'], teachers: ['guard'] },
     bedroll: { materials: ['hide'], teachers: ['unemployed'] },
@@ -678,42 +689,43 @@ const RECIPE_LEARNING_RULES = {
     bambooFence: { materials: ['bamboo'], teachers: ['unemployed'] },
     bambooTrap: { materials: ['bamboo', 'fang'], teachers: ['guard'], note: 'guard' },
     campFlag: { teachers: ['elder'] },
-    crystalBlade: { materials: ['crystal'], teachers: ['blacksmith'], note: 'elder' },
-    sinewBow: { materials: ['sinew'], teachers: ['guard'], note: 'guard' },
+    crystalBlade: { materials: ['crystal'], task: 'blacksmith' },
+    sinewBow: { materials: ['sinew'], task: 'guard' },
     simpleArrow: { materials: ['bamboo'], teachers: ['guard'] },
-    poisonArrow: { materials: ['venom'], teachers: ['guard', 'apothecary'], note: 'guard' },
+    poisonArrow: { materials: ['venom'], task: 'guard' },
     beeDart: { materials: ['beeStinger'], teachers: ['guard'] },
     antlerSpear: { materials: ['antler'], teachers: ['guard'], note: 'guard' },
-    stoneCoreHammer: { materials: ['stoneCore'], teachers: ['blacksmith'], note: 'blacksmith' },
+    stoneCoreHammer: { materials: ['stoneCore'], task: 'blacksmith' },
     venomDagger: { materials: ['fang', 'venom'], teachers: ['blacksmith'], note: 'guard' },
     woodShield: { materials: ['hide'], teachers: ['guard'] },
-    ironShield: { materials: ['ore'], teachers: ['blacksmith', 'guard'], note: 'blacksmith' },
-    crystalArmor: { materials: ['crystal'], teachers: ['blacksmith'], note: 'elder' },
+    ironShield: { materials: ['ore'], task: 'blacksmith' },
+    crystalArmor: { materials: ['crystal'], task: 'elder' },
     rabbitCloak: { materials: ['rabbitFur'], teachers: ['unemployed'] },
-    scorpionArmor: { materials: ['scorpionShell'], teachers: ['blacksmith'], note: 'blacksmith' },
+    scorpionArmor: { materials: ['scorpionShell'], task: 'blacksmith' },
     thickFurCoat: { materials: ['thickFur'], teachers: ['unemployed'] },
     reedShellArmor: { materials: ['reedShell'], teachers: ['unemployed'], note: 'workbench' },
-    mireCoreArmor: { materials: ['mireCore'], teachers: ['blacksmith'], note: 'elder' },
+    mireCoreArmor: { materials: ['mireCore'], task: 'elder' },
     antlerCharm: { materials: ['antler'], teachers: ['elder'], note: 'elder' },
     waxTorch: { materials: ['beeswax'], teachers: ['unemployed'] },
     beehiveBox: { materials: ['beeswax'], note: 'workbench' },
     antlerHorn: { materials: ['antler'], teachers: ['guard'] },
     shadowLantern: { materials: ['shadowShard'], note: 'elder' },
-    stoneCoreTotem: { materials: ['stoneCore'], teachers: ['elder'], note: 'elder' },
+    stoneCoreTotem: { materials: ['stoneCore'], task: 'elder' },
     reedMat: { materials: ['lotus'], teachers: ['unemployed'] },
     chest: { teachers: ['unemployed'] },
     resinGlue: { materials: ['resin'], teachers: ['blacksmith'] },
     mapleSnack: { materials: ['sap'], teachers: ['kitchen'] },
-    honeyRoastMeat: { materials: ['honey'], teachers: ['kitchen'] },
-    coalBomb: { materials: ['coal'], teachers: ['guard'], note: 'guard' },
+    honeyRoastMeat: { materials: ['honey'], task: 'kitchen' },
+    coalBomb: { materials: ['coal'], task: 'guard' },
     roastMeat: { materials: ['meat', 'coal'], teachers: ['kitchen'] },
-    key: { materials: ['crystal'], teachers: ['elder'], note: 'elder' },
+    key: { materials: ['crystal'], task: 'elder' },
 };
 RECIPES.forEach(item => {
     if (!STARTING_RECIPE_IDS.has(item.id)) item.learn = RECIPE_LEARNING_RULES[item.id] || null;
 });
 
 const TEACHER_RECIPE_IDS = Object.entries(RECIPE_LEARNING_RULES).reduce((acc, [id, rule]) => {
+    if (rule.task) return acc;
     (rule.teachers || []).forEach(role => {
         acc[role] ||= [];
         acc[role].push(id);
@@ -721,12 +733,27 @@ const TEACHER_RECIPE_IDS = Object.entries(RECIPE_LEARNING_RULES).reduce((acc, [i
     return acc;
 }, {});
 const NOTE_RECIPE_IDS = Object.entries(RECIPE_LEARNING_RULES).reduce((acc, [id, rule]) => {
+    if (rule.task) return acc;
     if (rule.note) {
         acc[rule.note] ||= [];
         acc[rule.note].push(id);
     }
     return acc;
 }, {});
+const TASK_RECIPE_IDS = Object.entries(RECIPE_LEARNING_RULES).reduce((acc, [id, rule]) => {
+    if (!rule.task) return acc;
+    acc[rule.task] ||= [];
+    acc[rule.task].push(id);
+    return acc;
+}, {});
+const RECIPE_NOTE_KEYS = {
+    blacksmith: 'recipeNoteBlacksmith',
+    apothecary: 'recipeNoteApothecary',
+    guard: 'recipeNoteGuard',
+    elder: 'recipeNoteElder',
+    workbench: 'recipeNoteWorkbench',
+};
+const RECIPE_NOTE_SOURCES = Object.fromEntries(Object.entries(RECIPE_NOTE_KEYS).map(([source, key]) => [key, source]));
 
 const COLORS = {
     outline: '#101820',
@@ -1160,6 +1187,7 @@ function createState() {
         discoveredMaterials: {},
         knownRecipes: {},
         learnedRecipeTeachers: {},
+        completedRecipeTasks: {},
         foundRecipeNotes: {},
         indoor: null,
         villageReputation: 2,
@@ -7143,25 +7171,31 @@ function randomContainerLoot(profile, building = null) {
     const local = villageLocalLootTable(building);
     const products = villageLocalProductTable(local.keys);
     const otherTables = {
-        villager: [['copperCoin', 1, 3], ['bandage', 1, 2], ['simpleArrow', 2, 6]],
-        small: [['pebble', 2, 6], ['simpleArrow', 2, 6], ['copperCoin', 0, 2]],
-        ore: [['coal', 1, 4], ['ore', 1, 4], ['stone', 2, 6], ['ironSkinPotion', 0, 1]],
-        herb: [['antidote', 0, 2], ['honeySalve', 0, 1], ['regenPotion', 0, 1]],
-        food: [['roastMeat', 1, 3], ['stew', 0, 2], ['honeyRoastMeat', 0, 1]],
-        guard: [['simpleArrow', 8, 16], ['bandage', 1, 3], ['stoneSpear', 0, 1], ['sinewBow', 0, 1]],
-        shop: [['copperCoin', 4, 10], ['bandage', 1, 3], ['potion', 0, 1], ['simpleArrow', 4, 10]],
-        basic: [['copperCoin', 0, 2], ['stone', 0, 3], ['fiber', 1, 4]],
-        elder: [['copperCoin', 2, 6], ['antlerCharm', 0, 1], ['speedPotion', 0, 1], ['bandage', 1, 3]],
+        villager: [['copperCoin', 1, 5], ['bandage', 1, 3], ['simpleArrow', 3, 9], ['torch', 0, 1], ['woodShield', 0, 1], ['clothArmor', 0, 1], ['potion', 0, 1]],
+        small: [['pebble', 2, 8], ['simpleArrow', 2, 8], ['copperCoin', 0, 3], ['fiber', 1, 5], ['berry', 0, 3], ['stoneSpear', 0, 1]],
+        ore: [['coal', 2, 6], ['ore', 2, 6], ['stone', 3, 9], ['ironwood', 0, 2], ['resinGlue', 0, 2], ['ironSkinPotion', 0, 1], ['ironShield', 0, 1], ['ironArmor', 0, 1], ['stoneCoreHammer', 0, 1]],
+        herb: [['herb', 2, 6], ['lotus', 0, 3], ['toxicMushroom', 0, 2], ['antidote', 0, 2], ['honeySalve', 0, 1], ['regenPotion', 0, 1], ['poisonVial', 0, 1], ['poisonResistPotion', 0, 1]],
+        food: [['meat', 1, 4], ['mushroom', 1, 4], ['berry', 2, 6], ['roastMeat', 1, 4], ['stew', 0, 2], ['mapleSnack', 0, 2], ['honeyRoastMeat', 0, 1]],
+        guard: [['simpleArrow', 10, 22], ['poisonArrow', 0, 8], ['beeDart', 0, 4], ['bandage', 1, 4], ['stoneSpear', 0, 2], ['bambooSpear', 0, 1], ['sinewBow', 0, 1], ['antlerSpear', 0, 1], ['woodShield', 0, 1], ['ironSkinPotion', 0, 1], ['coalBomb', 0, 1]],
+        shop: [['copperCoin', 4, 12], ['bandage', 1, 4], ['potion', 0, 2], ['simpleArrow', 4, 12], ['torch', 0, 2], ['slingshot', 0, 1], ['mapleSnack', 0, 2], ['antlerHorn', 0, 1]],
+        basic: [['copperCoin', 0, 3], ['stone', 0, 5], ['fiber', 2, 7], ['wood', 1, 5], ['pebble', 0, 6], ['clothArmor', 0, 1], ['stoneSpear', 0, 1]],
+        elder: [['copperCoin', 3, 8], ['crystal', 0, 2], ['antlerCharm', 0, 1], ['campCharm', 0, 1], ['speedPotion', 0, 1], ['nightVisionPotion', 0, 1], ['shadowLantern', 0, 1], ['bandage', 1, 3]],
     };
-    const table = [...local.table, ...products, ...(otherTables[profile] || otherTables.villager)];
+    const source = recipeNoteSourceForKind(building?.kind || '', profile);
+    const noteEntry = source && RECIPE_NOTE_KEYS[source] ? [[RECIPE_NOTE_KEYS[source], 0, 1]] : [];
+    const table = [...local.table, ...products, ...(otherTables[profile] || otherTables.villager), ...noteEntry];
     const loot = {};
-    const localPicks = profile === 'villager' || profile === 'small' || profile === 'basic' ? 4 : 3;
-    const otherPicks = profile === 'villager' || profile === 'small' ? 1 : 2;
+    const localPicks = profile === 'villager' || profile === 'small' || profile === 'basic' ? 5 : 4;
+    const otherPicks = profile === 'villager' || profile === 'small' ? 3 : 4;
     const localPool = [...local.table, ...products].sort(() => Math.random() - 0.5);
-    const otherPool = (otherTables[profile] || otherTables.villager).slice().sort(() => Math.random() - 0.5);
+    const otherPool = [...(otherTables[profile] || otherTables.villager), ...noteEntry].sort(() => Math.random() - 0.5);
     for (const [key, min, max] of [...localPool.slice(0, localPicks), ...otherPool.slice(0, otherPicks)]) {
         const amount = min + Math.floor(Math.random() * (max - min + 1));
         if (amount > 0) loot[key] = (loot[key] || 0) + amount;
+    }
+    if (source && RECIPE_NOTE_KEYS[source] && Math.random() < (profile === 'small' || profile === 'basic' ? 0.28 : 0.55)) {
+        const key = RECIPE_NOTE_KEYS[source];
+        loot[key] = Math.max(1, loot[key] || 0);
     }
     if (!Object.keys(loot).length) {
         const [key, min] = table.find(([, value]) => value > 0) || ['berry', 1];
@@ -7305,7 +7339,6 @@ function interactIndoor() {
 function stealFromIndoorContainer(object) {
     object.storage ||= { ...(object.loot || {}) };
     object.opened = true;
-    const learned = recipeLearningSuffix(learnRecipesFromVillageContainer(object));
     state.openChest = null;
     state.openIndoorContainer = {
         storage: object.storage,
@@ -7314,7 +7347,7 @@ function stealFromIndoorContainer(object) {
         label: object.label,
     };
     toggleInventory(true);
-    showToast(`打开${object.label}。拿走物品会降低村庄声誉。${learned}`);
+    showToast(`打开${object.label}。拿走物品会降低村庄声誉。里面可能藏有配方笔记。`);
 }
 
 function learnRecipesFromVillageContainer(object) {
@@ -7330,11 +7363,15 @@ function learnRecipesFromVillageContainer(object) {
 function recipeNoteSourceForObject(object) {
     const kind = state.indoor?.building?.kind || '';
     const mark = object.mark || '';
+    return recipeNoteSourceForKind(kind, mark);
+}
+
+function recipeNoteSourceForKind(kind = '', mark = '') {
     if (mark === 'guard' || kind === 'guard' || kind === 'guardFortress') return 'guard';
     if (mark === 'herb' || kind === 'apothecary' || kind === 'cultPriest' || kind === 'cultHerbalist' || kind === 'cultHealer') return 'apothecary';
     if (mark === 'elder' || kind === 'elder' || kind === 'basicElder') return 'elder';
     if (kind === 'blacksmith' || mark === 'ore') return 'blacksmith';
-    if (kind === 'unemployed' || kind === 'basicVillager') return 'workbench';
+    if (kind === 'unemployed' || kind === 'basicVillager' || mark === 'villager' || mark === 'small' || mark === 'basic') return 'workbench';
     return '';
 }
 
@@ -8886,6 +8923,14 @@ function learnRecipesFromTeacher(role) {
     return learnRecipesByIds(TEACHER_RECIPE_IDS[role] || []);
 }
 
+function learnRecipesFromTask(role) {
+    if (!role) return [];
+    state.completedRecipeTasks ||= {};
+    if (state.completedRecipeTasks[role]) return [];
+    state.completedRecipeTasks[role] = true;
+    return learnRecipesByIds(TASK_RECIPE_IDS[role] || []);
+}
+
 function recipeLearningSuffix(names) {
     if (!names?.length) return '';
     return ` 学会配方：${names.slice(0, 3).join('、')}${names.length > 3 ? `等 ${names.length} 种` : ''}。`;
@@ -8941,6 +8986,10 @@ function storeItemInChest(chest, key, amount = 1) {
 function takeItemFromChest(chest, key, amount = 1) {
     if ((chest.storage?.[key] || 0) <= 0) return;
     const moved = Math.min(amount, chest.storage[key]);
+    if (isRecipeNoteKey(key)) {
+        takeRecipeNoteFromChest(chest, key, moved);
+        return;
+    }
     if (!addInventoryItem(key, moved)) {
         showToast('背包已满，无法取出。');
         return;
@@ -8963,6 +9012,35 @@ function takeItemFromChest(chest, key, amount = 1) {
         }
     } else {
         showToast(`取出：${RESOURCE_LABELS[key] || key} x${moved}`);
+    }
+    renderHud();
+}
+
+function isRecipeNoteKey(key) {
+    return !!RECIPE_NOTE_SOURCES[key];
+}
+
+function takeRecipeNoteFromChest(chest, key, moved) {
+    chest.storage[key] -= moved;
+    if (chest.storage[key] <= 0) delete chest.storage[key];
+    const source = RECIPE_NOTE_SOURCES[key];
+    state.foundRecipeNotes ||= {};
+    state.foundRecipeNotes[source] = true;
+    const learned = recipeLearningSuffix(learnRecipesByIds(NOTE_RECIPE_IDS[source] || []));
+    if (chest.villageOwned && chest.ownerObject) {
+        chest.ownerObject.opened = true;
+        if (!chest.ownerObject.stolen) {
+            chest.ownerObject.stolen = true;
+            const village = state.indoor?.building?.village || state.village;
+            const reputation = changeVillageReputation(village, -1);
+            const npc = state.indoor?.objects.find(item => item.kind === 'npc');
+            if (npc) setVillagerPlayerAggro(npc);
+            showToast(`读走村民箱子里的${RESOURCE_LABELS[key]}，本村声誉 -1（当前 ${reputation.toFixed(1)}）。${learned}`);
+        } else {
+            showToast(`读走${RESOURCE_LABELS[key]}。${learned}`);
+        }
+    } else {
+        showToast(`读走${RESOURCE_LABELS[key]}。${learned}`);
     }
     renderHud();
 }
@@ -9319,6 +9397,7 @@ function recipeUnlocked(item) {
     if (!item.learn) return true;
     if (state.knownRecipes?.[item.id]) return true;
     if (recipeDiscoveredFromOutput(item)) return true;
+    if (item.learn.task) return !!state.completedRecipeTasks?.[item.learn.task] || (state.villageTaskCompletions?.[item.learn.task] || 0) > 0;
     if (item.learn.materials?.length && item.learn.materials.every(hasDiscoveredUnlock)) return true;
     if (item.learn.teachers?.some(role => state.learnedRecipeTeachers?.[role])) return true;
     if (item.learn.note && state.foundRecipeNotes?.[item.learn.note]) return true;
@@ -9349,6 +9428,7 @@ function unlockRequirementText(item) {
     }
     const rule = item.learn;
     if (!rule) return '';
+    if (rule.task) return `需完成${npcName(rule.task)}任务`;
     const parts = [];
     if (rule.materials?.length) parts.push(`发现${rule.materials.map(key => RESOURCE_LABELS[key] || key).join('、')}`);
     if (rule.teachers?.length) parts.push(`请教${rule.teachers.map(npcName).join('或')}`);
@@ -10330,10 +10410,11 @@ function handleVillagerTaskAction(npc) {
     }
     const completed = (state.villageTaskCompletions[npc.role] || 0) + 1;
     state.villageTaskCompletions[npc.role] = completed;
+    const learned = recipeLearningSuffix(learnRecipesFromTask(npc.role));
     state.activeVillageTaskRole = null;
     const reputation = changeVillageReputation(villageForTrader(npc), task.reputation);
     state.villageTasks[npc.role] = nextVillageTask(npc.role, completed) || { ...task, status: 'done' };
-    showToast(`${npc.label}：完成得很好。奖励 ${itemListText(task.reward)}，本村声誉 ${reputation.toFixed(1)}。之后还有新的事可以找我。`);
+    showToast(`${npc.label}：完成得很好。奖励 ${itemListText(task.reward)}，本村声誉 ${reputation.toFixed(1)}。${learned}之后还有新的事可以找我。`);
     renderHud();
 }
 
@@ -10708,7 +10789,10 @@ function toggleInventory(force = null) {
 }
 
 function updateMobileInventoryScale() {
-    const scale = Math.min(1, (window.innerWidth - 12) / 1260, (window.innerHeight - 12) / 820);
+    const rect = document.getElementById('canvas-wrap')?.getBoundingClientRect();
+    const width = rect?.width || window.innerWidth;
+    const height = rect?.height || window.innerHeight;
+    const scale = Math.min(1, (width - 36) / 1260, (height - 36) / 820);
     document.documentElement.style.setProperty('--mobile-inventory-scale', String(Math.max(0.28, scale)));
 }
 
@@ -10723,6 +10807,7 @@ function recipeHasKnownMaterial(recipe) {
 function recipeHasDiscoveryProgress(recipe) {
     return !!state.knownRecipes?.[recipe.id]
         || recipeDiscoveredFromOutput(recipe)
+        || !!(recipe.learn?.task && ((state.completedRecipeTasks?.[recipe.learn.task]) || (state.villageTaskCompletions?.[recipe.learn.task] || 0) > 0))
         || recipe.learn?.teachers?.some(role => state.learnedRecipeTeachers?.[role])
         || !!(recipe.learn?.note && state.foundRecipeNotes?.[recipe.learn.note]);
 }
@@ -17472,6 +17557,121 @@ function setMouseToFacing(distanceAhead = 150) {
     mouse.y = worldY(p.y + p.facing.y * distanceAhead);
 }
 
+function canvasPointFromClient(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const canvasRatio = canvas.width / canvas.height;
+    const rectRatio = rect.width / rect.height;
+    let drawWidth = rect.width;
+    let drawHeight = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+    if (rectRatio > canvasRatio) {
+        drawWidth = rect.height * canvasRatio;
+        offsetX = (rect.width - drawWidth) / 2;
+    } else if (rectRatio < canvasRatio) {
+        drawHeight = rect.width / canvasRatio;
+        offsetY = (rect.height - drawHeight) / 2;
+    }
+    return {
+        x: clamp((clientX - rect.left - offsetX) * (canvas.width / drawWidth), 0, canvas.width),
+        y: clamp((clientY - rect.top - offsetY) * (canvas.height / drawHeight), 0, canvas.height),
+    };
+}
+
+function setMouseFromClientPoint(clientX, clientY) {
+    const point = canvasPointFromClient(clientX, clientY);
+    mouse.x = point.x;
+    mouse.y = point.y;
+    const dir = currentAimDir();
+    state.player.facing = dir;
+    state.player.attackDir = dir;
+}
+
+function beginMobileAimGesture(event) {
+    if (state.inventoryOpen || state.win || state.lose) return;
+    event.preventDefault();
+    touchInput.aimPointerId = event.pointerId;
+    touchInput.aimStartedAt = performance.now();
+    touchInput.aiming = false;
+    setMouseFromClientPoint(event.clientX, event.clientY);
+    canvas.setPointerCapture(event.pointerId);
+    clearTimeout(touchInput.aimLongPressTimer);
+    touchInput.aimLongPressTimer = setTimeout(() => {
+        if (touchInput.aimPointerId !== event.pointerId || state.inventoryOpen) return;
+        touchInput.aiming = true;
+        startMobileAimedAttack(performance.now());
+    }, 260);
+}
+
+function updateMobileAimGesture(event) {
+    if (touchInput.aimPointerId !== event.pointerId) return;
+    event.preventDefault();
+    setMouseFromClientPoint(event.clientX, event.clientY);
+    if (state.player.rangedAim) state.player.attackDir = currentAimDir();
+}
+
+function endMobileAimGesture(event) {
+    if (touchInput.aimPointerId !== event.pointerId) return;
+    event.preventDefault();
+    setMouseFromClientPoint(event.clientX, event.clientY);
+    clearTimeout(touchInput.aimLongPressTimer);
+    touchInput.aimLongPressTimer = null;
+    const now = performance.now();
+    if (touchInput.aiming || state.player.throwableAim || state.player.rangedAim || state.player.meleeCharge) {
+        releaseMobileAimedAttack(now);
+    } else {
+        performMobileTapAttack(now);
+    }
+    touchInput.aimPointerId = null;
+    touchInput.aimStartedAt = 0;
+    touchInput.aiming = false;
+    touchInput.lastAimEndedAt = now;
+}
+
+function cancelMobileAimGesture(event = null) {
+    if (event && touchInput.aimPointerId !== event.pointerId) return;
+    clearTimeout(touchInput.aimLongPressTimer);
+    touchInput.aimLongPressTimer = null;
+    if (state.player.throwableAim) releaseThrowable();
+    if (state.player.rangedAim) releaseDirectRanged();
+    if (state.player.meleeCharge) releaseMeleeCharge();
+    mouse.down = false;
+    touchInput.aimPointerId = null;
+    touchInput.aimStartedAt = 0;
+    touchInput.aiming = false;
+    touchInput.lastAimEndedAt = performance.now();
+}
+
+function startMobileAimedAttack(now = performance.now()) {
+    const key = selectedHotbarItem();
+    if (isThrowableItem(key)) startThrowableAim(now);
+    else if (isDirectRangedItem(key)) startDirectRangedAim(now);
+    else if (isChargeMeleeItem(key)) startMeleeCharge(now);
+}
+
+function releaseMobileAimedAttack(now = performance.now()) {
+    if (state.player.throwableAim) releaseThrowable(now);
+    else if (state.player.rangedAim) releaseDirectRanged(now);
+    else if (state.player.meleeCharge) releaseMeleeCharge(now);
+    else performMobileTapAttack(now);
+    mouse.down = false;
+}
+
+function performMobileTapAttack(now = performance.now()) {
+    const key = selectedHotbarItem();
+    if (isThrowableItem(key)) {
+        startThrowableAim(now);
+        releaseThrowable(now + 1);
+    } else if (isDirectRangedItem(key)) {
+        startDirectRangedAim(now);
+        releaseDirectRanged(now + 1);
+    } else if (isChargeMeleeItem(key)) {
+        attack(now);
+    } else {
+        attack(now);
+    }
+}
+
 function triggerMobileInteractStart() {
     touchInput.interact = true;
     keys.add('e');
@@ -17541,13 +17741,14 @@ function setupMobileControls() {
             event.preventDefault();
             if (action === 'attack') {
                 setMouseToFacing();
-                if (isThrowableItem(selectedHotbarItem())) startThrowableAim();
-                else if (isDirectRangedItem(selectedHotbarItem())) startDirectRangedAim();
-                else if (isChargeMeleeItem(selectedHotbarItem())) startMeleeCharge();
-                else {
-                    mouse.down = true;
-                    attack();
-                }
+                touchInput.aimPointerId = event.pointerId;
+                touchInput.aiming = false;
+                clearTimeout(touchInput.aimLongPressTimer);
+                touchInput.aimLongPressTimer = setTimeout(() => {
+                    if (touchInput.aimPointerId !== event.pointerId) return;
+                    touchInput.aiming = true;
+                    startMobileAimedAttack();
+                }, 260);
             } else if (action === 'interact') {
                 triggerMobileInteractStart();
             } else if (action === 'block') {
@@ -17557,9 +17758,11 @@ function setupMobileControls() {
         button.addEventListener('pointerup', event => {
             event.preventDefault();
             if (action === 'attack') {
-                if (state.player.throwableAim) releaseThrowable();
-                if (state.player.rangedAim) releaseDirectRanged();
-                mouse.down = false;
+                clearTimeout(touchInput.aimLongPressTimer);
+                if (touchInput.aiming || state.player.throwableAim || state.player.rangedAim || state.player.meleeCharge) releaseMobileAimedAttack();
+                else performMobileTapAttack();
+                touchInput.aimPointerId = null;
+                touchInput.aiming = false;
             } else if (action === 'interact') {
                 triggerMobileInteractEnd();
             } else if (action === 'block') {
@@ -17568,9 +17771,7 @@ function setupMobileControls() {
         });
         button.addEventListener('pointercancel', () => {
             if (action === 'attack') {
-                if (state.player.throwableAim) releaseThrowable();
-                if (state.player.rangedAim) releaseDirectRanged();
-                mouse.down = false;
+                cancelMobileAimGesture();
             }
             if (action === 'interact') triggerMobileInteractEnd();
             if (action === 'block') mouse.blocking = false;
@@ -17581,12 +17782,28 @@ function setupMobileControls() {
             if (action === 'inventory') toggleInventory();
         });
     });
+    canvas.addEventListener('pointerdown', event => {
+        if (event.pointerType === 'mouse') return;
+        beginMobileAimGesture(event);
+    });
+    canvas.addEventListener('pointermove', event => {
+        if (event.pointerType === 'mouse') return;
+        updateMobileAimGesture(event);
+    });
+    canvas.addEventListener('pointerup', event => {
+        if (event.pointerType === 'mouse') return;
+        endMobileAimGesture(event);
+    });
+    canvas.addEventListener('pointercancel', event => {
+        if (event.pointerType === 'mouse') return;
+        cancelMobileAimGesture(event);
+    });
 }
 
 canvas.addEventListener('mousemove', event => {
-    const rect = canvas.getBoundingClientRect();
-    mouse.x = (event.clientX - rect.left) * (canvas.width / rect.width);
-    mouse.y = (event.clientY - rect.top) * (canvas.height / rect.height);
+    const point = canvasPointFromClient(event.clientX, event.clientY);
+    mouse.x = point.x;
+    mouse.y = point.y;
 });
 
 canvas.addEventListener('contextmenu', event => {
@@ -17594,6 +17811,7 @@ canvas.addEventListener('contextmenu', event => {
 });
 
 canvas.addEventListener('mousedown', event => {
+    if (performance.now() - (touchInput.lastAimEndedAt || 0) < 450) return;
     if (state.inventoryOpen) return;
     if (event.button === 2) {
         mouse.blocking = true;
@@ -17707,6 +17925,17 @@ function setupWildernessSettingsUi() {
     updateWildernessSettingLabels();
 }
 
+function toggleDesktopGameFullscreen(force = null) {
+    const enabled = force === null ? !document.body.classList.contains('game-fullscreen') : !!force;
+    document.body.classList.toggle('game-fullscreen', enabled);
+    const button = document.getElementById('sidebar-toggle-btn');
+    if (button) {
+        button.textContent = enabled ? '显示侧栏' : '全屏游戏';
+        button.setAttribute('aria-pressed', String(enabled));
+    }
+    updateMobileInventoryScale();
+}
+
 document.getElementById('restart-btn').addEventListener('click', () => {
     wildernessSettings.seedText = '';
     const seedInput = document.getElementById('setting-seed');
@@ -17715,6 +17944,7 @@ document.getElementById('restart-btn').addEventListener('click', () => {
 });
 
 document.getElementById('inventory-close-btn').addEventListener('click', () => toggleInventory(false));
+document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => toggleDesktopGameFullscreen());
 document.getElementById('villager-trade-btn')?.addEventListener('click', () => {
     if (state.pendingTrader) openVillagerTrade(state.pendingTrader);
 });

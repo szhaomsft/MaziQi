@@ -35,6 +35,7 @@
                 </div>
                 <div id="toast">靠近资源后长按 E 采集。</div>
                 <button id="villager-trade-btn" class="hidden" type="button">交易</button>
+                <button id="sidebar-toggle-btn" type="button" aria-pressed="false">全屏游戏</button>
                 <div id="mobile-controls" aria-hidden="true">
                     <div id="mobile-joystick" aria-label="移动摇杆">
                         <div id="mobile-joystick-thumb"></div>
@@ -46,6 +47,37 @@
                         <button type="button" data-mobile-action="use">使用</button>
                         <button type="button" data-mobile-action="attack" class="primary">攻击</button>
                     </div>
+                </div>
+                <div id="inventory-overlay" class="hidden" aria-hidden="true">
+                    <section id="inventory-window" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
+                        <header id="inventory-header">
+                            <div>
+                                <p class="eyebrow">背包 · 合成</p>
+                                <h2 id="inventory-title">物品栏</h2>
+                            </div>
+                            <button id="inventory-close-btn" type="button">关闭</button>
+                        </header>
+                        <div id="inventory-layout">
+                            <section class="inventory-section">
+                                <div id="inventory-main">
+                                    <aside id="equipment-panel" aria-label="装备栏"></aside>
+                                    <div id="backpack-panel">
+                                        <h3>已获得物品</h3>
+                                        <p class="inventory-hint">背包最多 27 格；点击物品后再点击快捷栏即可放入，也可拖拽或点丢弃。</p>
+                                        <div id="inventory-capacity"></div>
+                                        <div id="inventory"></div>
+                                    </div>
+                                </div>
+                                <div id="hotbar-drop-zone" aria-label="快捷栏槽位"></div>
+                                <div id="chest-storage" class="hidden" aria-label="木箱储物"></div>
+                                <div id="trade-panel" class="hidden" aria-label="村民交易"></div>
+                            </section>
+                            <section class="inventory-section">
+                                <h3>合成栏</h3>
+                                <div id="recipes"></div>
+                            </section>
+                        </div>
+                    </section>
                 </div>
             </div>
 
@@ -125,38 +157,6 @@
             </aside>
         </section>
     </main>
-
-    <div id="inventory-overlay" class="hidden" aria-hidden="true">
-        <section id="inventory-window" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
-            <header id="inventory-header">
-                <div>
-                    <p class="eyebrow">背包 · 合成</p>
-                    <h2 id="inventory-title">物品栏</h2>
-                </div>
-                <button id="inventory-close-btn" type="button">关闭</button>
-            </header>
-            <div id="inventory-layout">
-                <section class="inventory-section">
-                    <div id="inventory-main">
-                        <aside id="equipment-panel" aria-label="装备栏"></aside>
-                        <div id="backpack-panel">
-                            <h3>已获得物品</h3>
-                            <p class="inventory-hint">背包最多 27 格；点击物品后再点击快捷栏即可放入，也可拖拽或点丢弃。</p>
-                            <div id="inventory-capacity"></div>
-                            <div id="inventory"></div>
-                        </div>
-                    </div>
-                    <div id="hotbar-drop-zone" aria-label="快捷栏槽位"></div>
-                    <div id="chest-storage" class="hidden" aria-label="木箱储物"></div>
-                    <div id="trade-panel" class="hidden" aria-label="村民交易"></div>
-                </section>
-                <section class="inventory-section">
-                    <h3>合成栏</h3>
-                    <div id="recipes"></div>
-                </section>
-            </div>
-        </section>
-    </div>
 
     <script src="adventure.js"></script>
 </body>
