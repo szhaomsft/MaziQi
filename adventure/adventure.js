@@ -2976,6 +2976,17 @@ function updateIndoorNpcs(dt, now) {
     if (!state.indoor) return;
     updateVillageHostility();
     for (const npc of state.indoor.objects.filter(object => object.kind === 'npc' && !object.outside)) {
+        if (npc.homeBuilding && npc.homeBuilding !== state.indoor.building) {
+            removeFromInteriorObjects(npc);
+            npc.outside = true;
+            npc.returningHome = true;
+            if (npc.homeBuilding) {
+                npc.x = npc.homeBuilding.doorX;
+                npc.y = npc.homeBuilding.doorY + 46;
+            }
+            if (!state.outdoorVillagers.includes(npc)) state.outdoorVillagers.push(npc);
+            continue;
+        }
         if ((npc.hp ?? 80) <= 0) continue;
         updateVillagerStatusEffects(npc, dt, now);
         if ((npc.hp ?? 80) <= 0) continue;
@@ -3362,7 +3373,7 @@ function activeVillageTotem(npc = null) {
 }
 
 function removeFromInteriorObjects(entity) {
-    for (const building of state.village?.buildings || []) {
+    for (const building of allVillages().flatMap(village => village.buildings || [])) {
         if (!building.interiorObjects) continue;
         building.interiorObjects = building.interiorObjects.filter(object => object !== entity);
     }
@@ -6958,6 +6969,7 @@ function enterVillageHouse(building) {
         return;
     }
     building.interiorObjects ||= createIndoorObjects(building.kind, building);
+    sanitizeBuildingInteriorObjects(building);
     building.interiorObjects.forEach(object => {
         if (object.kind === 'npc') object.homeBuilding ||= building;
     });
@@ -6977,6 +6989,26 @@ function enterVillageHouse(building) {
     camera.x = 0;
     camera.y = 0;
     showToast(`进入${building.label}。靠近门按 E 离开。`);
+}
+
+function sanitizeBuildingInteriorObjects(building) {
+    if (!building?.interiorObjects) return;
+    building.interiorObjects = building.interiorObjects.filter(object => {
+        if (object.kind !== 'npc') return true;
+        if (!object.homeBuilding) {
+            object.homeBuilding = building;
+            return true;
+        }
+        if (object.homeBuilding === building) return true;
+        if (object.outside) return false;
+        if (!object.playerAggro) return false;
+        object.outside = true;
+        object.returningHome = true;
+        object.x = object.homeBuilding.doorX;
+        object.y = object.homeBuilding.doorY + 46;
+        if (!state.outdoorVillagers.includes(object)) state.outdoorVillagers.push(object);
+        return false;
+    });
 }
 
 function isVillageHouseLocked(building) {
