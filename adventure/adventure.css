@@ -560,10 +560,28 @@ body.game-fullscreen #game-canvas {
     background: rgba(255, 209, 102, 0.14);
 }
 
+.equipment-slot.equipped {
+    cursor: pointer;
+}
+
+.equipment-slot.equipped:hover {
+    border-color: rgba(255, 209, 102, 0.66);
+    background: rgba(255, 209, 102, 0.1);
+}
+
 .equipment-slot small {
     color: var(--muted);
     font-size: 11px;
     font-weight: 900;
+}
+
+.equipment-slot .equipment-durability {
+    color: #ffd166;
+    font-size: 10px;
+}
+
+.equipment-slot .equipment-durability.low {
+    color: #ff8f8f;
 }
 
 .equipment-slot span:not(.pixel-icon) {

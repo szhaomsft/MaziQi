@@ -17,6 +17,8 @@ const COVER_GRID_SIZE = 160;
 const ITEM_ICON_GRID = 12;
 const MAX_ENEMIES = 115;
 const MAX_NEARBY_ENEMIES = 20;
+const MAX_PLAYER_NEARBY_NORMAL_ENEMIES = 9;
+const MAX_VILLAGER_FOLLOWERS = 2;
 const DYNAMIC_SPAWN_MIN_DISTANCE = 560;
 const DYNAMIC_SPAWN_MAX_DISTANCE = 940;
 const ACTIVE_ENEMY_KEEP_DISTANCE = 1750;
@@ -111,11 +113,19 @@ const RESOURCE_LABELS = {
     flower: '野花',
     lotus: '莲花',
     cactusFruit: '仙人掌果',
+    carrot: '胡萝卜',
+    corn: '玉米',
+    tomato: '番茄',
+    repairKit: '木匠修理包',
+    jerky: '猎户肉干',
+    minerRation: '矿工干粮',
+    vegetableSoup: '蔬菜汤',
     resin: '树脂',
     sap: '树液',
     honey: '蜂蜜',
     beeStinger: '蜂刺',
     beeswax: '蜂蜡',
+    royalJelly: '蜂王浆',
     rabbitFur: '兔毛',
     rabbitFoot: '兔腿',
     antler: '鹿角',
@@ -147,6 +157,9 @@ const RESOURCE_LABELS = {
     stoneAxe: '石斧',
     stonePickaxe: '石镐',
     stoneSickle: '石镰',
+    ironAxe: '铁斧',
+    ironPickaxe: '铁镐',
+    ironSickle: '铁镰',
     stoneSpear: '石矛',
     slingshot: '弹弓',
     bambooSpear: '竹矛',
@@ -157,6 +170,8 @@ const RESOURCE_LABELS = {
     clothArmor: '布衣',
     ironArmor: '铁甲',
     crystalArmor: '魔晶甲',
+    minerLampHelmet: '矿灯头盔',
+    crystalLampHelmet: '晶灯头盔',
     woodShield: '木盾',
     ironShield: '铁盾',
     thickFurCoat: '厚毛皮衣',
@@ -171,6 +186,9 @@ const RESOURCE_LABELS = {
     snare: '捕兽夹',
     bambooFence: '竹栅栏',
     bambooTrap: '竹刺陷阱',
+    forestSnare: '林地绳套陷阱',
+    forestSpikeTrap: '林地尖木陷阱',
+    forestBellTrap: '林地响铃陷阱',
     potionTable: '药水台',
     workbench: '工作台',
     forge: '锻造台',
@@ -184,6 +202,7 @@ const RESOURCE_LABELS = {
     ironSkinPotion: '硬皮药水',
     bandage: '绷带',
     honeySalve: '蜂蜜药膏',
+    royalJellyPotion: '蜂王浆药剂',
     nightVisionPotion: '夜视药水',
     jumpPotion: '跳跃药水',
     poisonResistPotion: '毒抗药水',
@@ -241,10 +260,10 @@ const SIMPLE_WEAPON_DEFS = [
     { id: 'boneSpikedClub', name: '骨刺棍', desc: '横扫攻击，命中造成流血', cost: { wood: 3, fang: 1, fiber: 1 }, icon: 'club', profile: { damage: 3, range: 54, stamina: 12, cooldown: 0.42, arc: -0.05, style: 'slash', cleave: true, bleed: true } },
     { id: 'vineStoneHammer', name: '藤索石锤', desc: '慢速重击，砸地可短暂定身', cost: { wood: 2, stone: 4, fiber: 3 }, icon: 'hammer', station: 'workbench', unlock: ['workbench'], profile: { damage: 5, range: 52, stamina: 18, cooldown: 0.72, arc: 0.04, style: 'chop', cleave: true, root: 700 } },
     { id: 'shieldClub', name: '木盾短棍', desc: '攻防一体，命中后短暂稳住身形', cost: { wood: 5, fiber: 2 }, icon: 'shield', profile: { damage: 2, range: 45, stamina: 9, cooldown: 0.34, arc: 0.05, style: 'club', guard: true, knock: 0.8 } },
-    { id: 'twinStoneDagger', name: '双石匕首', desc: '双连击，贴身快速爆发', cost: { stone: 3, fiber: 2 }, icon: 'dagger', profile: { damage: 2, range: 38, stamina: 8, cooldown: 0.22, arc: 0.02, style: 'stab', multiStrike: 2 } },
-    { id: 'bambooThrowingKnife', name: '竹片飞刀', desc: '轻快近战，短按连削并附带飞刀残影', cost: { bamboo: 2, fiber: 1 }, icon: 'dagger', profile: { damage: 2, range: 50, stamina: 9, cooldown: 0.28, arc: 0.08, style: 'stab', dart: true } },
+    { id: 'twinStoneDagger', name: '双石匕首', desc: '双连击，贴身快速爆发', cost: { stone: 3, fiber: 2 }, icon: 'dagger', profile: { damage: 2, range: 40, stamina: 6, cooldown: 0.18, arc: 0.02, style: 'stab', multiStrike: 2, dagger: true, bleed: true } },
+    { id: 'bambooThrowingKnife', name: '竹片飞刀', desc: '轻快近战，短按连削并附带飞刀残影', cost: { bamboo: 2, fiber: 1 }, icon: 'dagger', profile: { damage: 2, range: 52, stamina: 7, cooldown: 0.22, arc: 0.08, style: 'stab', dart: true, dagger: true } },
     { id: 'torchClub', name: '火把棍', desc: '近战点燃敌人，夜晚伤害更高', cost: { wood: 2, resin: 1, coal: 1 }, icon: 'torch', unlock: ['resin', 'coal'], profile: { damage: 3, range: 48, stamina: 11, cooldown: 0.38, arc: 0.08, style: 'club', burn: true, nightBonus: 1 } },
-    { id: 'toxicKnife', name: '毒刺短刀', desc: '快速攻击，命中叠毒', cost: { stone: 2, toxicMushroom: 1, fiber: 1 }, icon: 'dagger', profile: { damage: 2, range: 36, stamina: 8, cooldown: 0.24, arc: 0.04, style: 'stab', poison: true } },
+    { id: 'toxicKnife', name: '毒刺短刀', desc: '快速攻击，命中叠毒', cost: { stone: 2, toxicMushroom: 1, fiber: 1 }, icon: 'dagger', profile: { damage: 2, range: 38, stamina: 6, cooldown: 0.18, arc: 0.04, style: 'stab', poison: true, dagger: true } },
     { id: 'beeNeedleSpear', name: '蜂刺针矛', desc: '高频刺击，小概率麻痹', cost: { wood: 2, beeStinger: 1, fiber: 1 }, icon: 'spear', profile: { damage: 3, range: 86, stamina: 10, cooldown: 0.3, arc: 0.3, style: 'thrust', stunChance: 0.28 } },
     { id: 'antlerFork', name: '鹿角叉', desc: '扇形戳刺，适合打多个敌人', cost: { wood: 2, antler: 1, fiber: 1 }, icon: 'spear', profile: { damage: 4, range: 82, stamina: 13, cooldown: 0.44, arc: -0.02, style: 'slash', maxHits: 3 } },
     { id: 'sling', name: '投石带', desc: '消耗小石子，蓄力越久越远', cost: { fiber: 4, hide: 1 }, icon: 'bow', ranged: true, profile: { damage: 2, range: 390, stamina: 11, cooldown: 0.78, arc: 0.18, style: 'thrust', rangedKind: 'slingStone' } },
@@ -252,7 +271,7 @@ const SIMPLE_WEAPON_DEFS = [
     { id: 'ropeSickle', name: '绳镰', desc: '拉拽敌人，绕身攻击', cost: { stoneSickle: 1, fiber: 4 }, icon: 'sickle', station: 'workbench', unlock: ['stoneSickle'], profile: { damage: 3, range: 118, stamina: 13, cooldown: 0.46, arc: -0.08, style: 'rope', pull: true } },
     { id: 'nailClub', name: '木钉棒', desc: '普通挥击，概率眩晕', cost: { wood: 3, stone: 2 }, icon: 'club', profile: { damage: 3, range: 48, stamina: 12, cooldown: 0.4, arc: 0.04, style: 'club', stunChance: 0.35 } },
     { id: 'resinHammer', name: '树脂粘锤', desc: '命中减速，蓄力感强的黏击', cost: { wood: 3, resin: 2, stone: 2 }, icon: 'hammer', station: 'workbench', unlock: ['resin'], profile: { damage: 4, range: 50, stamina: 15, cooldown: 0.58, arc: 0.05, style: 'chop', root: 1100 } },
-    { id: 'frogWhip', name: '蛙舌鞭', desc: '长距离鞭打，可打断冲锋', cost: { frogTongue: 1, fiber: 3, wood: 1 }, icon: 'whip', station: 'workbench', unlock: ['frogTongue'], profile: { damage: 2, range: 116, stamina: 12, cooldown: 0.42, arc: -0.03, style: 'slash', interrupt: true } },
+    { id: 'frogWhip', name: '蛙舌鞭', desc: '长距离鞭打，可打断冲锋', cost: { frogTongue: 1, fiber: 3, wood: 1 }, icon: 'whip', station: 'workbench', unlock: ['frogTongue'], profile: { damage: 2, range: 116, stamina: 12, cooldown: 0.42, arc: -0.03, style: 'slash', interrupt: true, whip: true } },
     { id: 'scorpionHook', name: '蝎尾钩', desc: '钩击加毒伤，可把小怪拉近', cost: { scorpionShell: 1, venom: 1, wood: 2 }, icon: 'sickle', station: 'forge', unlock: ['scorpionShell', 'venom'], profile: { damage: 4, range: 88, stamina: 14, cooldown: 0.46, arc: 0.12, style: 'thrust', poison: true, pull: true } },
     { id: 'shadowWoodBlade', name: '影木刃', desc: '短距离瞬斩，夜晚有额外残影', cost: { wood: 2, shadowShard: 1, fiber: 1 }, icon: 'blade', station: 'forge', unlock: ['shadowShard'], profile: { damage: 4, range: 58, stamina: 13, cooldown: 0.34, arc: 0.02, style: 'slash', cleave: true, nightBonus: 2, shadow: true } },
     { id: 'clawHookBlade', name: '兽爪钩刃', desc: '突进钩斩，可拉近敌人', cost: { beastClaw: 2, wood: 2, fiber: 2 }, icon: 'blade', station: 'workbench', unlock: ['beastClaw'], profile: { damage: 4, range: 72, stamina: 13, cooldown: 0.38, arc: 0.08, style: 'slash', pull: true, knock: 1.15 } },
@@ -268,7 +287,7 @@ const SIMPLE_WEAPON_DEFS = [
     { id: 'cypressMudSaber', name: '沼柏泥刃', desc: '沼柏木加泥沼材料，命中附带迟缓', cost: { cypressWood: 3, mud: 2, reedShell: 1 }, icon: 'blade', station: 'workbench', unlock: ['cypressWood', 'reedShell'], profile: { damage: 4, range: 62, stamina: 13, cooldown: 0.38, arc: 0.05, style: 'slash', root: 950 } },
     { id: 'blossomwoodWand', name: '花冠木杖', desc: '花冠木与花粉尘制成，轻击会减速敌人', cost: { blossomWood: 3, pollenDust: 2, flower: 2 }, icon: 'hammer', station: 'workbench', unlock: ['blossomWood', 'pollenDust'], ranged: true, profile: { damage: 3, range: 430, stamina: 12, cooldown: 0.58, arc: 0.2, style: 'thrust', rangedKind: 'pollenBolt', root: 800 } },
     { id: 'vineWrappedSpear', name: '藤缠短矛', desc: '藤蔓缠住矛头，刺击会短暂减速', cost: { stoneSpear: 1, vine: 3, jungleLeaf: 2 }, icon: 'spear', station: 'workbench', unlock: ['vine', 'jungleLeaf'], profile: { damage: 4, range: 94, stamina: 13, cooldown: 0.44, arc: 0.3, style: 'thrust', root: 650 } },
-    { id: 'poisonVineWhip', name: '毒藤长鞭', desc: '长距离甩击，低直伤但叠毒和减速', cost: { vine: 6, toxicMushroom: 2, venom: 1, fiber: 3 }, icon: 'whip', station: 'workbench', unlock: ['vine', 'toxicMushroom'], profile: { damage: 3, range: 132, stamina: 15, cooldown: 0.48, arc: -0.02, style: 'slash', poison: true, root: 900, interrupt: true } },
+    { id: 'poisonVineWhip', name: '毒藤长鞭', desc: '长距离甩击，低直伤但叠毒和减速', cost: { vine: 6, toxicMushroom: 2, venom: 1, fiber: 3 }, icon: 'whip', station: 'workbench', unlock: ['vine', 'toxicMushroom'], profile: { damage: 3, range: 132, stamina: 15, cooldown: 0.48, arc: -0.02, style: 'slash', poison: true, root: 900, interrupt: true, whip: true } },
     { id: 'jungleMachete', name: '丛林砍刀', desc: '硬木砍刀，适合开路和横扫藤蔓怪', cost: { hardwood: 3, vine: 2, ore: 2 }, icon: 'blade', station: 'forge', unlock: ['hardwood', 'vine'], profile: { damage: 5, range: 66, stamina: 14, cooldown: 0.4, arc: 0.02, style: 'slash', cleave: true, interrupt: true } },
     { id: 'vineBambooCrossbow', name: '竹藤弩', desc: '竹藤复合弩，装填比竹弩快但伤害略低', cost: { bamboo: 4, vine: 3, hardwood: 2, simpleArrow: 4 }, icon: 'bow', station: 'workbench', unlock: ['bamboo', 'vine', 'simpleArrow'], ranged: true, profile: { damage: 4, range: 500, stamina: 16, cooldown: 0.9, arc: 0.18, style: 'thrust', rangedKind: 'vineBolt', maxHits: 2 } },
     { id: 'poisonVineBlowpipe', name: '毒藤吹管', desc: '低直伤的毒针远程武器，适合安全上毒', cost: { bamboo: 3, vine: 2, venom: 1 }, icon: 'bow', station: 'workbench', unlock: ['bamboo', 'vine', 'venom'], ranged: true, profile: { damage: 2, range: 440, stamina: 9, cooldown: 0.42, arc: 0.18, style: 'thrust', rangedKind: 'vineDart' } },
@@ -327,6 +346,28 @@ const VILLAGER_TRADES = {
         { give: { copperCoin: 12 }, receive: { bedroll: 1 }, minRep: 2 },
         { give: { copperCoin: 14 }, receive: { shadowLantern: 1 }, minRep: 4 },
     ],
+    carpenter: [
+        { give: { copperCoin: 3 }, receive: { bambooFence: 2 }, minRep: -2 },
+        { give: { wood: 6, fiber: 2 }, receive: { workbench: 1 }, minRep: 0 },
+        { give: { buttressWood: 2, resin: 1 }, receive: { buttressPlate: 1 }, minRep: 2 },
+    ],
+    hunter: [
+        { give: { copperCoin: 3 }, receive: { simpleArrow: 10 }, minRep: -2 },
+        { give: { hide: 2, fiber: 2 }, receive: { sinewBow: 1 }, minRep: 1 },
+        { give: { beeStinger: 2 }, receive: { beeDart: 4 }, minRep: 1 },
+    ],
+    miner: [
+        { give: { copperCoin: 4 }, receive: { coal: 4 }, minRep: -2 },
+        { give: { copperCoin: 6 }, receive: { ore: 4 }, minRep: 0 },
+        { give: { crystal: 1, coal: 2 }, receive: { ironPickaxe: 1 }, minRep: 3 },
+    ],
+    farmer: [
+        { give: { copperCoin: 2 }, receive: { berry: 5 }, minRep: -3 },
+        { give: { copperCoin: 3 }, receive: { carrot: 4, tomato: 3 }, minRep: -2 },
+        { give: { copperCoin: 4 }, receive: { corn: 5 }, minRep: -1 },
+        { give: { honey: 1 }, receive: { roastMeat: 2 }, minRep: 0 },
+        { give: { flower: 4 }, receive: { herb: 4 }, minRep: 1 },
+    ],
 };
 
 const RESOURCE_ICONS = {
@@ -358,11 +399,19 @@ const RESOURCE_ICONS = {
     flower: '🌼',
     lotus: '🪷',
     cactusFruit: '🌵',
+    carrot: '▸',
+    corn: '▥',
+    tomato: '●',
+    repairKit: '▤',
+    jerky: '▰',
+    minerRation: '▣',
+    vegetableSoup: '◉',
     resin: '▣',
     sap: '◈',
     honey: '▥',
     beeStinger: '˄',
     beeswax: '▰',
+    royalJelly: '✹',
     rabbitFur: '▱',
     rabbitFoot: '⌙',
     antler: '⌯',
@@ -387,6 +436,9 @@ const RESOURCE_ICONS = {
     stoneAxe: '🪓',
     stonePickaxe: '⛏',
     stoneSickle: '⌒',
+    ironAxe: '🪓',
+    ironPickaxe: '⛏',
+    ironSickle: '☾',
     stoneSpear: '🔱',
     slingshot: '⌒',
     bambooSpear: '🎋',
@@ -397,6 +449,8 @@ const RESOURCE_ICONS = {
     clothArmor: '▱',
     ironArmor: '🛡',
     crystalArmor: '💠',
+    minerLampHelmet: '◉',
+    crystalLampHelmet: '◉',
     woodShield: '◧',
     ironShield: '◨',
     thickFurCoat: '▰',
@@ -424,6 +478,7 @@ const RESOURCE_ICONS = {
     ironSkinPotion: '◆',
     bandage: '▭',
     honeySalve: '▣',
+    royalJellyPotion: '✹',
     nightVisionPotion: '◐',
     jumpPotion: '↟',
     poisonResistPotion: '◍',
@@ -485,19 +540,19 @@ const BACKPACK_SLOT_LIMIT = BACKPACK_COLUMNS * BACKPACK_ROWS;
 const CHEST_SLOT_LIMIT = 27;
 const ITEM_ICON_TYPES = {
     wood: 'wood', oakWood: 'oakWood', blossomWood: 'blossomWood', birchWood: 'birchWood', pineWood: 'pineWood', mapleWood: 'mapleWood', deadWood: 'deadWood', darkWood: 'darkWood', cypressWood: 'cypressWood', willowWood: 'willowWood', ironwood: 'ironwood', elderWood: 'elderWood', buttressWood: 'buttressWood', bamboo: 'bamboo', bambooShard: 'bamboo', jungleLeaf: 'jungleLeaf', vine: 'vine', jungleFruit: 'jungleFruit', hardwood: 'wood', stone: 'stone', pebble: 'stone', ore: 'ore', coal: 'coal', crystal: 'crystal', mud: 'mud',
-    resin: 'resin', sap: 'sap', honey: 'honey', beeStinger: 'fang', beeswax: 'honey', rabbitFur: 'hide', rabbitFoot: 'meat', antler: 'fang', sinew: 'fiber',
+    resin: 'resin', sap: 'sap', honey: 'honey', beeStinger: 'beeStinger', beeswax: 'beeswax', royalJelly: 'royalJelly', rabbitFur: 'hide', rabbitFoot: 'meat', antler: 'fang', sinew: 'fiber',
     frogLeg: 'meat', frogTongue: 'venom', scorpionShell: 'armor', batWing: 'wing', stoneCore: 'stoneCore', shadowShard: 'shadow', shadowEssence: 'shadow', toxicMushroom: 'toxicMushroom',
-    fiber: 'grass', herb: 'herb', flower: 'flower', berry: 'berry', mushroom: 'mushroom', lotus: 'lotus', cactusFruit: 'cactus',
+    fiber: 'grass', herb: 'herb', flower: 'flower', berry: 'berry', mushroom: 'mushroom', lotus: 'lotus', cactusFruit: 'cactus', carrot: 'carrot', corn: 'corn', tomato: 'tomato', repairKit: 'repairKit', jerky: 'jerky', minerRation: 'minerRation', vegetableSoup: 'vegetableSoup',
     hide: 'hide', meat: 'meat', slimeGel: 'gel', fang: 'fang', venom: 'venom', beastClaw: 'claw', pollenDust: 'pollenDust', thickFur: 'thickFur', reedShell: 'reedShell', mireCore: 'mireCore', crystalFang: 'crystalFang', boneShard: 'boneShard',
-    stoneAxe: 'axe', stonePickaxe: 'pickaxe', stoneSickle: 'sickle', stoneSpear: 'spear', slingshot: 'bow', bambooSpear: 'spear', ironSword: 'sword', crystalBlade: 'blade', venomDagger: 'dagger',
-    leatherArmor: 'armor', clothArmor: 'cloak', ironArmor: 'armor', crystalArmor: 'armor', thickFurCoat: 'cloak', reedShellArmor: 'armor', mireCoreArmor: 'armorPotion', woodShield: 'shield', ironShield: 'shield',
-    coalBomb: 'bomb', poisonVial: 'toxicMushroom', campfire: 'torch', torch: 'torch', bedroll: 'bedroll', campCharm: 'charm', snare: 'trap', bambooFence: 'fence', bambooTrap: 'trap',
+    stoneAxe: 'axe', stonePickaxe: 'pickaxe', stoneSickle: 'sickle', ironAxe: 'axe', ironPickaxe: 'pickaxe', ironSickle: 'sickle', stoneSpear: 'spear', slingshot: 'bow', bambooSpear: 'spear', ironSword: 'sword', crystalBlade: 'blade', venomDagger: 'dagger',
+    leatherArmor: 'armor', clothArmor: 'cloak', ironArmor: 'armor', crystalArmor: 'armor', minerLampHelmet: 'minerLampHelmet', crystalLampHelmet: 'crystalLampHelmet', thickFurCoat: 'cloak', reedShellArmor: 'armor', mireCoreArmor: 'armorPotion', woodShield: 'shield', ironShield: 'shield',
+    coalBomb: 'bomb', poisonVial: 'poisonVial', campfire: 'campfire', torch: 'torch', bedroll: 'bedroll', campCharm: 'charm', snare: 'trap', bambooFence: 'fence', bambooTrap: 'trap',
     potionTable: 'stationPotion', workbench: 'stationWorkbench', forge: 'stationForge', campFlag: 'flag',
     potion: 'potion', stew: 'stew', salve: 'salve', antidote: 'antidote', speedPotion: 'speed', regenPotion: 'potion', ironSkinPotion: 'armorPotion',
-    honeySalve: 'salve', nightVisionPotion: 'potion', jumpPotion: 'speed', poisonResistPotion: 'antidote', shadowPotion: 'shadow', bandage: 'bandage', strongBandage: 'bandage',
+    honeySalve: 'salve', royalJellyPotion: 'royalJellyPotion', nightVisionPotion: 'potion', jumpPotion: 'speed', poisonResistPotion: 'antidote', shadowPotion: 'shadow', bandage: 'bandage', strongBandage: 'bandage',
     sinewBow: 'bow', simpleArrow: 'arrow', poisonArrow: 'arrow', beeDart: 'dart', antlerSpear: 'spear', stoneCoreHammer: 'hammer', rabbitCloak: 'cloak', scorpionArmor: 'armor',
-    antlerCharm: 'charm', waxTorch: 'torch', beehiveBox: 'honey', antlerHorn: 'horn', shadowLantern: 'shadow', stoneCoreTotem: 'stoneCore', reedMat: 'grass', chest: 'stationWorkbench', resinGlue: 'resin',
-    vineRope: 'vine', toxicVineGlue: 'toxicMushroom', buttressPlate: 'buttressWood', vineRoundShield: 'shield', buttressShield: 'shield', jungleLeafCloak: 'cloak', buttressArmor: 'armor', toxicMask: 'toxicMushroom', parasiticVineArmor: 'armorPotion',
+    antlerCharm: 'charm', waxTorch: 'waxTorch', beehiveBox: 'beehiveBox', antlerHorn: 'horn', shadowLantern: 'shadow', stoneCoreTotem: 'stoneCore', reedMat: 'grass', chest: 'stationWorkbench', resinGlue: 'resin',
+    vineRope: 'vine', toxicVineGlue: 'toxicVineGlue', buttressPlate: 'buttressWood', vineRoundShield: 'shield', buttressShield: 'shield', jungleLeafCloak: 'cloak', buttressArmor: 'armor', toxicMask: 'toxicMask', parasiticVineArmor: 'armorPotion',
     vineNetTrap: 'trap', toxicVineSnare: 'trap', poisonBambooTrap: 'trap', jungleSalve: 'salve', vineStaminaDrink: 'speed', poisonLeafWrap: 'antidote', jungleTotem: 'jungleLeaf',
     mapleSnack: 'sap', honeyRoastMeat: 'meat', roastMeat: 'meat', key: 'key',
     recipeNoteBlacksmith: 'stationWorkbench', recipeNoteApothecary: 'stationPotion', recipeNoteGuard: 'arrow', recipeNoteElder: 'charm', recipeNoteWorkbench: 'stationWorkbench',
@@ -507,22 +562,22 @@ const PIXEL_ICON_PALETTES = {
     wood: ['#5a341d', '#9a6436', '#d49a5a'], oakWood: ['#4f2d16', '#8a5a32', '#d6a85b'], blossomWood: ['#6b3b1f', '#b87462', '#ffd6ec'], birchWood: ['#2d2a25', '#f1ead3', '#fff8d8'], pineWood: ['#3b2417', '#5a341d', '#d0a85f'], mapleWood: ['#5a2f1c', '#b85a2a', '#d8a041'], deadWood: ['#2d2117', '#5a4632', '#7a6040'], darkWood: ['#151f16', '#342819', '#5c3f82'], cypressWood: ['#1f2d1d', '#46351f', '#6f8750'], willowWood: ['#2d2a1d', '#5b4a2d', '#c6e07b'], ironwood: ['#1f2428', '#3f3f3f', '#b77dff'], elderWood: ['#2f3945', '#4a4036', '#d7bcff'], buttressWood: ['#2a1a10', '#7a4a2a', '#c18a52'], bamboo: ['#1f5f34', '#70bf55', '#d7f28a'], jungleLeaf: ['#0f3d28', '#2fa35a', '#8cff66'], vine: ['#173b24', '#5fae49', '#cde77b'], jungleFruit: ['#1f5f34', '#ff7a3d', '#ffd166'], stone: ['#48515a', '#8c98a4', '#d8e5f2'],
     ore: ['#48515a', '#7dcbe8', '#e8fbff'], coal: ['#121820', '#303946', '#7b8794'], crystal: ['#512b9a', '#b77dff', '#f2ddff'],
     mud: ['#3b2a1b', '#6d5438', '#a38350'], grass: ['#1f5f34', '#5fbf55', '#cde77b'], herb: ['#17613a', '#69e08e', '#d5ffd8'],
-    resin: ['#5a341d', '#ffb84d', '#fff0a8'], sap: ['#5a2f1c', '#d68a43', '#ffd166'], honey: ['#8a5a12', '#ffd166', '#fff3b0'],
+    resin: ['#5a341d', '#ffb84d', '#fff0a8'], sap: ['#5a2f1c', '#d68a43', '#ffd166'], honey: ['#8a5a12', '#ffd166', '#fff3b0'], beeswax: ['#8a5a12', '#d99a43', '#fff0a8'], royalJelly: ['#6b3b1f', '#fff0a8', '#ffffff'], royalJellyPotion: ['#6b3b1f', '#fff0a8', '#ffffff'], beeStinger: ['#2d2117', '#ffd166', '#fff3b0'],
     claw: ['#3d2a1d', '#c99a62', '#fff3d0'], pollenDust: ['#8a5a12', '#ffd166', '#fff3b0'], thickFur: ['#4f321d', '#b98f68', '#ead8bd'], reedShell: ['#2f4b3a', '#6f8750', '#d7f28a'], mireCore: ['#263f34', '#6d5438', '#8cff66'], crystalFang: ['#512b9a', '#b77dff', '#ffffff'], boneShard: ['#5a5146', '#d8d0bd', '#fff3d0'],
-    shadow: ['#171326', '#6f4cc2', '#d8c4ff'], toxicMushroom: ['#241330', '#8cff66', '#d94bff'],
+    shadow: ['#171326', '#6f4cc2', '#d8c4ff'], toxicMushroom: ['#241330', '#8cff66', '#d94bff'], poisonVial: ['#18331f', '#8cff66', '#d94bff'], toxicVineGlue: ['#173b24', '#5fae49', '#d94bff'], toxicMask: ['#241330', '#8cff66', '#f2ddff'],
     wing: ['#1c2035', '#8fb8ff', '#d8e5f2'], stoneCore: ['#2f3945', '#b77dff', '#ffd166'], bow: ['#5a341d', '#d6a06a', '#f8fbff'], arrow: ['#5a341d', '#c5d6df', '#8cff66'], dart: ['#5a341d', '#ffd166', '#8cff66'], hammer: ['#5a341d', '#66737f', '#b77dff'], cloak: ['#6b4a36', '#f1dfc3', '#ffffff'], horn: ['#5a341d', '#d8c08a', '#fff3b0'],
     flower: ['#2e7d43', '#ffd166', '#ff6b9a'], berry: ['#245d34', '#d93f68', '#ff9ab0'], mushroom: ['#efe3c0', '#d94b5f', '#ffffff'],
-    lotus: ['#1f6b52', '#f4a6d7', '#ffd166'], cactus: ['#1d6b47', '#58c47a', '#ff6b9a'], hide: ['#4b2d1d', '#9a5f3f', '#d6a06a'],
+    lotus: ['#1f6b52', '#f4a6d7', '#ffd166'], cactus: ['#1d6b47', '#58c47a', '#ff6b9a'], carrot: ['#1f6b34', '#ff9f1c', '#ffd166'], corn: ['#2f7f44', '#ffd166', '#fff3b0'], tomato: ['#245d34', '#ff4d3d', '#ffd0b8'], repairKit: ['#5a341d', '#d6a06a', '#d8e5f2'], jerky: ['#4b2d1d', '#b55a32', '#ffd0b8'], minerRation: ['#303946', '#d8c08a', '#d8e5f2'], vegetableSoup: ['#5a341d', '#ff9f1c', '#9cffb7'], hide: ['#4b2d1d', '#9a5f3f', '#d6a06a'],
     meat: ['#7f2630', '#d94b5f', '#ffd0b8'], gel: ['#125f4c', '#5ee089', '#c8ffd8'], fang: ['#5d4934', '#f8fbff', '#c9d6dd'],
     venom: ['#213c1e', '#8cff66', '#d6ff9c'], axe: ['#5a341d', '#a8b3bd', '#f8fbff'], pickaxe: ['#5a341d', '#66737f', '#d8e5f2'], sickle: ['#5a341d', '#c5d6df', '#f8fbff'],
-    spear: ['#5a341d', '#d8e5f2', '#d7f28a'], sword: ['#38414d', '#c5d6df', '#ffffff'], blade: ['#512b9a', '#b77dff', '#ffffff'],
+    spear: ['#5a341d', '#d8e5f2', '#d7f28a'], sword: ['#38414d', '#c5d6df', '#ffffff'], blade: ['#512b9a', '#b77dff', '#ffffff'], club: ['#5a341d', '#9a6436', '#d8c08a'], whip: ['#3b2417', '#70bf55', '#d7f28a'],
     dagger: ['#203020', '#8cff66', '#f8fbff'], armor: ['#4a3a2a', '#9fb3c8', '#ffffff'], shield: ['#5a341d', '#c5d6df', '#ffd166'],
-    bomb: ['#161b22', '#ff9f1c', '#ffd166'], torch: ['#5a341d', '#ff9f1c', '#ffd166'], bedroll: ['#27364a', '#8fb8ff', '#f8fbff'],
+    bomb: ['#161b22', '#ff9f1c', '#ffd166'], torch: ['#5a341d', '#ff9f1c', '#ffd166'], waxTorch: ['#5a341d', '#ffd166', '#fff3b0'], campfire: ['#3b2417', '#ff6b2b', '#ffd166'], bedroll: ['#27364a', '#8fb8ff', '#f8fbff'],
     charm: ['#5d2ea6', '#ffd166', '#ffffff'], trap: ['#5a341d', '#d8e5f2', '#ffd166'], fence: ['#1f5f34', '#d7f28a', '#9bd86a'],
     flag: ['#5a341d', '#ff6b6b', '#ffffff'], potion: ['#2d4b6b', '#7dcbe8', '#ffffff'], stew: ['#5a341d', '#d68a43', '#ffd166'],
     salve: ['#125f4c', '#5ee089', '#ffffff'], antidote: ['#213c1e', '#8cff66', '#ffffff'], speed: ['#27364a', '#ffd166', '#ffffff'],
     stationPotion: ['#3a2454', '#7dcbe8', '#ffd166'], stationWorkbench: ['#4a2b17', '#9a6436', '#d49a5a'], stationForge: ['#2f3945', '#ff9f1c', '#d8e5f2'],
-    armorPotion: ['#26384d', '#c5d6df', '#ffffff'], bandage: ['#5d4934', '#f8fbff', '#d8e5f2'], key: ['#5a3c13', '#ffd166', '#fff3b0'], default: ['#26384d', '#9fb3c8', '#ffffff'],
+    armorPotion: ['#26384d', '#c5d6df', '#ffffff'], minerLampHelmet: ['#303946', '#ffd166', '#d8e5f2'], crystalLampHelmet: ['#26384d', '#ffd166', '#f2ddff'], beehiveBox: ['#5a341d', '#d99a43', '#ffd166'], bandage: ['#5d4934', '#f8fbff', '#d8e5f2'], key: ['#5a3c13', '#ffd166', '#fff3b0'], default: ['#26384d', '#9fb3c8', '#ffffff'],
 };
 
 const RESOURCE_BREAKDOWN_DEFS = [
@@ -559,6 +614,15 @@ const RECIPES = [
     recipe('sickle', '石镰', '快速收割纤维和花草', { wood: 2, stone: 3, fiber: 2 }, game => {
         game.inventory.stoneSickle += 1;
     }, game => game.inventory.stoneSickle > 0 || game.equipment.tool === '石镰'),
+    { ...recipe('ironPickaxe', '铁镐', '更快采矿，清理塌方效率更高', { stonePickaxe: 1, ore: 5, coal: 2, wood: 2 }, game => {
+        game.inventory.ironPickaxe = (game.inventory.ironPickaxe || 0) + 1;
+    }, game => (game.inventory.ironPickaxe || 0) > 0 || game.equipment.tool === '铁镐'), station: 'forge', unlock: ['ore', 'coal'] },
+    { ...recipe('ironAxe', '铁斧', '砍树更快，对木质/蜂巢结构更有效', { stoneAxe: 1, ore: 4, coal: 2, wood: 2 }, game => {
+        game.inventory.ironAxe = (game.inventory.ironAxe || 0) + 1;
+    }, game => (game.inventory.ironAxe || 0) > 0 || game.equipment.tool === '铁斧'), station: 'forge', unlock: ['ore', 'coal'] },
+    { ...recipe('ironSickle', '铁镰', '收割花草藤蔓更快，采集草药效率更高', { stoneSickle: 1, ore: 4, coal: 1, fiber: 3 }, game => {
+        game.inventory.ironSickle = (game.inventory.ironSickle || 0) + 1;
+    }, game => (game.inventory.ironSickle || 0) > 0 || game.equipment.tool === '铁镰'), station: 'forge', unlock: ['ore'] },
     recipe('bambooShard', '竹片', '把 1 个竹材削成 3 个竹片，供竹片飞刀发射', { bamboo: 1 }, game => {
         game.inventory.bambooShard = (game.inventory.bambooShard || 0) + 3;
     }, () => false),
@@ -568,10 +632,10 @@ const RECIPES = [
     recipe('buttressPlate', '板根甲片', '板根盾甲的硬质甲片', { buttressWood: 2, stone: 1 }, game => { game.inventory.buttressPlate = (game.inventory.buttressPlate || 0) + 1; }, () => false),
     { ...recipe('vineRoundShield', '藤编圆盾', '轻盾，格挡较弱但不笨重', { vine: 4, bamboo: 2, fiber: 2 }, game => { game.inventory.vineRoundShield = (game.inventory.vineRoundShield || 0) + 1; }, game => game.inventory.vineRoundShield > 0 || game.equipment.shield === '藤编圆盾'), station: 'workbench', unlock: ['vine'] },
     { ...recipe('buttressShield', '板根盾', '强抗击退的板根木盾', { buttressPlate: 2, vineRope: 1, woodShield: 1 }, game => { game.inventory.buttressShield = (game.inventory.buttressShield || 0) + 1; }, game => game.inventory.buttressShield > 0 || game.equipment.shield === '板根盾'), station: 'workbench', unlock: ['buttressPlate'] },
-    { ...recipe('jungleLeafCloak', '丛林叶披肩', '丛林行走更轻，防御较低', { jungleLeaf: 5, vineRope: 1, fiber: 3 }, game => { game.inventory.jungleLeafCloak = (game.inventory.jungleLeafCloak || 0) + 1; }, game => game.inventory.jungleLeafCloak > 0 || game.equipment.armor === '丛林叶披肩'), station: 'workbench', unlock: ['jungleLeaf'] },
-    { ...recipe('buttressArmor', '板根木甲', '抗击退和远程强，但比较沉', { buttressPlate: 3, vineRope: 2, leatherArmor: 1 }, game => { game.inventory.buttressArmor = (game.inventory.buttressArmor || 0) + 1; }, game => game.inventory.buttressArmor > 0 || game.equipment.armor === '板根木甲'), station: 'forge', unlock: ['buttressPlate'] },
-    { ...recipe('toxicMask', '毒菇面罩', '降低中毒和神经毒影响', { toxicMushroom: 3, jungleLeaf: 2, fiber: 4 }, game => { game.inventory.toxicMask = (game.inventory.toxicMask || 0) + 1; }, game => game.inventory.toxicMask > 0 || game.equipment.armor === '毒菇面罩'), station: 'workbench', unlock: ['toxicMushroom'] },
-    { ...recipe('parasiticVineArmor', '绿母寄生甲', '缓慢回血但饥饿消耗更高', { vine: 10, toxicMushroom: 3, jungleFruit: 3, leatherArmor: 1 }, game => { game.inventory.parasiticVineArmor = (game.inventory.parasiticVineArmor || 0) + 1; }, game => game.inventory.parasiticVineArmor > 0 || game.equipment.armor === '绿母寄生甲'), station: 'forge', unlock: ['vine', 'toxicMushroom'] },
+    { ...recipe('jungleLeafCloak', '丛林叶披肩', '丛林行走更轻，防御较低', { jungleLeaf: 5, vineRope: 1, fiber: 3 }, game => { game.inventory.jungleLeafCloak = (game.inventory.jungleLeafCloak || 0) + 1; }, game => game.inventory.jungleLeafCloak > 0 || hasEquippedArmor('丛林叶披肩')), station: 'workbench', unlock: ['jungleLeaf'] },
+    { ...recipe('buttressArmor', '板根木甲', '抗击退和远程强，但比较沉', { buttressPlate: 3, vineRope: 2, leatherArmor: 1 }, game => { game.inventory.buttressArmor = (game.inventory.buttressArmor || 0) + 1; }, game => game.inventory.buttressArmor > 0 || hasEquippedArmor('板根木甲')), station: 'forge', unlock: ['buttressPlate'] },
+    { ...recipe('toxicMask', '毒菇面罩', '降低中毒和神经毒影响', { toxicMushroom: 3, jungleLeaf: 2, fiber: 4 }, game => { game.inventory.toxicMask = (game.inventory.toxicMask || 0) + 1; }, game => game.inventory.toxicMask > 0 || hasEquippedArmor('毒菇面罩')), station: 'workbench', unlock: ['toxicMushroom'] },
+    { ...recipe('parasiticVineArmor', '绿母寄生甲', '缓慢回血但饥饿消耗更高', { vine: 10, toxicMushroom: 3, jungleFruit: 3, leatherArmor: 1 }, game => { game.inventory.parasiticVineArmor = (game.inventory.parasiticVineArmor || 0) + 1; }, game => game.inventory.parasiticVineArmor > 0 || hasEquippedArmor('绿母寄生甲')), station: 'forge', unlock: ['vine', 'toxicMushroom'] },
     { ...recipe('vineNetTrap', '藤网陷阱', '放置后范围缠绕敌人', { vineRope: 2, jungleLeaf: 4, bambooShard: 3 }, game => { game.inventory.vineNetTrap = (game.inventory.vineNetTrap || 0) + 1; }, () => false), station: 'workbench', unlock: ['vineRope'] },
     { ...recipe('toxicVineSnare', '毒藤绊索', '放置后中毒并减速敌人', { toxicVineGlue: 1, vine: 3, fiber: 2 }, game => { game.inventory.toxicVineSnare = (game.inventory.toxicVineSnare || 0) + 1; }, () => false), station: 'workbench', unlock: ['toxicVineGlue'] },
     { ...recipe('poisonBambooTrap', '竹刺毒陷阱', '竹刺陷阱的毒化版本', { bambooTrap: 1, venom: 1, vine: 2 }, game => { game.inventory.poisonBambooTrap = (game.inventory.poisonBambooTrap || 0) + 1; }, () => false), station: 'workbench', unlock: ['bambooTrap', 'venom'] },
@@ -608,10 +672,10 @@ const RECIPES = [
     }, game => game.inventory.ironSword > 0 || game.equipment.weapon === '铁剑'),
     recipe('armor', '皮甲', '受到伤害 -1', { hide: 4, fiber: 4 }, game => {
         game.inventory.leatherArmor += 1;
-    }, game => game.inventory.leatherArmor > 0 || game.equipment.armor === '皮甲'),
+    }, game => game.inventory.leatherArmor > 0 || hasEquippedArmor('皮甲')),
     recipe('clothArmor', '布衣', '最基础的轻甲', { fiber: 8 }, game => {
         game.inventory.clothArmor += 1;
-    }, game => game.inventory.clothArmor > 0 || game.equipment.armor === '布衣'),
+    }, game => game.inventory.clothArmor > 0 || hasEquippedArmor('布衣')),
     recipe('bandage', '绷带', '手工制作，恢复 12 生命', { fiber: 3 }, game => {
         game.inventory.bandage += 1;
     }, () => false),
@@ -637,6 +701,7 @@ const RECIPES = [
         game.inventory.ironSkinPotion += 1;
     }, () => false),
     recipe('honeySalve', '蜂蜜药膏', '恢复 30 生命，并再生 8 秒', { honey: 1, herb: 1, fiber: 1 }, game => { game.inventory.honeySalve += 1; }, () => false),
+    recipe('royalJellyPotion', '蜂王浆药剂', '大幅恢复，并长时间缓慢恢复生命和体力，降低受击体力损耗', { royalJelly: 1, honey: 3, pollenDust: 2, lotus: 1 }, game => { game.inventory.royalJellyPotion = (game.inventory.royalJellyPotion || 0) + 1; }, () => false),
     recipe('nightVisionPotion', '夜视药水', '35 秒大幅扩大夜晚视野', { batWing: 1, crystal: 1, lotus: 1 }, game => { game.inventory.nightVisionPotion += 1; }, () => false),
     recipe('jumpPotion', '跳跃药水', '18 秒行动更轻快，显著减轻水/泥地阻力', { frogLeg: 1, lotus: 1, slimeGel: 1 }, game => { game.inventory.jumpPotion += 1; }, () => false),
     recipe('poisonResistPotion', '毒抗药水', '40 秒免疫中毒并清除当前中毒', { scorpionShell: 1, antidote: 1, honey: 1 }, game => { game.inventory.poisonResistPotion += 1; }, () => false),
@@ -645,7 +710,7 @@ const RECIPES = [
     recipe('strongBandage', '强效绷带', '恢复 25 生命', { bandage: 1, honey: 1, herb: 1 }, game => { game.inventory.strongBandage += 1; }, () => false),
     recipe('ironArmor', '铁甲', '防御大幅提升', { ore: 8, coal: 2, hide: 2 }, game => {
         game.inventory.ironArmor += 1;
-    }, game => game.inventory.ironArmor > 0 || game.equipment.armor === '铁甲'),
+    }, game => game.inventory.ironArmor > 0 || hasEquippedArmor('铁甲')),
     recipe('campfire', '营火', '可放置，靠近后烹饪熟食', { wood: 5, stone: 3, coal: 1 }, game => {
         game.inventory.campfire += 1;
     }, () => false),
@@ -690,12 +755,18 @@ const RECIPES = [
     }, game => game.inventory.ironShield > 0 || game.equipment.shield === '铁盾'),
     recipe('crystalArmor', '魔晶甲', '高防御护甲', { ironArmor: 1, crystal: 3, slimeGel: 2 }, game => {
         game.inventory.crystalArmor += 1;
-    }, game => game.inventory.crystalArmor > 0 || game.equipment.armor === '魔晶甲'),
-    recipe('rabbitCloak', '兔毛披肩', '轻便保暖披肩', { rabbitFur: 3, hide: 1, fiber: 2 }, game => { game.inventory.rabbitCloak += 1; }, game => game.inventory.rabbitCloak > 0 || game.equipment.armor === '兔毛披肩'),
-    recipe('scorpionArmor', '蝎壳甲', '防御并抗毒', { scorpionShell: 3, hide: 2, ore: 2 }, game => { game.inventory.scorpionArmor += 1; }, game => game.inventory.scorpionArmor > 0 || game.equipment.armor === '蝎壳甲'),
-    recipe('thickFurCoat', '厚毛皮衣', '温暖厚实，减轻击退', { thickFur: 3, hide: 2, fiber: 3 }, game => { game.inventory.thickFurCoat += 1; }, game => game.inventory.thickFurCoat > 0 || game.equipment.armor === '厚毛皮衣'),
-    recipe('reedShellArmor', '湿地甲壳甲', '湿地甲壳制成，抗减速', { reedShell: 3, cypressWood: 2, fiber: 3 }, game => { game.inventory.reedShellArmor += 1; }, game => game.inventory.reedShellArmor > 0 || game.equipment.armor === '湿地甲壳甲'),
-    recipe('mireCoreArmor', '泥沼护甲', '泥沼核心护甲，防御较高', { mireCore: 2, mud: 4, hide: 2 }, game => { game.inventory.mireCoreArmor += 1; }, game => game.inventory.mireCoreArmor > 0 || game.equipment.armor === '泥沼护甲'),
+    }, game => game.inventory.crystalArmor > 0 || hasEquippedArmor('魔晶甲')),
+    { ...recipe('minerLampHelmet', '矿灯头盔', '头部装备，提供稳定中等照明', { ironArmor: 1, coal: 3, crystal: 1, beeswax: 1 }, game => {
+        game.inventory.minerLampHelmet = (game.inventory.minerLampHelmet || 0) + 1;
+    }, game => (game.inventory.minerLampHelmet || 0) > 0 || hasEquippedArmor('矿灯头盔')), station: 'forge', unlock: ['ore', 'coal'] },
+    { ...recipe('crystalLampHelmet', '晶灯头盔', '头部装备，持续提供比火把更亮的照明', { ironArmor: 1, crystal: 4, coal: 3, shadowShard: 1 }, game => {
+        game.inventory.crystalLampHelmet = (game.inventory.crystalLampHelmet || 0) + 1;
+    }, game => (game.inventory.crystalLampHelmet || 0) > 0 || hasEquippedArmor('晶灯头盔')), station: 'forge', unlock: ['crystal', 'coal'] },
+    recipe('rabbitCloak', '兔毛披肩', '轻便保暖披肩', { rabbitFur: 3, hide: 1, fiber: 2 }, game => { game.inventory.rabbitCloak += 1; }, game => game.inventory.rabbitCloak > 0 || hasEquippedArmor('兔毛披肩')),
+    recipe('scorpionArmor', '蝎壳甲', '防御并抗毒', { scorpionShell: 3, hide: 2, ore: 2 }, game => { game.inventory.scorpionArmor += 1; }, game => game.inventory.scorpionArmor > 0 || hasEquippedArmor('蝎壳甲')),
+    recipe('thickFurCoat', '厚毛皮衣', '温暖厚实，减轻击退', { thickFur: 3, hide: 2, fiber: 3 }, game => { game.inventory.thickFurCoat += 1; }, game => game.inventory.thickFurCoat > 0 || hasEquippedArmor('厚毛皮衣')),
+    recipe('reedShellArmor', '湿地甲壳甲', '湿地甲壳制成，抗减速', { reedShell: 3, cypressWood: 2, fiber: 3 }, game => { game.inventory.reedShellArmor += 1; }, game => game.inventory.reedShellArmor > 0 || hasEquippedArmor('湿地甲壳甲')),
+    recipe('mireCoreArmor', '泥沼护甲', '泥沼核心护甲，防御较高', { mireCore: 2, mud: 4, hide: 2 }, game => { game.inventory.mireCoreArmor += 1; }, game => game.inventory.mireCoreArmor > 0 || hasEquippedArmor('泥沼护甲')),
     recipe('antlerCharm', '鹿角护符', '提高最大生命', { antler: 1, crystal: 1, flower: 2 }, game => { game.inventory.antlerCharm += 1; }, game => game.inventory.antlerCharm > 0),
     recipe('waxTorch', '蜂蜡火把', '更明亮的火把', { beeswax: 1, wood: 2, coal: 1 }, game => { game.inventory.waxTorch += 1; }, () => false),
     recipe('beehiveBox', '蜂箱', '可放置的蜂箱', { beeswax: 1, wood: 4, flower: 2 }, game => { game.inventory.beehiveBox += 1; }, () => false),
@@ -748,6 +819,7 @@ const RECIPE_LEARNING_RULES = {
     regenPotion: { materials: ['lotus', 'slimeGel'], task: 'apothecary' },
     ironSkinPotion: { materials: ['mud', 'coal'], teachers: ['apothecary', 'guard'], note: 'guard' },
     honeySalve: { materials: ['honey'], teachers: ['apothecary'] },
+    royalJellyPotion: { materials: ['royalJelly'], task: 'apothecary' },
     nightVisionPotion: { materials: ['batWing'], note: 'elder' },
     jumpPotion: { materials: ['frogLeg'], teachers: ['apothecary'] },
     poisonResistPotion: { materials: ['scorpionShell'], task: 'apothecary' },
@@ -755,6 +827,9 @@ const RECIPE_LEARNING_RULES = {
     poisonVial: { materials: ['toxicMushroom', 'venom'], teachers: ['apothecary'], note: 'apothecary' },
     strongBandage: { materials: ['honey'], teachers: ['apothecary'] },
     ironArmor: { materials: ['ore'], task: 'blacksmith' },
+    ironPickaxe: { materials: ['ore', 'coal'], task: 'blacksmith' },
+    ironAxe: { materials: ['ore', 'coal'], task: 'blacksmith' },
+    ironSickle: { materials: ['ore'], task: 'blacksmith' },
     campfire: { materials: ['coal'], teachers: ['kitchen'] },
     torch: { materials: ['coal'], teachers: ['guard'] },
     bedroll: { materials: ['hide'], teachers: ['unemployed'] },
@@ -774,6 +849,8 @@ const RECIPE_LEARNING_RULES = {
     woodShield: { materials: ['hide'], teachers: ['guard'] },
     ironShield: { materials: ['ore'], task: 'blacksmith' },
     crystalArmor: { materials: ['crystal'], task: 'elder' },
+    minerLampHelmet: { materials: ['coal', 'crystal'], task: 'blacksmith' },
+    crystalLampHelmet: { materials: ['crystal', 'coal'], task: 'blacksmith' },
     rabbitCloak: { materials: ['rabbitFur'], teachers: ['unemployed'] },
     scorpionArmor: { materials: ['scorpionShell'], task: 'blacksmith' },
     thickFurCoat: { materials: ['thickFur'], teachers: ['unemployed'] },
@@ -1170,20 +1247,49 @@ function breakdownRecipe(def) {
     };
 }
 
+function createTestGearLoadout() {
+    return {
+        inventory: {
+            stoneAxe: 1,
+            stonePickaxe: 1,
+            stoneSickle: 1,
+            ironSword: 1,
+            sinewBow: 1,
+            woodShield: 1,
+            leatherArmor: 1,
+            minerLampHelmet: 1,
+            rabbitCloak: 1,
+            simpleArrow: 24,
+            poisonArrow: 6,
+            coalBomb: 2,
+            honeySalve: 2,
+            bandage: 4,
+            roastMeat: 4,
+            torch: 4,
+        },
+        hotbarItems: ['ironSword', 'sinewBow', 'stonePickaxe', 'stoneAxe', 'coalBomb', 'honeySalve', 'bandage', 'roastMeat', 'torch'],
+    };
+}
+
 function createState() {
     const jungleCult = createJungleCultVillage();
-    const village = createVillage();
+    const village = createMineVillage() || createVillage(startingForestVillageRegion());
     activeAdvancedVillage = village;
+    const forestVillage = createVillage(startingForestVillageRegion());
     const secondVillage = createSecondVillage(village);
     const thirdVillage = wildernessSettings.fortressEnabled ? createFortressVillage(village, secondVillage) : null;
-    const villages = [jungleCult, village, secondVillage, thirdVillage].filter(Boolean);
+    const villages = [jungleCult, village, forestVillage, secondVillage, thirdVillage].filter(Boolean);
     const resources = createResources(village);
+    const waspHives = createWaspHives(resources);
     const spawnDens = createSpawnDens();
     const decorations = createDecorations();
     const jungleRuin = decorations.find(item => item.kind === 'jungleRuin');
-    const playerSpawn = jungleRuin ? jungleRuinSpawnPoint(jungleRuin) : village.spawn;
+    const mineCave = decorations.find(item => item.kind === 'mineCave');
+    const playerSpawn = village.spawn;
     const enemies = createEnemies(spawnDens);
     if (jungleRuin) enemies.push(createJungleRuinGuardian(jungleRuin));
+    limitInitialEnemiesNearPlayer(enemies, playerSpawn);
+    const testGear = createTestGearLoadout();
     const gameState = {
         player: {
             x: playerSpawn.x,
@@ -1219,6 +1325,8 @@ function createState() {
             weakToxinUntil: 0,
             regenUntil: 0,
             regenTickAt: 0,
+            royalJellyUntil: 0,
+            royalJellyTickAt: 0,
             ironSkinUntil: 0,
             nightVisionUntil: 0,
             poisonResistUntil: 0,
@@ -1230,18 +1338,20 @@ function createState() {
             meleeCharge: null,
             pendingMeleeCharge: null,
         },
-        inventory: { wood: 0, oakWood: 0, blossomWood: 0, birchWood: 0, pineWood: 0, mapleWood: 0, deadWood: 0, darkWood: 0, cypressWood: 0, willowWood: 0, ironwood: 0, elderWood: 0, buttressWood: 0, bamboo: 0, bambooShard: 0, jungleLeaf: 0, vine: 0, jungleFruit: 0, hardwood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, beastClaw: 0, pollenDust: 0, thickFur: 0, reedShell: 0, mireCore: 0, crystalFang: 0, boneShard: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 1, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, rabbitCloak: 0, scorpionArmor: 0, thickFurCoat: 0, reedShellArmor: 0, mireCoreArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0 },
+        inventory: { wood: 0, oakWood: 0, blossomWood: 0, birchWood: 0, pineWood: 0, mapleWood: 0, deadWood: 0, darkWood: 0, cypressWood: 0, willowWood: 0, ironwood: 0, elderWood: 0, buttressWood: 0, bamboo: 0, bambooShard: 0, jungleLeaf: 0, vine: 0, jungleFruit: 0, hardwood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, carrot: 0, corn: 0, tomato: 0, repairKit: 0, jerky: 0, minerRation: 0, vegetableSoup: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, royalJelly: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, beastClaw: 0, pollenDust: 0, thickFur: 0, reedShell: 0, mireCore: 0, crystalFang: 0, boneShard: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, ironAxe: 0, ironPickaxe: 0, ironSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, minerLampHelmet: 0, crystalLampHelmet: 0, rabbitCloak: 0, scorpionArmor: 0, thickFurCoat: 0, reedShellArmor: 0, mireCoreArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, royalJellyPotion: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0, ...testGear.inventory },
         equipment: {
-            tool: '徒手',
-            weapon: '木棍',
-            armor: '无',
-            shield: '无',
-            attack: 1,
-            range: 42,
-            defense: 0,
+            tool: '石镐',
+            weapon: '铁剑',
+            armor: '皮甲',
+            armors: { body: '皮甲', cloak: '兔毛披肩', head: '矿灯头盔' },
+            shield: '木盾',
+            attack: 6,
+            range: 68,
+            defense: 3,
             utility: '无',
         },
         resources,
+        waspHives,
         tallGrassGrid: buildTallGrassGrid(resources),
         resourceGrid: buildResourceGrid(resources),
         spawnDens,
@@ -1261,11 +1371,13 @@ function createState() {
         floatTexts: [],
         projectiles: [],
         indoorProjectiles: [],
+        underground: null,
+        undergroundProjectiles: [],
         placedTorches: [],
         placedFences: [],
         placedStations: [],
         bambooTraps: [],
-        hotbarItems: ['crystalBlade', ...Array(8).fill(null)],
+        hotbarItems: testGear.hotbarItems,
         draggedInventoryItem: null,
         draggedHotbarSlot: null,
         selectedBackpackItem: null,
@@ -1298,8 +1410,58 @@ function createState() {
         deathMessage: '',
         deathAdvice: '',
     };
+    gameState.outdoorVillagers = [];
     gameState.decorationGrid = buildDecorationGrid(gameState.decorations);
     return gameState;
+}
+
+function startingForestVillageRegion() {
+    const regions = worldRegionSet();
+    const forest = (regions.forest || []).slice().sort((a, b) => b.radius - a.radius)[0] || regions.village;
+    return {
+        x: forest.x,
+        y: forest.y,
+        radius: Math.max(520, Math.min(760, forest.radius * 0.46)),
+        seed: (forest.seed || 115) + 13.37,
+        tier: 'advanced',
+        preferredSkin: 'forest',
+    };
+}
+
+function createStartingVillagerFollowers(village, player) {
+    const guardHome = village.buildings.find(building => building.kind === 'guard' || building.kind === 'guardFortress') || village.buildings[0];
+    const healerHome = village.buildings.find(building => building.kind === 'apothecary' || building.kind === 'elder') || village.buildings[1] || guardHome;
+    return [
+        createStartingFollowerNpc('guard', '随行守卫', guardHome, player, -82, 78, 100),
+        createStartingFollowerNpc('apothecary', '随行药师', healerHome, player, 58, 102, 80),
+    ].filter(Boolean);
+}
+
+function createStartingFollowerNpc(role, label, homeBuilding, player, offsetX, offsetY, hp) {
+    if (!homeBuilding) return null;
+    return {
+        kind: 'npc',
+        role,
+        label,
+        x: player.x + offsetX,
+        y: player.y + offsetY,
+        homeX: VIEW.width / 2,
+        homeY: VIEW.height - 178,
+        w: 34,
+        h: 46,
+        radius: 17,
+        hp,
+        maxHp: hp,
+        solid: false,
+        action: 'npc',
+        mood: 'calm',
+        nextWanderAt: 0,
+        outside: true,
+        follower: true,
+        followTarget: 'player',
+        returningHome: false,
+        homeBuilding,
+    };
 }
 
 function createWorldSeed() {
@@ -1336,7 +1498,7 @@ function createVillage(baseRegion = worldRegionSet().village) {
     const layout = villageLayoutForSeed(region.seed);
     const large = seededUnit(region.seed, 18.8) > 0.54;
     const spacing = large ? 1.28 : 1.08;
-    const buildingDefs = expandedVillageBuildings(layout, region.seed, large, region.tier || 'advanced');
+    const buildingDefs = expandedVillageBuildings(layout, region.seed, large, region.tier || 'advanced', region);
     const buildings = [];
     buildingDefs.forEach((building, index) => {
         if (building.cornerX && building.cornerY) {
@@ -1382,6 +1544,7 @@ function createVillage(baseRegion = worldRegionSet().village) {
         radius: tier === 'fortress' ? region.radius : (large ? region.radius * 1.22 : region.radius),
         seed: roadSeed,
         tier,
+        skin: region.preferredSkin || villageSkinForRegion(region),
         reputation: 2,
         layoutName: layout.name,
         large,
@@ -1392,6 +1555,7 @@ function createVillage(baseRegion = worldRegionSet().village) {
         spawn: { x: snapToGroundGrid(spawnPoint.x), y: snapToGroundGrid(spawnPoint.y) },
     };
     village.buildings.forEach(building => { building.village = village; });
+    initializeVillageBuildings(village);
     return village;
 }
 
@@ -1520,8 +1684,46 @@ function createJungleCultVillage() {
         spawn: { x: snapToGroundGrid(center.x + 220), y: snapToGroundGrid(center.y + 290) },
     };
     village.buildings.forEach(building => { building.village = village; });
+    initializeVillageBuildings(village);
     activeJungleCultVillage = village;
     return village;
+}
+
+function initializeVillageBuildings(village) {
+    for (const building of village.buildings || []) {
+        building.maxHp ||= villageBuildingMaxHp(building);
+        building.hp ??= building.maxHp;
+        building.radius ||= Math.max(building.w, building.h) * 0.45;
+        building.destroyed ||= false;
+    }
+}
+
+function villageBuildingMaxHp(building) {
+    const base = {
+        basicVillager: 80,
+        unemployed: 90,
+        basicElder: 120,
+        elder: 145,
+        blacksmith: 125,
+        apothecary: 110,
+        kitchen: 110,
+        merchant: 115,
+        carpenter: 115,
+        hunter: 105,
+        outerHunter: 90,
+        miner: 120,
+        farmer: 95,
+        guard: 125,
+        guardFortress: 170,
+        cultPriest: 155,
+        cultHerbalist: 130,
+        cultHealer: 135,
+        cultHunter: 130,
+        cultGuard: 150,
+        cultVillager: 120,
+    }[building.kind] || 95;
+    const tierBonus = building.village?.tier === 'fortress' ? 25 : (building.village?.tier === 'jungleCult' ? 15 : 0);
+    return base + tierBonus;
 }
 
 function nearestJungleCorePoint(region) {
@@ -1584,6 +1786,23 @@ function createSecondVillage(primary) {
     };
     const village = createVillage(target);
     village.layoutName = `${village.layoutName}-market`;
+    return village;
+}
+
+function createMineVillage(primary = null) {
+    const regions = worldRegionSet();
+    const mine = (regions.mine || []).slice().sort((a, b) => b.radius - a.radius)[0];
+    if (!mine) return null;
+    const target = {
+        x: mine.x,
+        y: mine.y,
+        radius: Math.max(500, Math.min(760, mine.radius * 0.5)),
+        seed: (mine.seed || 10) + 431,
+        tier: 'advanced',
+        preferredSkin: 'mine',
+    };
+    const village = createVillage(target);
+    village.layoutName = 'mine-union';
     return village;
 }
 
@@ -1685,17 +1904,124 @@ function villageVisualProfile(village) {
         };
     }
     if (village?.tier === 'basic') {
+        const skin = terrainVillageSkinProfile(village?.skin);
         return {
             flag: { main: '#7a4a24', trim: '#d6a06a', dark: '#3f2a1c', emblem: 'patch' },
-            building: { roof: '#6f5a2f', wall: '#8a6a3d', accent: '#5a341d', sign: '#d6a06a' },
-            clothing: { body: '#5a4632', trim: '#d6a06a', accent: '#8a6a3d' },
+            building: { roof: hexMix('#6f5a2f', skin.building.roof, 0.35), wall: hexMix('#8a6a3d', skin.building.wall, 0.35), accent: skin.building.accent, sign: hexMix('#d6a06a', skin.building.sign, 0.35), pattern: skin.building.pattern },
+            clothing: { body: hexMix('#5a4632', skin.clothing.body, 0.35), trim: hexMix('#d6a06a', skin.clothing.trim, 0.35), accent: hexMix('#8a6a3d', skin.clothing.accent, 0.35) },
         };
     }
-    return {
-        flag: { main: '#7f2034', trim: '#ffd166', dark: '#4a2b17', emblem: 'cross' },
-        building: { roof: '#4b3b28', wall: '#7a6040', accent: '#d6a06a', sign: '#ffd166' },
-        clothing: { body: '#4a3a2a', trim: '#ffd166', accent: '#d6a06a' },
+    return terrainVillageSkinProfile(village?.skin);
+}
+
+function hexMix(a, b, amount = 0.5) {
+    const ca = parseHexColor(a);
+    const cb = parseHexColor(b);
+    if (!ca || !cb) return b || a;
+    const mix = (x, y) => Math.round(x + (y - x) * amount);
+    return `#${[mix(ca[0], cb[0]), mix(ca[1], cb[1]), mix(ca[2], cb[2])].map(value => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function parseHexColor(value) {
+    if (typeof value !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(value)) return null;
+    return [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
+}
+
+function villageSkinForRegion(region) {
+    const counts = {};
+    const samples = [[0, 0], [260, 0], [-260, 0], [0, 260], [0, -260], [420, 180], [-420, 180], [180, 420], [180, -420]];
+    samples.forEach(([ox, oy]) => {
+        const kind = terrainInfoAt(clamp(region.x + ox, 40, WORLD.width - 40), clamp(region.y + oy, 40, WORLD.height - 40)).kind;
+        if (kind === 'village' || kind === 'water') return;
+        counts[kind] = (counts[kind] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'grass';
+}
+
+function terrainVillageSkinProfile(kind = 'grass') {
+    const profiles = {
+        grass: {
+            flag: { main: '#7f2034', trim: '#ffd166', dark: '#4a2b17', emblem: 'cross' },
+            building: { roof: '#4b3b28', wall: '#7a6040', accent: '#d6a06a', sign: '#ffd166', pattern: 'timber' },
+            clothing: { body: '#4a3a2a', trim: '#ffd166', accent: '#d6a06a' },
+        },
+        tallgrass: {
+            flag: { main: '#6f5a2f', trim: '#cde77b', dark: '#3d3a1f', emblem: 'patch' },
+            building: { roof: '#6f6a34', wall: '#7a6b3d', accent: '#cde77b', sign: '#d7f28a', pattern: 'thatch' },
+            clothing: { body: '#4d4a2a', trim: '#cde77b', accent: '#8a8f45' },
+        },
+        forest: {
+            flag: { main: '#244d2a', trim: '#d6a06a', dark: '#17351f', emblem: 'leaf' },
+            building: { roof: '#2f4a2d', wall: '#6b4a2f', accent: '#9a6436', sign: '#d6a06a', pattern: 'logs' },
+            clothing: { body: '#2f3f2a', trim: '#d6a06a', accent: '#70bf55' },
+        },
+        birch: {
+            flag: { main: '#f1ead3', trim: '#303946', dark: '#8c98a4', emblem: 'bar' },
+            building: { roof: '#d8d0bd', wall: '#f1ead3', accent: '#303946', sign: '#d8e5f2', pattern: 'birch' },
+            clothing: { body: '#5a5146', trim: '#f8fbff', accent: '#303946' },
+        },
+        pine: {
+            flag: { main: '#17351f', trim: '#d0a85f', dark: '#102418', emblem: 'leaf' },
+            building: { roof: '#1f3a27', wall: '#5a4128', accent: '#d0a85f', sign: '#d8c08a', pattern: 'logs' },
+            clothing: { body: '#243a2a', trim: '#d0a85f', accent: '#5fae49' },
+        },
+        maple: {
+            flag: { main: '#8a3a24', trim: '#ffd166', dark: '#4a2418', emblem: 'leaf' },
+            building: { roof: '#8a4a2a', wall: '#7a4f2d', accent: '#d8a041', sign: '#ffd166', pattern: 'maple' },
+            clothing: { body: '#5a321f', trim: '#ffd166', accent: '#b85a2a' },
+        },
+        meadow: {
+            flag: { main: '#b87462', trim: '#ffd6ec', dark: '#6b3b4b', emblem: 'flower' },
+            building: { roof: '#b87462', wall: '#8a6a4a', accent: '#ffd6ec', sign: '#ffd166', pattern: 'flower' },
+            clothing: { body: '#6b4a5a', trim: '#ffd6ec', accent: '#ffd166' },
+        },
+        swamp: {
+            flag: { main: '#263f34', trim: '#8cff66', dark: '#1b2b24', emblem: 'wave' },
+            building: { roof: '#263f34', wall: '#5b4a2d', accent: '#6f8750', sign: '#9cffb7', pattern: 'reed' },
+            clothing: { body: '#2f4034', trim: '#9cffb7', accent: '#6f8750' },
+        },
+        mud: {
+            flag: { main: '#5b4a2d', trim: '#8cff66', dark: '#3b2a1b', emblem: 'wave' },
+            building: { roof: '#4a3824', wall: '#6d5438', accent: '#a38350', sign: '#cde77b', pattern: 'mud' },
+            clothing: { body: '#4a3a2a', trim: '#a38350', accent: '#8cff66' },
+        },
+        reedWetland: {
+            flag: { main: '#5b4a2d', trim: '#d7f28a', dark: '#2f3f2a', emblem: 'bar' },
+            building: { roof: '#c6a85f', wall: '#6f6040', accent: '#d7f28a', sign: '#d7f28a', pattern: 'reed' },
+            clothing: { body: '#5a5333', trim: '#d7f28a', accent: '#c6a85f' },
+        },
+        bamboo: {
+            flag: { main: '#1f5f34', trim: '#d7f28a', dark: '#123d2b', emblem: 'bar' },
+            building: { roof: '#2f7f44', wall: '#70a85a', accent: '#d7f28a', sign: '#d7f28a', pattern: 'bamboo' },
+            clothing: { body: '#1f5f34', trim: '#d7f28a', accent: '#70bf55' },
+        },
+        mine: {
+            flag: { main: '#303946', trim: '#ffd166', dark: '#171d24', emblem: 'bar' },
+            building: { roof: '#303946', wall: '#66737f', accent: '#8c98a4', sign: '#ffd166', pattern: 'stone' },
+            clothing: { body: '#303946', trim: '#d8e5f2', accent: '#ffd166' },
+        },
+        ruins: {
+            flag: { main: '#512b9a', trim: '#d7bcff', dark: '#2f2445', emblem: 'diamond' },
+            building: { roof: '#4a4036', wall: '#6f6474', accent: '#b77dff', sign: '#d7bcff', pattern: 'rune' },
+            clothing: { body: '#3f334a', trim: '#d7bcff', accent: '#b77dff' },
+        },
+        dry: {
+            flag: { main: '#a35a2f', trim: '#ffd166', dark: '#5a321f', emblem: 'patch' },
+            building: { roof: '#b86b35', wall: '#9a7a4a', accent: '#ffd166', sign: '#fff0a8', pattern: 'adobe' },
+            clothing: { body: '#7a4f2d', trim: '#ffd166', accent: '#d68a43' },
+        },
+        darkForest: {
+            flag: { main: '#241330', trim: '#b77dff', dark: '#15111d', emblem: 'diamond' },
+            building: { roof: '#241330', wall: '#342819', accent: '#6f4cc2', sign: '#d8c4ff', pattern: 'shadow' },
+            clothing: { body: '#241f30', trim: '#b77dff', accent: '#6f4cc2' },
+        },
+        jungle: {
+            flag: { main: '#123d2b', trim: '#8cff66', dark: '#0f2d22', emblem: 'leaf' },
+            building: { roof: '#1f6b3f', wall: '#5a4128', accent: '#8cff66', sign: '#d5ffd8', pattern: 'vine' },
+            clothing: { body: '#173b24', trim: '#8cff66', accent: '#5fae49' },
+        },
     };
+    return profiles[kind] || profiles.grass;
 }
 
 function createVillageRoadSigns(villages) {
@@ -1953,7 +2279,7 @@ function villageLayoutForSeed(seed) {
     return layouts[Math.floor(seededUnit(seed, 12.4) * layouts.length) % layouts.length];
 }
 
-function expandedVillageBuildings(layout, seed, large, tier = 'advanced') {
+function expandedVillageBuildings(layout, seed, large, tier = 'advanced', region = null) {
     if (tier === 'basic') {
         return [
             { kind: 'basicElder', label: '简陋村长屋', angle: -1.45, distance: 180, w: 112, h: 96 },
@@ -1974,9 +2300,43 @@ function expandedVillageBuildings(layout, seed, large, tier = 'advanced') {
             { kind: 'kitchen', label: '铁堡厨房', angle: 1.57, distance: 160, w: 132, h: 112 },
         ];
     }
+    const skin = region?.preferredSkin || (region ? villageSkinForRegion(region) : '');
+    if (['forest', 'pine', 'birch', 'maple'].includes(skin)) {
+        const buildings = [
+            { kind: 'elder', label: '林地长屋', angle: -1.55, distance: 150, w: 156, h: 116 },
+            { kind: 'hunter', label: '内侧猎棚', angle: -2.65, distance: 230, w: 148, h: 104 },
+            { kind: 'outerHunter', label: '北侧猎棚', angle: -1.05, distance: 330, w: 138, h: 100 },
+            { kind: 'outerHunter', label: '东侧猎棚', angle: 0.25, distance: 345, w: 138, h: 100 },
+            { kind: 'outerHunter', label: '西侧猎棚', angle: 2.85, distance: 345, w: 138, h: 100 },
+            { kind: 'carpenter', label: '锯木棚', angle: 0.25, distance: 245, w: 150, h: 110 },
+            { kind: 'kitchen', label: '熏肉火塘', angle: 0.95, distance: 292, w: 132, h: 104 },
+            { kind: 'unemployed', label: '伐木小屋', angle: 2.1, distance: 226, w: 118, h: 96 },
+        ];
+        if (large) buildings.push({ kind: 'outerHunter', label: '南侧猎棚', angle: 1.65, distance: 360, w: 134, h: 98 });
+        return buildings;
+    }
+    if (skin === 'mine') {
+        const minePoint = region ? nearbyMineWorkPoint(region.x, region.y, Math.max(900, (region.radius || 520) * 1.55)) : null;
+        const buildings = [
+            { kind: 'elder', label: '矿头议事屋', angle: -1.55, distance: 150, w: 150, h: 112 },
+            { kind: 'miner', label: '矿工宿舍', angle: -2.55, distance: 220, w: 136, h: 108, minePoint },
+            { kind: 'miner', label: '矿工屋', angle: 2.55, distance: 230, w: 132, h: 106, minePoint },
+            { kind: 'blacksmith', label: '矿炉锻造屋', angle: 0.05, distance: 225, w: 146, h: 114 },
+            { kind: 'guard', label: '矿卫屋', angle: 1.15, distance: 255, w: 132, h: 106 },
+            { kind: 'guard', label: '矿口岗亭', angle: -0.9, distance: 275, w: 124, h: 100 },
+            { kind: 'kitchen', label: '矿工火塘', angle: 2.0, distance: 285, w: 126, h: 100 },
+        ];
+        if (large) buildings.push({ kind: 'miner', label: '外侧矿棚', angle: 0.72, distance: 330, w: 128, h: 102, minePoint });
+        return buildings;
+    }
     const buildings = layout.buildings.map(item => ({ ...item }));
     buildings.push({ kind: 'guard', label: '守卫石屋', angle: -1.92 + seededUnit(seed, 24) * 0.55, distance: 285, w: 142, h: 116 });
     buildings.push({ kind: 'merchant', label: '商人小店', angle: -0.1 + seededUnit(seed, 25) * 0.7, distance: 300, w: 142, h: 112 });
+    buildings.push({ kind: 'carpenter', label: '木匠棚屋', angle: 2.85 + seededUnit(seed, 26) * 0.35, distance: 330, w: 138, h: 112 });
+    buildings.push({ kind: 'hunter', label: '猎户小屋', angle: -2.62 + seededUnit(seed, 27) * 0.35, distance: 345, w: 132, h: 108 });
+    const minePoint = region ? nearbyMineWorkPoint(region.x, region.y, Math.max(920, (region.radius || 520) * 1.7)) : null;
+    if (minePoint) buildings.push({ kind: 'miner', label: '矿工屋', angle: 0.52 + seededUnit(seed, 28) * 0.42, distance: 340, w: 134, h: 112, minePoint });
+    buildings.push({ kind: 'farmer', label: '农夫屋', angle: 1.9 + seededUnit(seed, 29) * 0.45, distance: 320, w: 128, h: 104 });
     buildings.push({ kind: 'unemployed', label: '村民屋', angle: 1.18 + seededUnit(seed, 21) * 1.2, distance: 260, w: 126, h: 108 });
     if (large) {
         [
@@ -1987,6 +2347,24 @@ function expandedVillageBuildings(layout, seed, large, tier = 'advanced') {
         ].forEach(item => buildings.push(item));
     }
     return buildings;
+}
+
+function nearbyMineWorkPoint(x, y, maxDistance = 980) {
+    let best = null;
+    for (let r = 0; r <= maxDistance; r += 64) {
+        const steps = Math.max(12, Math.ceil(r / 40));
+        for (let i = 0; i < steps; i++) {
+            const angle = i * Math.PI * 2 / steps + r * 0.017;
+            const point = {
+                x: clamp(x + Math.cos(angle) * r, 80, WORLD.width - 80),
+                y: clamp(y + Math.sin(angle) * r, 80, WORLD.height - 80),
+            };
+            if (terrainInfoAt(point.x, point.y).kind !== 'mine') continue;
+            const score = distance(point, { x, y });
+            if (!best || score < best.score) best = { ...point, score };
+        }
+    }
+    return best ? { x: snapToGroundGrid(best.x), y: snapToGroundGrid(best.y) } : null;
 }
 
 function villageGardenForRegion(region, layout = villageLayoutForSeed(region.seed || 1), buildings = []) {
@@ -2091,7 +2469,7 @@ function createResources(villageParam = null) {
     };
     const addForced = (kind, x, y, gives, hp, radius) => {
         if (terrainInfoAt(x, y).kind === 'water') return;
-        if (villageForClearance && kind !== 'woodFence' && isNearVillageHouseClearance({ x, y }, villageForClearance)) return;
+        if (villageForClearance && !['woodFence', 'cropCarrot', 'cropCorn', 'cropTomato', 'emptyCropPatch'].includes(kind) && isNearVillageHouseClearance({ x, y }, villageForClearance)) return;
         registerResource(resource(kind, x, y, gives, hp, radius));
     };
 
@@ -2219,6 +2597,20 @@ function createResources(villageParam = null) {
         if (seededUnit(village.garden.x, y) > 0.38) gardenFence.push([village.garden.x - village.garden.w / 2, y, 'woodFence']);
         if (seededUnit(village.garden.x + 9, y) > 0.26) gardenFence.push([village.garden.x + village.garden.w / 2, y, 'woodFence']);
     }
+    const farmerFields = [];
+    for (const building of (isForestVillage(village) ? [] : (village.buildings || []).filter(item => item.kind === 'farmer'))) {
+        const field = villageFarmFieldForBuilding(village, building);
+        building.fieldCenter = { x: field.x, y: field.y };
+        for (let row = -2; row <= 2; row++) {
+            for (let col = -4; col <= 4; col++) {
+                const cropKinds = ['cropCarrot', 'cropCorn', 'cropTomato'];
+                const crop = cropKinds[Math.abs(row * 5 + col + Math.floor(seededUnit(field.x + row, field.y + col) * 3)) % cropKinds.length];
+                const x = field.x + col * 26 + (seededUnit(field.x + col, row) - 0.5) * 5;
+                const y = field.y + row * 22 + (seededUnit(field.y + row, col) - 0.5) * 5;
+                farmerFields.push([x, y, crop]);
+            }
+        }
+    }
     [
         [CAMP_POSITION.x + 180, CAMP_POSITION.y + 90, 'tree'], [CAMP_POSITION.x - 160, CAMP_POSITION.y + 130, 'grassOakTreeStump'], [CAMP_POSITION.x + 220, CAMP_POSITION.y - 160, 'rock'],
         ...regions.mine.flatMap((region, index) => [
@@ -2235,6 +2627,7 @@ function createResources(villageParam = null) {
         ]),
         ...gardenPlants,
         ...gardenFence,
+        ...farmerFields,
     ].forEach(([x, y, kind]) => {
         const config = {
             tree: ['wood', 6, 34],
@@ -2248,12 +2641,94 @@ function createResources(villageParam = null) {
             berry: ['berry', 3, 20],
             grass: ['fiber', 3, 18],
             woodFence: ['wood', 4, 16],
+            cropCarrot: ['carrot', 3, 14],
+            cropCorn: ['corn', 3, 15],
+            cropTomato: ['tomato', 3, 15],
         }[kind];
-        const fixedVillagePlant = ['herb', 'berry', 'grass', 'woodFence'].includes(kind);
+        const fixedVillagePlant = ['herb', 'berry', 'grass', 'woodFence', 'cropCarrot', 'cropCorn', 'cropTomato'].includes(kind);
         (fixedVillagePlant ? addForced : add)(kind, x, y, ...config);
     });
 
     return resources.filter(item => terrainInfoAt(item.x, item.y).kind !== 'water');
+}
+
+function villageFarmFieldForBuilding(village, building) {
+    const fromCenter = normalize(building.x - village.x, building.y - village.y || 1);
+    const baseDistance = Math.max(village.radius * 0.78, 390);
+    const preferred = {
+        x: village.x + fromCenter.x * baseDistance,
+        y: village.y + fromCenter.y * baseDistance * 0.82,
+    };
+    const candidates = [preferred];
+    for (let i = 0; i < 12; i++) {
+        const angle = Math.atan2(fromCenter.y, fromCenter.x) + (i % 2 ? -1 : 1) * (0.22 + Math.floor(i / 2) * 0.18);
+        const dist = baseDistance + (i % 3) * 42;
+        candidates.push({ x: village.x + Math.cos(angle) * dist, y: village.y + Math.sin(angle) * dist * 0.82 });
+    }
+    for (const candidate of candidates) {
+        const point = nearestDryVillagePoint(candidate.x, candidate.y, village, 220);
+        const probe = { x: point.x, y: point.y, radius: 34 };
+        if (terrainInfoAt(point.x, point.y).kind !== 'water' && !isNearVillageHouseClearance(probe, village)) {
+            return { x: snapToGroundGrid(point.x), y: snapToGroundGrid(point.y) };
+        }
+    }
+    return { x: snapToGroundGrid(preferred.x), y: snapToGroundGrid(preferred.y) };
+}
+
+function createWaspHives(resources = []) {
+    const hives = [];
+    const campPoint = CAMP_POSITION;
+    const ruinsPoint = worldRegionSet().ruins[0];
+    const candidates = [];
+    for (let y = 260; y < WORLD.height - 260; y += 96) {
+        for (let x = 260; x < WORLD.width - 260; x += 96) {
+            const px = x + (hash2(x * 0.017 + 31, y * 0.017 - 9) - 0.5) * 72;
+            const py = y + (hash2(x * 0.019 - 13, y * 0.019 + 27) - 0.5) * 72;
+            if (terrainInfoAt(px, py).kind !== 'meadow') continue;
+            if (villageRegionWeight(px, py) > 0.12) continue;
+            if (distance({ x: px, y: py }, campPoint) < 520 || distance({ x: px, y: py }, ruinsPoint) < 520) continue;
+            const flowers = resources.filter(r => r.hp > 0 && ['meadowFlower', 'flower', 'herb', 'beehive'].includes(r.kind) && distance(r, { x: px, y: py }) < 260).length;
+            const openSpace = !resources.some(r => r.hp > 0 && distance(r, { x: px, y: py }) < r.radius + 68);
+            const score = flowers * 2 + (openSpace ? 6 : 0) + valueNoise(px * 0.004 + 8, py * 0.004 - 4) * 4;
+            candidates.push({ x: snapToGroundGrid(px), y: snapToGroundGrid(py), score });
+        }
+    }
+    candidates
+        .sort((a, b) => b.score - a.score)
+        .forEach(candidate => {
+            if (hives.length >= 2) return;
+            if (hives.some(hive => distance(hive, candidate) < 900)) return;
+            hives.push({
+                kind: 'waspHive',
+                x: candidate.x,
+                y: candidate.y,
+                radius: 54,
+                hp: 230,
+                maxHp: 230,
+                stage: 0,
+                state: 'intact',
+                nextSummonAt: 0,
+                queenSpawned: false,
+                brokenAt: 0,
+            });
+        });
+    return hives;
+}
+
+function waspHiveTestSpawnPoint(hive) {
+    const candidates = [
+        { x: hive.x + 280, y: hive.y + 140 },
+        { x: hive.x - 280, y: hive.y + 140 },
+        { x: hive.x + 260, y: hive.y - 180 },
+        { x: hive.x - 260, y: hive.y - 180 },
+        { x: hive.x, y: hive.y + 320 },
+    ];
+    return candidates.find(point => {
+        const x = clamp(point.x, 80, WORLD.width - 80);
+        const y = clamp(point.y, 80, WORLD.height - 80);
+        const terrain = terrainInfoAt(x, y).kind;
+        return terrain !== 'water' && terrain !== 'village';
+    }) || { x: clamp(hive.x + 280, 80, WORLD.width - 80), y: clamp(hive.y + 140, 80, WORLD.height - 80) };
 }
 
 function isNearVillageHouseClearance(point, village) {
@@ -2407,6 +2882,7 @@ function makeEnemy(kind, x, y, boss = false) {
         wolf: ['荒狼', 18, 24, 4, 148, 64, { fang: { min: 1, max: 2 }, hide: { min: 1, max: 1 }, meat: { min: 0, max: 1, chance: 0.45 } }, 1],
         bat: ['夜蝠', 12, 12, 2, 210, 96, { batWing: { min: 0, max: 1, chance: 0.7 }, fang: { min: 0, max: 1, chance: 0.55 }, meat: { min: 0, max: 1, chance: 0.25 } }, 1],
         bee: ['野蜂', 10, 10, 1, 185, 44, { beeStinger: { min: 0, max: 1, chance: 0.65 }, beeswax: { min: 0, max: 1, chance: 0.45 }, honey: { min: 0, max: 1, chance: 0.4 } }, 1],
+        waspQueen: ['黄蜂女王', 32, 190, 8, 155, 128, { royalJelly: { min: 2, max: 3 }, honey: { min: 12, max: 18 }, beeswax: { min: 10, max: 16 }, beeStinger: { min: 8, max: 12 }, pollenDust: { min: 7, max: 11 }, flower: { min: 8, max: 14 }, honeySalve: { min: 1, max: 2 }, waxTorch: { min: 1, max: 2 } }, 1],
         jungleSnake: ['丛林蛇', 11, 14, 2, 155, 56, { venom: { min: 1, max: 1 }, fang: { min: 0, max: 1, chance: 0.45 }, meat: { min: 0, max: 1, chance: 0.35 } }, 1],
         vineStalker: ['藤蔓潜伏者', 18, 30, 3, 92, 98, { vine: { min: 2, max: 4 }, jungleLeaf: { min: 0, max: 2, chance: 0.55 }, herb: { min: 0, max: 1, chance: 0.35 } }, 1],
         grassRunner: ['平原疾行兽', 14, 18, 2, 170, 52, { beastClaw: { min: 1, max: 1 }, meat: { min: 1, max: 2 }, fiber: { min: 0, max: 1, chance: 0.35 } }, 1],
@@ -2470,6 +2946,18 @@ function createEnemies(spawnDens = []) {
     return enemies;
 }
 
+function limitInitialEnemiesNearPlayer(enemies, playerPoint, radius = 850) {
+    const limit = nearbyNormalEnemyLimit();
+    const nearby = enemies
+        .filter(enemyItem => isNormalEnemyForNearbyCap(enemyItem) && distance(enemyItem, playerPoint) < radius)
+        .sort((a, b) => distance(b, playerPoint) - distance(a, playerPoint));
+    if (nearby.length <= limit) return;
+    const remove = new Set(nearby.slice(limit));
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        if (remove.has(enemies[i])) enemies.splice(i, 1);
+    }
+}
+
 function addMineGolems(add) {
     const mineCenters = worldRegionSet().mine.slice(0, 3);
     mineCenters.forEach((center, centerIndex) => {
@@ -2489,29 +2977,463 @@ function addMineGolems(add) {
     });
 }
 
+function createMineCaveDynamicObjects() {
+    const objects = [];
+    const resourceSpots = [
+        ['mineVein', '铁矿脉', 220, 170, { ore: 4, coal: 2 }],
+        ['mineVein', '煤矿脉', 292, 520, { coal: 6, stone: 3 }],
+        ['mineVein', '碎石矿脉', 560, 560, { stone: 7, ore: 2 }],
+        ['mineVein', '铁矿脉', 824, 232, { ore: 5, coal: 2 }],
+        ['mineCrystalVein', '晶矿脉', 850, 472, { crystal: 2, stoneCore: 1 }],
+        ['mineCrystalVein', '浅晶矿脉', 428, 162, { crystal: 1, ore: 3 }],
+    ];
+    for (const [kind, label, x, y, storage] of resourceSpots) {
+        objects.push(createMineCaveResource(kind, label, x, y, storage));
+    }
+    const monsters = [
+        mineCaveMonster('mineBat', '矿蝠', 332, 300),
+        mineCaveMonster('crystalBug', '晶壳虫', 650, 354),
+        mineCaveMonster('stoneCrawler', '石核虫', 774, 544),
+        mineCaveMonster('mineBat', '矿蝠', 514, 498),
+    ];
+    objects.push(...monsters);
+    return objects;
+}
+
+function createMineCaveResource(kind, label, x, y, storage) {
+    const first = Object.entries(storage)[0] || ['stone', 1];
+    return {
+        kind,
+        label,
+        x, y,
+        w: 74,
+        h: 68,
+        radius: 28,
+        solid: true,
+        action: 'mineVein',
+        storage: { ...storage },
+        gives: first[0],
+        hp: kind === 'mineCrystalVein' ? 6 : 5,
+        maxHp: kind === 'mineCrystalVein' ? 6 : 5,
+        caveResource: true,
+    };
+}
+
+function nearestMineCaveHarvestable() {
+    if (state.indoor?.building?.kind !== 'mineCaveInterior') return null;
+    const p = state.player;
+    return (state.indoor.objects || [])
+        .filter(object => object.caveResource && object.hp > 0 && Object.values(object.storage || {}).some(amount => amount > 0))
+        .map(object => ({ type: 'resource', item: object, d: distanceToRect(p, object) }))
+        .filter(item => item.d <= 54)
+        .sort((a, b) => a.d - b.d)[0] || null;
+}
+
+function nearestUndergroundHarvestable() {
+    const ug = state.underground;
+    if (!ug) return null;
+    const p = state.player;
+    return (ug.resources || [])
+        .filter(resource => resource.hp > 0)
+        .map(resource => ({ type: 'resource', item: resource, d: distance(p, resource) }))
+        .filter(item => item.d <= p.radius + item.item.radius + 24)
+        .sort((a, b) => a.d - b.d)[0] || null;
+}
+
+function mineCaveMonster(mineKind, label, x, y) {
+    const stats = {
+        mineBat: { hp: 18, attack: 3, speed: 150, radius: 16, drop: { batWing: 1, coal: 1 } },
+        crystalBug: { hp: 34, attack: 4, speed: 82, radius: 19, drop: { crystalFang: 1, ore: 2 } },
+        stoneCrawler: { hp: 42, attack: 5, speed: 68, radius: 21, drop: { stoneCore: 1, stone: 4 } },
+    }[mineKind];
+    return {
+        kind: 'mineMonster',
+        mineKind,
+        label,
+        name: label,
+        x, y,
+        homeX: x,
+        homeY: y,
+        w: stats.radius * 2,
+        h: stats.radius * 2,
+        radius: stats.radius,
+        hp: stats.hp,
+        maxHp: stats.hp,
+        attack: stats.attack,
+        speed: stats.speed,
+        drop: stats.drop,
+        solid: false,
+        nextAttackAt: 0,
+        nextWanderAt: 0,
+        targetX: x,
+        targetY: y,
+    };
+}
+
+function updateMineCave(dt, now) {
+    if (state.indoor?.building?.kind !== 'mineCaveInterior') return;
+    const objects = state.indoor.objects || [];
+    const aliveMonsters = objects.filter(object => object.kind === 'mineMonster' && object.hp > 0);
+    if (aliveMonsters.length < 5 && now >= (state.indoor.nextMineSpawnAt || 0)) {
+        state.indoor.nextMineSpawnAt = now + 8000;
+        const spawn = randomMineCaveSpawnPoint(aliveMonsters.length);
+        objects.push(mineCaveMonster(Math.random() < 0.5 ? 'mineBat' : (Math.random() < 0.55 ? 'crystalBug' : 'stoneCrawler'), spawn.label, spawn.x, spawn.y));
+    }
+    for (const monster of aliveMonsters) updateMineCaveMonster(monster, dt, now);
+    state.indoor.objects = objects.filter(object => object.kind !== 'mineMonster' || object.hp > 0 || (object.deathAt && now - object.deathAt < 900));
+}
+
+function updateUnderground(dt, now) {
+    const ug = state.underground;
+    if (!ug) return;
+    if (ug.enemies.filter(enemy => enemy.hp > 0 && !enemy.boss).length < 6 && now >= (ug.nextSpawnAt || 0)) {
+        ug.nextSpawnAt = now + 9000;
+        const spawn = randomUndergroundSpawnPoint(ug);
+        if (spawn) ug.enemies.push(mineCaveMonster(spawn.kind, spawn.label, spawn.x, spawn.y));
+    }
+    for (const enemy of ug.enemies.filter(enemy => enemy.hp > 0)) {
+        updateMineMonsterStatusEffects(enemy, dt, now);
+        if (enemy.hp > 0) updateUndergroundEnemy(enemy, dt, now, ug);
+    }
+    separateUndergroundEnemies(ug);
+    updateUndergroundProjectiles(dt, now);
+    ug.enemies = ug.enemies.filter(enemy => enemy.hp > 0 || (enemy.deathAt && now - enemy.deathAt < 900));
+}
+
+function separateUndergroundEnemies(ug) {
+    const alive = (ug.enemies || []).filter(enemy => enemy.hp > 0);
+    for (let i = 0; i < alive.length; i++) {
+        for (let j = i + 1; j < alive.length; j++) {
+            const a = alive[i];
+            const b = alive[j];
+            const minDist = a.radius + b.radius + 4;
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            if (dist >= minDist) continue;
+            const push = (minDist - dist) * 0.5;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            moveUndergroundEntity(a, -nx * push, -ny * push);
+            moveUndergroundEntity(b, nx * push, ny * push);
+        }
+    }
+}
+
+function updateUndergroundProjectiles(dt, now) {
+    const projectiles = state.undergroundProjectiles || [];
+    for (const projectile of projectiles) {
+        if (projectile.exploded) continue;
+        const previous = { x: projectile.x, y: projectile.y };
+        const progress = clamp((now - projectile.startedAt) / projectile.duration, 0, 1);
+        projectile.x = lerp(projectile.startX, projectile.targetX, progress);
+        projectile.y = lerp(projectile.startY, projectile.targetY, progress);
+        if (undergroundWallCollides({ x: projectile.x, y: projectile.y, radius: 3 })) {
+            projectile.exploded = true;
+            continue;
+        }
+        const hit = findUndergroundProjectileHit(projectile, previous);
+        if (hit) {
+            damageMineCaveMonster(hit, now, { name: directProjectileName(projectile), damage: directProjectileDamage(projectile), dir: projectile.dir || state.player.facing });
+            projectile.exploded = true;
+            continue;
+        }
+        if (progress >= 1) projectile.exploded = true;
+    }
+    state.undergroundProjectiles = projectiles.filter(projectile => !projectile.exploded);
+}
+
+function findUndergroundProjectileHit(projectile, previous) {
+    return (state.underground?.enemies || [])
+        .filter(enemy => enemy.hp > 0)
+        .map(enemy => ({ enemy, d: distanceToSegment(enemy, previous, projectile), radius: enemy.radius + 8 }))
+        .filter(hit => hit.d <= hit.radius)
+        .sort((a, b) => a.d - b.d)[0]?.enemy || null;
+}
+
+function randomUndergroundSpawnPoint(ug) {
+    const previous = state.underground;
+    state.underground = ug;
+    const player = state.player;
+    const rooms = (ug.rooms || [])
+        .filter(room => room.type !== 'entry')
+        .filter(room => distance(room, player) > 760)
+        .sort((a, b) => distance(b, player) - distance(a, player));
+    const fallbackRooms = (ug.rooms || []).filter(room => room.type !== 'entry' && distance(room, player) > 520);
+    const candidates = rooms.length ? rooms : fallbackRooms;
+    if (!candidates.length) {
+        state.underground = previous;
+        return null;
+    }
+    const room = candidates[Math.floor((performance.now() * 0.001 + ug.enemies.length) % candidates.length)];
+    const roll = seededUnit(ug.seed + ug.enemies.length * 13.7 + performance.now() * 0.0001, 44);
+    const kind = room.type === 'crystal' ? (roll > 0.55 ? 'crystalBug' : 'mineBat')
+        : (room.type === 'boss' || room.type === 'bone' ? (roll > 0.45 ? 'stoneCrawler' : 'crystalBug')
+            : (roll > 0.66 ? 'stoneCrawler' : (roll > 0.34 ? 'crystalBug' : 'mineBat')));
+    const label = kind === 'stoneCrawler' ? '石核虫' : (kind === 'crystalBug' ? '晶壳虫' : '矿蝠');
+    const point = randomNonOverlappingUndergroundPoint(ug, room.id, Math.floor(performance.now() * 0.01) + ug.enemies.length * 31, 24, 70)
+        || nearestUndergroundWalkablePoint({ x: room.x, y: room.y }, 24, 360, probe => !undergroundPlacementOverlaps(ug, probe));
+    state.underground = previous;
+    if (!point || distance(point, player) < 520) return null;
+    return { kind, label, x: point.x, y: point.y };
+}
+
+function updateUndergroundEnemy(enemy, dt, now, ug) {
+    if (enemy.knockX || enemy.knockY) {
+        moveUndergroundEntity(enemy, (enemy.knockX || 0) * dt, (enemy.knockY || 0) * dt);
+        enemy.knockX *= Math.pow(0.02, dt);
+        enemy.knockY *= Math.pow(0.02, dt);
+    }
+    if ((enemy.rootedUntil || 0) > now) return;
+    const p = state.player;
+    const dist = distance(enemy, p);
+    if (dist < enemy.radius + p.radius + 10 && now >= (enemy.nextAttackAt || 0)) {
+        enemy.nextAttackAt = now + (enemy.mineKind === 'mineBat' ? 820 : 1200);
+        enemy.attackFlashUntil = now + 180;
+        applyMineMonsterDamage(enemy, now);
+        return;
+    }
+    let target = p;
+    if (dist > 520) {
+        if (now >= (enemy.nextWanderAt || 0)) {
+            enemy.targetX = clamp(enemy.homeX + (Math.random() - 0.5) * 260, 80, ug.width - 80);
+            enemy.targetY = clamp(enemy.homeY + (Math.random() - 0.5) * 220, 80, ug.height - 80);
+            enemy.nextWanderAt = now + 1600 + Math.random() * 1400;
+        }
+        target = { x: enemy.targetX, y: enemy.targetY };
+    }
+    const dir = normalize(target.x - enemy.x, target.y - enemy.y);
+    moveUndergroundEntity(enemy, dir.x * enemy.speed * dt, dir.y * enemy.speed * dt);
+}
+
+function updateMineMonsterStatusEffects(enemy, dt, now) {
+    if (isStoneCreature(enemy)) {
+        enemy.poisonUntil = 0;
+        enemy.bleedUntil = 0;
+        enemy.burnUntil = 0;
+        return;
+    }
+    if (enemy.poisonUntil && enemy.poisonUntil > now && now >= (enemy.poisonTickAt || 0)) {
+        const damage = enemy.poisonPower || 1;
+        enemy.hp -= damage;
+        enemy.poisonTickAt = now + 800;
+        enemy.hurtUntil = now + 120;
+        addFloatText(`-${damage}`, enemy.x, enemy.y - 42, '#8cff66');
+    } else if (enemy.poisonUntil && enemy.poisonUntil <= now) {
+        enemy.poisonUntil = 0;
+        enemy.poisonPower = 1;
+    }
+    if (enemy.bleedUntil && enemy.bleedUntil > now && now >= (enemy.bleedTickAt || 0)) {
+        const damage = enemy.bleedPower || 1;
+        enemy.hp -= damage;
+        enemy.bleedTickAt = now + 650;
+        enemy.hurtUntil = now + 120;
+        addFloatText(`-${damage}`, enemy.x, enemy.y - 50, '#ff6b6b');
+    } else if (enemy.bleedUntil && enemy.bleedUntil <= now) {
+        enemy.bleedUntil = 0;
+        enemy.bleedPower = 1;
+    }
+    if (enemy.hp <= 0) {
+        enemy.hp = 0;
+        enemy.deathAt = now;
+        const drops = grantMineMonsterDrops(enemy);
+        addFloatText(drops, enemy.x, enemy.y - 52, '#9cffb7');
+        showToast(`${enemy.label} 被持续伤害击败，获得 ${drops}`);
+    }
+}
+
+function moveUndergroundEntity(entity, dx, dy) {
+    const oldX = entity.x;
+    entity.x += dx;
+    if (undergroundCollides(entity)) {
+        entity.x = oldX;
+    }
+    const oldY = entity.y;
+    entity.y += dy;
+    if (undergroundCollides(entity)) {
+        entity.y = oldY;
+    }
+}
+
+function undergroundWallRects() {
+    const ug = state.underground;
+    const wall = 48;
+    return [
+        { x: ug.width / 2, y: wall / 2, w: ug.width, h: wall },
+        { x: ug.width / 2, y: ug.height - wall / 2, w: ug.width, h: wall },
+        { x: wall / 2, y: ug.height / 2, w: wall, h: ug.height },
+        { x: ug.width - wall / 2, y: ug.height / 2, w: wall, h: ug.height },
+    ];
+}
+
+function undergroundCollides(entity) {
+    const ug = state.underground;
+    if (!ug) return false;
+    if (undergroundWallCollides(entity)) return true;
+    for (const object of ug.objects || []) {
+        const rect = undergroundObjectCollisionRect(object);
+        if (rect && rotatedRectCircleOverlap(rect, entity)) return true;
+    }
+    for (const resource of ug.resources || []) {
+        if (resource.hp <= 0) continue;
+        if (resource.wallCrystal) continue;
+        if (undergroundResourceCollidesEntity(resource, entity)) return true;
+    }
+    return false;
+}
+
+function undergroundWallCollides(entity) {
+    return !undergroundWalkableCircle(entity);
+}
+
+function undergroundWalkableCircle(entity) {
+    const foot = undergroundCollisionFoot(entity);
+    const points = [
+        { x: foot.x, y: foot.y },
+        { x: foot.x - foot.radius, y: foot.y },
+        { x: foot.x + foot.radius, y: foot.y },
+        { x: foot.x, y: foot.y + foot.radius * 0.55 },
+        { x: foot.x, y: foot.y - foot.radius * 0.35 },
+    ];
+    return points.every(point => undergroundWalkableAt(point.x, point.y));
+}
+
+function undergroundCollisionFoot(entity) {
+    const radius = entity.radius || 12;
+    return {
+        x: entity.x,
+        y: entity.y + radius * 0.58,
+        radius: Math.max(4, radius * 0.28),
+    };
+}
+
+function undergroundWalkableAt(x, y) {
+    const ug = state.underground;
+    if (!ug) return false;
+    if (x < 0 || y < 0 || x > ug.width || y > ug.height) return false;
+    const visualEdgePadding = 0;
+    if ((ug.rooms || []).some(room => Math.abs(x - room.x) <= room.w / 2 + visualEdgePadding && Math.abs(y - room.y) <= room.h / 2 + visualEdgePadding)) return true;
+    return (ug.tunnels || []).some(tunnel => distanceToSegmentPoint({ x, y }, { x: tunnel.x1, y: tunnel.y1 }, { x: tunnel.x2, y: tunnel.y2 }) <= tunnel.width / 2 + visualEdgePadding);
+}
+
+function distanceToSegmentPoint(point, a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lengthSq = dx * dx + dy * dy || 1;
+    const t = clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq, 0, 1);
+    const px = a.x + dx * t;
+    const py = a.y + dy * t;
+    return Math.hypot(point.x - px, point.y - py);
+}
+
+function undergroundObjectCollisionRect(object) {
+    if (object.kind === 'collapse' && object.hp > 0) return { x: object.x, y: object.y, w: object.w || 116, h: object.h || 58, angle: object.angle || 0 };
+    if (object.kind === 'mineChest') return { x: object.x, y: object.y, w: 56, h: 32 };
+    return null;
+}
+
+function undergroundResourceCollisionRect(resource) {
+    return {
+        x: resource.x,
+        y: resource.y + resource.radius * 0.18,
+        w: resource.radius * 1.34,
+        h: resource.radius * 0.68,
+    };
+}
+
+function rotatedRectCircleOverlap(rect, circle) {
+    if (!rect.angle) return rectCircleOverlap(rect, circle);
+    const cos = Math.cos(-rect.angle);
+    const sin = Math.sin(-rect.angle);
+    const dx = circle.x - rect.x;
+    const dy = circle.y - rect.y;
+    const localCircle = {
+        x: rect.x + dx * cos - dy * sin,
+        y: rect.y + dx * sin + dy * cos,
+        radius: circle.radius,
+    };
+    return rectCircleOverlap({ ...rect, angle: 0 }, localCircle);
+}
+
+function undergroundResourceCollidesEntity(resource, entity) {
+    const rect = undergroundResourceCollisionRect(resource);
+    const foot = {
+        x: entity.x,
+        y: entity.y + (entity.radius || 0) * 0.42,
+        radius: Math.max(5, (entity.radius || 12) * 0.48),
+    };
+    return rectCircleOverlap(rect, foot);
+}
+
+function randomMineCaveSpawnPoint(seed = 0) {
+    const spots = [
+        { x: 190, y: 152, label: '矿蝠' },
+        { x: VIEW.width - 190, y: 156, label: '晶壳虫' },
+        { x: 190, y: VIEW.height - 170, label: '石核虫' },
+        { x: VIEW.width - 230, y: VIEW.height - 176, label: '矿蝠' },
+    ];
+    return spots[Math.floor((performance.now() * 0.001 + seed * 1.7) % spots.length)];
+}
+
+function updateMineCaveMonster(monster, dt, now) {
+    if (monster.knockX || monster.knockY) {
+        moveIndoorEntitySafely(monster, (monster.knockX || 0) * dt, (monster.knockY || 0) * dt);
+        monster.knockX *= Math.pow(0.02, dt);
+        monster.knockY *= Math.pow(0.02, dt);
+    }
+    if ((monster.rootedUntil || 0) > now) return;
+    const p = state.player;
+    const dist = distance(monster, p);
+    if (dist < monster.radius + p.radius + 10 && now >= (monster.nextAttackAt || 0)) {
+        monster.nextAttackAt = now + (monster.mineKind === 'mineBat' ? 850 : 1250);
+        monster.attackFlashUntil = now + 180;
+        applyMineMonsterDamage(monster, now);
+        return;
+    }
+    let target = p;
+    if (dist > 430) {
+        if (now >= (monster.nextWanderAt || 0)) {
+            monster.targetX = clamp(monster.homeX + (Math.random() - 0.5) * 180, 110, VIEW.width - 110);
+            monster.targetY = clamp(monster.homeY + (Math.random() - 0.5) * 150, 110, VIEW.height - 110);
+            monster.nextWanderAt = now + 1600 + Math.random() * 1500;
+        }
+        target = { x: monster.targetX, y: monster.targetY };
+    }
+    const dir = normalize(target.x - monster.x, target.y - monster.y);
+    moveIndoorEntitySafely(monster, dir.x * monster.speed * dt, dir.y * monster.speed * dt);
+    const bounds = indoorMovementBounds();
+    monster.x = clamp(monster.x, bounds.left, bounds.right);
+    monster.y = clamp(monster.y, bounds.top, bounds.bottom);
+}
+
+function applyMineMonsterDamage(monster, now) {
+    applyEnemyDamageToTarget(monster, state.player, monster.attack, monster.mineKind === 'mineBat' ? '撕咬' : '撞击', now);
+    spawnBurst(state.player.x, state.player.y - 10, monster.mineKind === 'crystalBug' ? '#b77dff' : '#d8e5f2', 8, 120, 14);
+}
+
 function addBiomeCreatures(add) {
     [
-        ['bee', 'meadow', 4],
-        ['grassRunner', 'grass', 5],
-        ['tallgrassRaptor', 'tallgrass', 4],
-        ['meadowMoth', 'meadow', 5],
-        ['forestBear', 'forest', 3],
-        ['bambooPanda', 'bamboo', 3],
-        ['birchStag', 'birch', 4],
-        ['pineLynx', 'pine', 4],
-        ['mapleFox', 'maple', 4],
-        ['reedCrab', 'reedWetland', 4],
-        ['swampMireling', 'swamp', 4],
-        ['drySandWasp', 'dry', 4],
-        ['mineCrystalBat', 'mine', 4],
+        ['bee', 'meadow', 2],
+        ['grassRunner', 'grass', 4],
+        ['tallgrassRaptor', 'tallgrass', 3],
+        ['meadowMoth', 'meadow', 2],
+        ['forestBear', 'forest', 2],
+        ['bambooPanda', 'bamboo', 2],
+        ['birchStag', 'birch', 3],
+        ['pineLynx', 'pine', 3],
+        ['mapleFox', 'maple', 3],
+        ['reedCrab', 'reedWetland', 3],
+        ['swampMireling', 'swamp', 3],
+        ['drySandWasp', 'dry', 2],
+        ['mineCrystalBat', 'mine', 2],
         ['ruinsBoneGuard', 'ruins', 3],
-        ['hare', 'meadow', 4],
-        ['deer', 'birch', 4],
-        ['deer', 'maple', 4],
-        ['deer', 'pine', 4],
-        ['shade', 'darkForest', 5],
-        ['jungleSnake', 'jungle', 7],
-        ['vineStalker', 'jungle', 4],
+        ['hare', 'meadow', 3],
+        ['deer', 'birch', 3],
+        ['deer', 'maple', 3],
+        ['deer', 'pine', 3],
+        ['shade', 'darkForest', 4],
+        ['jungleSnake', 'jungle', 6],
+        ['vineStalker', 'jungle', 3],
     ].forEach(([kind, terrainKind, count]) => {
         let placed = 0;
         const offset = Math.floor(hash2(kind.length, terrainKind.length) * 120);
@@ -2535,23 +3457,23 @@ function addBiomeCreatures(add) {
 }
 
 function chooseInitialSpawnKind(terrainKind, x, y, n) {
-    if (terrainKind === 'grass' && n > 0.76) return n > 0.92 ? 'slime' : 'grassRunner';
-    if (terrainKind === 'tallgrass' && n > 0.5) return n > 0.76 ? 'tallgrassRaptor' : 'wolf';
-    if (terrainKind === 'meadow' && n > 0.42) return n > 0.72 ? 'meadowMoth' : (n > 0.56 ? 'bee' : 'hare');
+    if (terrainKind === 'grass' && n > 0.8) return n > 0.94 ? 'slime' : 'grassRunner';
+    if (terrainKind === 'tallgrass' && n > 0.56) return n > 0.8 ? 'tallgrassRaptor' : 'wolf';
+    if (terrainKind === 'meadow' && n > 0.5) return n > 0.84 ? 'meadowMoth' : (n > 0.72 ? 'bee' : 'hare');
     if (terrainKind === 'darkForest' && n > 0.44) return 'shade';
     if (terrainKind === 'birch' && n > 0.36) return n > 0.66 ? 'birchStag' : (n > 0.52 ? 'deer' : 'hare');
     if (terrainKind === 'maple' && n > 0.36) return n > 0.66 ? 'mapleFox' : (n > 0.52 ? 'deer' : 'hare');
     if (terrainKind === 'pine' && n > 0.42) return n > 0.72 ? 'pineLynx' : (n > 0.56 ? 'wolf' : 'deer');
-    if (terrainKind === 'jungle' && n > 0.42) return n > 0.82 ? 'vineStalker' : (n > 0.54 ? 'jungleSnake' : (n > 0.48 ? 'boar' : 'bee'));
-    if ((terrainKind === 'grass' || terrainKind === 'shore') && n > 0.84) return n > 0.94 ? 'bat' : 'slime';
+    if (terrainKind === 'jungle' && n > 0.48) return n > 0.84 ? 'vineStalker' : (n > 0.58 ? 'jungleSnake' : (n > 0.54 ? 'boar' : 'bee'));
+    if ((terrainKind === 'grass' || terrainKind === 'shore') && n > 0.88) return n > 0.97 ? 'bat' : 'slime';
     if (terrainKind === 'reedWetland' && n > 0.46) return 'reedCrab';
     if ((terrainKind === 'swamp' || terrainKind === 'mud' || terrainKind === 'shore') && n > 0.48) return terrainKind === 'shore' ? 'frog' : (n > 0.72 ? 'swampMireling' : 'frog');
-    if (terrainKind === 'dry' && n > 0.46) return n > 0.72 ? 'drySandWasp' : 'scorpion';
+    if (terrainKind === 'dry' && n > 0.52) return n > 0.82 ? 'drySandWasp' : 'scorpion';
     if (terrainKind === 'forest' && n > 0.56) return n > 0.8 ? 'forestBear' : 'boar';
     if (terrainKind === 'bamboo' && n > 0.54) return n > 0.78 ? 'bambooPanda' : 'boar';
     if ((terrainKind === 'pine' || terrainKind === 'maple' || terrainKind === 'birch') && n > 0.66) return n > 0.84 ? 'wolf' : 'boar';
-    if (terrainKind === 'mine' && n > 0.64) return n > 0.82 ? 'mineCrystalBat' : (n > 0.74 ? 'golem' : 'bat');
-    if (terrainKind === 'ruins' && n > 0.64) return n > 0.82 ? 'ruinsBoneGuard' : (n > 0.74 ? 'golem' : 'bat');
+    if (terrainKind === 'mine' && n > 0.7) return n > 0.9 ? 'mineCrystalBat' : (n > 0.8 ? 'golem' : 'bat');
+    if (terrainKind === 'ruins' && n > 0.7) return n > 0.9 ? 'ruinsBoneGuard' : (n > 0.8 ? 'golem' : 'bat');
     return '';
 }
 
@@ -2640,8 +3562,50 @@ function createDecorations() {
     [
         [1120, 1010], [1300, 910], [1660, 1190], [1910, 1040], [2040, 790],
     ].forEach(([x, y], index) => add(index % 2 ? 'pebbles' : 'crack', x, y, 1));
+    items.push(createMineCaveEntrance());
     items.push(createJungleRuinEntrance());
     return items;
+}
+
+function createMineCaveEntrance() {
+    const mines = (worldRegionSet().mine || []).slice();
+    const region = mines.sort((a, b) => a.x - b.x)[0] || { x: WORLD.width * 0.35, y: WORLD.height * 0.42, radius: 620, seed: 71 };
+    const angle = seededUnit(region.seed || 71, 36.4) * Math.PI * 2;
+    const dist = Math.max(160, region.radius * (0.18 + seededUnit(region.seed || 71, 18.9) * 0.28));
+    const point = nearestMinePoint(region.x + Math.cos(angle) * dist, region.y + Math.sin(angle) * dist, region);
+    return {
+        kind: 'mineCave',
+        label: '废弃矿洞',
+        x: snapToGroundGrid(point.x),
+        y: snapToGroundGrid(point.y),
+        radius: 68,
+        scale: 1,
+        warned: false,
+    };
+}
+
+function nearestMinePoint(x, y, fallback) {
+    let best = { x, y };
+    let bestScore = terrainInfoAt(x, y).kind === 'mine' ? 0 : Infinity;
+    for (let r = 0; r <= 420; r += 42) {
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+            const p = { x: clamp(x + Math.cos(a) * r, 80, WORLD.width - 80), y: clamp(y + Math.sin(a) * r, 80, WORLD.height - 80) };
+            if (terrainInfoAt(p.x, p.y).kind !== 'mine') continue;
+            const score = distance(p, fallback || { x, y }) + r * 0.25;
+            if (score < bestScore) {
+                best = p;
+                bestScore = score;
+            }
+        }
+    }
+    return best;
+}
+
+function mineCaveSpawnPoint(cave) {
+    return {
+        x: snapToGroundGrid(clamp(cave.x - 118, 80, WORLD.width - 80)),
+        y: snapToGroundGrid(clamp(cave.y + 92, 80, WORLD.height - 80)),
+    };
 }
 
 function createJungleRuinEntrance() {
@@ -2693,6 +3657,10 @@ function createVillageTasks() {
         kitchen: { status: 'new', title: '巡夜热食', need: { meat: 2, mushroom: 2, coal: 1 }, reward: { roastMeat: 2, stew: 1 }, reputation: 1.1 },
         guard: { status: 'new', title: '加固村口防线', need: { bamboo: 4, fiber: 4, ore: 1 }, reward: { simpleArrow: 12, bandage: 1, bambooTrap: 1 }, reputation: 1.4 },
         elder: { status: 'new', title: '安抚村民的仪式', need: { flower: 4, crystal: 1, shadowShard: 1 }, reward: { antlerHorn: 1, copperCoin: 8 }, reputation: 2 },
+        carpenter: { status: 'new', title: '修补村屋木梁', need: { wood: 8, fiber: 4, stone: 2 }, reward: { bambooFence: 3, workbench: 1 }, reputation: 1.4 },
+        hunter: { status: 'new', title: '补齐猎手箭袋', need: { fiber: 4, bamboo: 4, fang: 1 }, reward: { simpleArrow: 18, beeDart: 2 }, reputation: 1.3 },
+        miner: { status: 'new', title: '清点矿洞工具', need: { coal: 3, ore: 3, stone: 5 }, reward: { ironPickaxe: 1, torch: 2 }, reputation: 1.5 },
+        farmer: { status: 'new', title: '补种村庄粮篮', need: { berry: 4, carrot: 2, honey: 1 }, reward: { roastMeat: 2, herb: 3, tomato: 2 }, reputation: 1.1 },
         cultPriest: { status: 'new', title: '绿母毒谱补页', need: { toxicMushroom: 2, jungleLeaf: 4, vine: 3 }, reward: { poisonVial: 2, antidote: 1 }, reputation: 1.4 },
         cultHerbalist: { status: 'new', title: '安抚受控丛林兽', need: { jungleFruit: 4, vine: 4, venom: 1 }, reward: { jungleLeaf: 4, poisonVial: 1 }, reputation: 1.5 },
         cultHealer: { status: 'new', title: '补充疗藤药材', need: { herb: 4, jungleLeaf: 4, vine: 3 }, reward: { salve: 2, bandage: 2 }, reputation: 1.3 },
@@ -2728,6 +3696,26 @@ function nextVillageTask(role, completed = 0) {
             { title: '村民安神花束', need: { flower: 4, herb: 2 }, reward: { copperCoin: 6, bandage: 2 }, reputation: 1.2 },
             { title: '修补村旗仪式', need: { flower: 3, fiber: 4, crystal: 1 }, reward: { antlerHorn: 1 }, reputation: 1.8 },
             { title: '驱散暗影传闻', need: { shadowShard: 2, crystal: 1, flower: 4 }, reward: { shadowLantern: 1, copperCoin: 12 }, reputation: 2.4 },
+        ],
+        carpenter: [
+            { title: '补木栅栏', need: { wood: 8, fiber: 3 }, reward: { bambooFence: 4, copperCoin: 4 }, reputation: 1.1 },
+            { title: '修屋顶横梁', need: { oakWood: 3, resin: 1 }, reward: { workbench: 1, bandage: 1 }, reputation: 1.5 },
+            { title: '准备重建材料', need: { wood: 10, stone: 4, coal: 1 }, reward: { chest: 1, copperCoin: 8 }, reputation: 1.8 },
+        ],
+        hunter: [
+            { title: '削箭杆', need: { bamboo: 4, fiber: 3 }, reward: { simpleArrow: 18 }, reputation: 1.0 },
+            { title: '换取兽皮弓弦', need: { hide: 2, sinew: 1 }, reward: { sinewBow: 1, simpleArrow: 10 }, reputation: 1.6 },
+            { title: '准备蜂刺飞镖', need: { beeStinger: 2, bamboo: 2 }, reward: { beeDart: 5, copperCoin: 5 }, reputation: 1.7 },
+        ],
+        miner: [
+            { title: '筛选煤块', need: { coal: 4, stone: 4 }, reward: { ore: 4, torch: 2 }, reputation: 1.1 },
+            { title: '修铁镐柄', need: { ore: 4, wood: 3, coal: 2 }, reward: { ironPickaxe: 1 }, reputation: 1.8 },
+            { title: '深层矿样', need: { crystal: 2, stoneCore: 1 }, reward: { minerLampHelmet: 1, copperCoin: 10 }, reputation: 2.2 },
+        ],
+        farmer: [
+            { title: '收浆果篮', need: { berry: 6, carrot: 2 }, reward: { roastMeat: 1, herb: 2, tomato: 2 }, reputation: 0.9 },
+            { title: '补蜂蜜储备', need: { honey: 2, flower: 3, corn: 2 }, reward: { honeySalve: 1, mushroom: 3 }, reputation: 1.4 },
+            { title: '给厨房送菜', need: { mushroom: 4, herb: 2, tomato: 3 }, reward: { stew: 2, copperCoin: 5, corn: 2 }, reputation: 1.5 },
         ],
         cultPriest: [
             { title: '抄写神经毒谱', need: { toxicMushroom: 3, venom: 2, jungleLeaf: 4 }, reward: { poisonVial: 3, antidote: 1 }, reputation: 1.5 },
@@ -2768,8 +3756,8 @@ function nextVillageTask(role, completed = 0) {
 
 function createSpawnDens() {
     const dens = [];
-    const biomeDenCaps = Object.fromEntries(Object.keys(BIOME_MONSTER_TERRAIN).map(kind => [kind, 7]));
-    const caps = { frog: 12, scorpion: 12, bat: 16, wolf: 8, slime: 10, bee: 10, shade: 8, jungleSnake: 10, vineStalker: 6, ...biomeDenCaps };
+    const biomeDenCaps = Object.fromEntries(Object.keys(BIOME_MONSTER_TERRAIN).map(kind => [kind, 6]));
+    const caps = { frog: 10, scorpion: 10, bat: 8, wolf: 7, slime: 9, bee: 5, shade: 7, jungleSnake: 9, vineStalker: 5, meadowMoth: 4, drySandWasp: 4, mineCrystalBat: 4, ...biomeDenCaps };
     const counts = Object.fromEntries(Object.keys(caps).map(kind => [kind, 0]));
     const add = (kind, x, y) => {
         if (counts[kind] >= caps[kind]) return;
@@ -2788,30 +3776,30 @@ function createSpawnDens() {
             if (biomeKind) add(biomeKind, px, py);
             else if ((terrain === 'swamp' || terrain === 'mud' || terrain === 'shore') && n > 0.54) add('frog', px, py);
             else if (terrain === 'dry' && n > 0.54) add('scorpion', px, py);
-            else if ((terrain === 'mine' || terrain === 'ruins') && n > 0.4) add('bat', px, py);
-            else if ((terrain === 'tallgrass' || terrain === 'forest') && n > 0.64) add('wolf', px, py);
-            else if ((terrain === 'grass' || terrain === 'shore') && n > 0.7) add('slime', px, py);
-            else if (terrain === 'meadow' && n > 0.34) add('bee', px, py);
-            else if (terrain === 'darkForest' && n > 0.34) add('shade', px, py);
-            else if (terrain === 'jungle' && n > 0.38) add(n > 0.74 ? 'vineStalker' : 'jungleSnake', px, py);
+            else if ((terrain === 'mine' || terrain === 'ruins') && n > 0.56) add('bat', px, py);
+            else if ((terrain === 'tallgrass' || terrain === 'forest') && n > 0.68) add('wolf', px, py);
+            else if ((terrain === 'grass' || terrain === 'shore') && n > 0.74) add('slime', px, py);
+            else if (terrain === 'meadow' && n > 0.52) add('bee', px, py);
+            else if (terrain === 'darkForest' && n > 0.4) add('shade', px, py);
+            else if (terrain === 'jungle' && n > 0.44) add(n > 0.78 ? 'vineStalker' : 'jungleSnake', px, py);
         }
     }
     return dens;
 }
 
 function chooseBiomeDenKind(terrain, n) {
-    if (terrain === 'grass' && n > 0.58) return 'grassRunner';
-    if (terrain === 'tallgrass' && n > 0.46) return 'tallgrassRaptor';
-    if (terrain === 'meadow' && n > 0.4) return 'meadowMoth';
-    if (terrain === 'forest' && n > 0.5) return 'forestBear';
+    if (terrain === 'grass' && n > 0.62) return 'grassRunner';
+    if (terrain === 'tallgrass' && n > 0.52) return 'tallgrassRaptor';
+    if (terrain === 'meadow' && n > 0.62) return 'meadowMoth';
+    if (terrain === 'forest' && n > 0.56) return 'forestBear';
     if (terrain === 'bamboo' && n > 0.48) return 'bambooPanda';
     if (terrain === 'birch' && n > 0.42) return 'birchStag';
     if (terrain === 'pine' && n > 0.4) return 'pineLynx';
     if (terrain === 'maple' && n > 0.42) return 'mapleFox';
     if (terrain === 'reedWetland' && n > 0.4) return 'reedCrab';
     if ((terrain === 'swamp' || terrain === 'mud') && n > 0.44) return 'swampMireling';
-    if (terrain === 'dry' && n > 0.44) return 'drySandWasp';
-    if (terrain === 'mine' && n > 0.4) return 'mineCrystalBat';
+    if (terrain === 'dry' && n > 0.62) return 'drySandWasp';
+    if (terrain === 'mine' && n > 0.6) return 'mineCrystalBat';
     if (terrain === 'ruins' && n > 0.4) return 'ruinsBoneGuard';
     return '';
 }
@@ -2912,13 +3900,19 @@ function update(dt, now) {
         updatePlayer(dt, now);
         updatePendingVillagerEntries(now);
         updateAllVillagerHomeHealing(dt, now);
+        updateMineCave(dt, now);
         updateIndoorNpcs(dt, now);
         updateIndoorProjectiles(dt, now);
-        if (state.indoor) {
+        if (state.underground) {
+            updateHarvestHold(dt);
+            updateUnderground(dt, now);
+        } else if (state.indoor) {
+            updateHarvestHold(dt);
             updateOutdoorWorldWhileIndoor(dt, now);
         } else {
             updateHarvestHold(dt);
             updateBambooTraps(now);
+            updateWaspHives(now);
             updateProjectiles(dt, now);
             updateEnemies(dt, now);
             updateOutdoorVillagers(dt, now);
@@ -2948,9 +3942,10 @@ function updatePlayer(dt, now) {
     updatePoison(dt, now);
     updateCultToxins(dt, now);
     updatePotionEffects(now);
-    if (!state.indoor) updateCampHealing(dt, now);
+    if (!state.indoor && !state.underground) updateCampHealing(dt, now);
     if (Math.abs(p.knockX) > 1 || Math.abs(p.knockY) > 1) {
-        if (state.indoor) moveIndoorPlayer(p, p.knockX * dt, p.knockY * dt);
+        if (state.underground) moveUndergroundEntity(p, p.knockX * dt, p.knockY * dt);
+        else if (state.indoor) moveIndoorPlayer(p, p.knockX * dt, p.knockY * dt);
         else moveCircle(p, p.knockX * dt, p.knockY * dt);
         p.knockX *= Math.pow(0.025, dt);
         p.knockY *= Math.pow(0.025, dt);
@@ -2964,6 +3959,15 @@ function updatePlayer(dt, now) {
     dx += touchInput.moveX;
     dy += touchInput.moveY;
 
+    if ((p.trappedUntil || 0) > now) {
+        if (keys.has('e') || touchInput.interact) {
+            p.trappedUntil = Math.max(now, p.trappedUntil - 1200 * dt);
+            if (Math.random() < 0.12) addFloatText('挣脱', p.x, p.y - 52, '#ffd166');
+        }
+        dx = 0;
+        dy = 0;
+    }
+
     if (dx || dy) {
         const dir = normalize(dx, dy);
         if (now < p.dizzyUntil) {
@@ -2976,7 +3980,7 @@ function updatePlayer(dt, now) {
         const dir = normalize(dx, dy);
         const hungerFactor = hungerMoveFactor();
         const sprinting = keys.has('Shift') && p.stamina > 0 && p.hunger > 12;
-        const terrain = state.indoor ? { kind: 'indoor' } : terrainInfoAt(p.x, p.y);
+        const terrain = state.indoor || state.underground ? { kind: 'indoor' } : terrainInfoAt(p.x, p.y);
         const inWater = terrain.kind === 'water';
         const inMud = terrain.kind === 'mud';
         const inBamboo = terrain.kind === 'bamboo';
@@ -2984,17 +3988,18 @@ function updatePlayer(dt, now) {
         const boost = performance.now() < p.speedBoostUntil ? (p.speedBoostPower || 1.32) : 1;
         p.blocking = isBlocking();
         const blockSlow = p.blocking ? 0.62 : 1;
-        const armorMudSlow = inMud && (state.equipment.armor === '铁甲' || state.equipment.armor === '魔晶甲') ? 0.76 : 1;
+        const armorMudSlow = inMud && (hasEquippedArmor('铁甲') || hasEquippedArmor('魔晶甲')) ? 0.76 : 1;
         const aimSlow = isAimingDirectRanged() ? 0.48 : 1;
         const slowFactor = now < (p.slowUntil || 0) ? 0.5 : 1;
         const nearReedMat = isNearPlacedStation('reedMat', 115);
         const terrainSlow = nearReedMat ? 0.94 : (now < (p.jumpPotionUntil || 0) ? 0.82 : 0.58);
-        const jungleArmorFactor = inJungle && state.equipment.armor === '丛林叶披肩' ? 0.94 : 0.84;
+        const jungleArmorFactor = inJungle && hasEquippedArmor('丛林叶披肩') ? 0.94 : 0.84;
         const speed = p.speed * boost * slowFactor * blockSlow * hungerFactor * aimSlow * (sprinting ? 1.55 : 1) * (inWater ? terrainSlow : 1) * (inMud ? terrainSlow : 1) * (inBamboo ? 0.9 : 1) * (inJungle ? jungleArmorFactor : 1) * armorMudSlow;
         p.facing = dir;
-        if (state.indoor) moveIndoorPlayer(p, dir.x * speed * dt, dir.y * speed * dt);
+        if (state.underground) moveUndergroundEntity(p, dir.x * speed * dt, dir.y * speed * dt);
+        else if (state.indoor) moveIndoorPlayer(p, dir.x * speed * dt, dir.y * speed * dt);
         else moveCircle(p, dir.x * speed * dt, dir.y * speed * dt);
-        if (inWater) {
+        if (inWater && !state.underground) {
             const current = waterCurrentAt(p.x, p.y);
             moveCircle(p, current.x * dt, current.y * dt);
             spawnWaterRipple(p.x, p.y + 12);
@@ -3003,7 +4008,7 @@ function updatePlayer(dt, now) {
         p.stamina = clamp(p.stamina + (sprinting ? sprintCost : 24 * hungerStaminaFactor()) * dt, 0, 100);
     } else {
         p.blocking = isBlocking();
-        if (!state.indoor && terrainInfoAt(p.x, p.y).kind === 'water') {
+        if (!state.indoor && !state.underground && terrainInfoAt(p.x, p.y).kind === 'water') {
             const current = waterCurrentAt(p.x, p.y);
             moveCircle(p, current.x * 0.55 * dt, current.y * 0.55 * dt);
             spawnWaterRipple(p.x, p.y + 12);
@@ -3026,11 +4031,21 @@ function updatePlayer(dt, now) {
 
 function updatePotionEffects(now) {
     const p = state.player;
-    if (p.regenUntil <= now || now < p.regenTickAt) return;
-    p.regenTickAt = now + 1200;
-    p.hp = Math.min(p.maxHp, p.hp + 3);
-    addFloatText('+3', p.x, p.y - 50, '#9cffb7');
-    renderHud();
+    let changed = false;
+    if (p.regenUntil > now && now >= p.regenTickAt) {
+        p.regenTickAt = now + 1200;
+        p.hp = Math.min(p.maxHp, p.hp + 3);
+        addFloatText('+3', p.x, p.y - 50, '#9cffb7');
+        changed = true;
+    }
+    if ((p.royalJellyUntil || 0) > now && now >= (p.royalJellyTickAt || 0)) {
+        p.royalJellyTickAt = now + 1500;
+        p.hp = Math.min(p.maxHp, p.hp + 2);
+        p.stamina = Math.min(100, p.stamina + 6);
+        addFloatText('+王浆', p.x, p.y - 64, '#fff0a8');
+        changed = true;
+    }
+    if (changed) renderHud();
 }
 
 function updateCampHealing(dt, now) {
@@ -3134,13 +4149,20 @@ function updateIndoorNpcs(dt, now) {
             npc.outside = true;
             npc.returningHome = true;
             if (npc.homeBuilding) {
-                npc.x = npc.homeBuilding.doorX;
-                npc.y = npc.homeBuilding.doorY + 46;
+                const exitPoint = villageHouseExitPoint(npc.homeBuilding);
+                npc.x = exitPoint.x;
+                npc.y = exitPoint.y;
             }
             if (!state.outdoorVillagers.includes(npc)) state.outdoorVillagers.push(npc);
             continue;
         }
         if ((npc.hp ?? 80) <= 0) continue;
+        if (Math.abs(npc.knockX || 0) > 1 || Math.abs(npc.knockY || 0) > 1) {
+            moveIndoorNpcSafely(npc, (npc.knockX || 0) * dt, (npc.knockY || 0) * dt);
+            npc.knockX *= Math.pow(0.04, dt);
+            npc.knockY *= Math.pow(0.04, dt);
+            if ((npc.staggerUntil || 0) > now) continue;
+        }
         updateVillagerStatusEffects(npc, dt, now);
         if ((npc.hp ?? 80) <= 0) continue;
         if ((npc.rootedUntil || 0) > now) continue;
@@ -3180,9 +4202,9 @@ function updateIndoorNpcs(dt, now) {
         const dx = npc.targetX - npc.x;
         const dy = npc.targetY - npc.y;
         const dist = Math.hypot(dx, dy);
-            if (dist > 3) {
+        if (dist > 3) {
             moveIndoorNpcSafely(npc, (dx / dist) * 34 * dt, (dy / dist) * 34 * dt);
-            npc.facing = dx >= 0 ? 1 : -1;
+            updateVillagerFacingFromDirection(npc, { x: dx / dist, y: dy / dist });
         }
     }
     updateVillageTotems(dt, now);
@@ -3201,16 +4223,24 @@ function updateAngryIndoorNpc(npc, dt, now) {
     npc.facing = dx >= 0 ? 1 : -1;
     const profile = villagerAttackProfile(npc, dist);
     if (npc.role === 'guard' && updateVillagerFleeHeal(npc, dt, now)) return;
+    if (npc.role === 'elder' && isForestVillage(homeVillageFor(npc))) {
+        updateForestElderCombat(npc, dt, now, state.player, dist);
+        return;
+    }
+    if (npc.role === 'elder' && isMineVillage(homeVillageFor(npc))) {
+        updateMineElderCombat(npc, dt, now, state.player, dist);
+        return;
+    }
     if (npc.role === 'guard' && dist <= profile.range && villagerCanAttack(npc, now)) {
         startVillagerMeleeAttack(npc, profile, now);
         return;
     }
     if (updateVillagerEvasion(npc, dt, now, dist)) return;
-    if (npc.role === 'elder' && !activeVillageTotem() && villagerCanAttack(npc, now)) {
+    if (npc.role === 'elder' && canElderSummonTotem(npc, now) && villagerCanAttack(npc, now)) {
         summonVillageTotem(npc, now);
         return;
     }
-    if (npc.role === 'elder' && activeVillageTotem()) {
+    if (npc.role === 'elder' && activeVillageTotem(npc)) {
         updateElderBackline(npc, dt, now, dist);
         return;
     }
@@ -3256,14 +4286,15 @@ function fleeToGuardHouseFromIndoor(npc, dt) {
     const door = { x: VIEW.width / 2, y: VIEW.height - 58 };
     const dir = normalize(door.x - npc.x, door.y - npc.y);
     moveIndoorNpcSafely(npc, dir.x * 190 * dt, dir.y * 190 * dt);
-    npc.facing = dir.x >= 0 ? 1 : -1;
+    updateVillagerFacingFromDirection(npc, dir);
     if (canIndoorNpcExitAtDoor(npc)) {
         const oldBuilding = state.indoor.building;
         removeFromInteriorObjects(npc);
         npc.outside = true;
         npc.homeBuilding = guardHouse;
-        npc.x = oldBuilding.doorX;
-        npc.y = oldBuilding.doorY + 46;
+        const exitPoint = villageHouseExitPoint(oldBuilding);
+        npc.x = exitPoint.x;
+        npc.y = exitPoint.y;
         npc.returningHome = false;
         npc.fleeingToGuard = true;
         npc.targetX = guardHouse.doorX;
@@ -3285,7 +4316,7 @@ function basicElderExitAndCallForHelp(npc, dt, now) {
     const door = { x: VIEW.width / 2, y: VIEW.height - 58 };
     const dir = normalize(door.x - npc.x, door.y - npc.y);
     moveIndoorNpcSafely(npc, dir.x * 170 * dt, dir.y * 170 * dt);
-    npc.facing = dir.x >= 0 ? 1 : -1;
+    updateVillagerFacingFromDirection(npc, dir);
     npc.workState = '呼救';
     npc.workStateUntil = now + 1800;
     if (!canIndoorNpcExitAtDoor(npc)) return;
@@ -3337,7 +4368,7 @@ function basicElderCallVillageForHelp(npc, now = performance.now()) {
 
 function nearestGuardHouseForVillager(npc) {
     return (homeVillageFor(npc)?.buildings || [])
-        .filter(building => isGuardBuilding(building))
+        .filter(building => isGuardBuilding(building) && !building.destroyed)
         .sort((a, b) => distance(npc, a) - distance(npc, b))[0] || null;
 }
 
@@ -3473,6 +4504,8 @@ function bestVillagerDodgeDirection(npc) {
 }
 
 function updateElderBackline(npc, dt, now, dist) {
+    if (isForestVillage(homeVillageFor(npc))) return updateForestElderCombat(npc, dt, now, state.player, dist);
+    if (isMineVillage(homeVillageFor(npc))) return updateMineElderCombat(npc, dt, now, state.player, dist);
     const away = normalize(npc.x - state.player.x, npc.y - state.player.y);
     npc.facing = state.player.x >= npc.x ? 1 : -1;
     const repositioning = moveRangedVillagerOutOfCorner(npc, dt, now) || updateRangedVillagerSpacing(npc, dt, now, dist, 165, 240);
@@ -3510,7 +4543,7 @@ function castElderCommand(npc, now) {
     if (hit) {
         const p = state.player;
         p.dizzyUntil = Math.max(p.dizzyUntil || 0, now + 850);
-        p.stamina = Math.max(0, p.stamina - 30);
+        p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(30));
         const dir = normalize(p.x - npc.x, p.y - npc.y);
         applyPlayerSoftKnockback(dir, 90, 0.35);
         addFloatText('压制', p.x, p.y - 54, '#ffd166');
@@ -3523,6 +4556,14 @@ function castElderCommand(npc, now) {
 function activeVillageTotem(npc = null) {
     if (npc?.outside) return state.outdoorVillagers.find(object => object.kind === 'totem' && object.hp > 0 && object.ownerRole === npc.role);
     return state.indoor?.objects.find(object => object.kind === 'totem' && object.hp > 0);
+}
+
+function canElderSummonTotem(npc, now = performance.now()) {
+    if (isForestVillage(homeVillageFor(npc))) return false;
+    if (isMineVillage(homeVillageFor(npc))) return false;
+    if (activeVillageTotem(npc)) return false;
+    if (!npc.lastTotemDestroyedAt) return true;
+    return now >= npc.lastTotemDestroyedAt + 18000;
 }
 
 function removeFromInteriorObjects(entity) {
@@ -3546,10 +4587,12 @@ function removeExistingTotemsForOwner(npc) {
 }
 
 function summonVillageTotem(npc, now) {
+    if (isForestVillage(homeVillageFor(npc))) return;
+    if (isMineVillage(homeVillageFor(npc))) return;
     const indoor = !npc.outside;
     const x = indoor ? clamp(npc.x + (npc.facing === -1 ? -86 : 86), 260, VIEW.width - 260) : clamp(npc.x + (npc.facing === -1 ? -86 : 86), 32, WORLD.width - 32);
     const y = indoor ? clamp(npc.y + 28, 230, VIEW.height - 210) : clamp(npc.y + 28, 32, WORLD.height - 32);
-    const totem = { kind: 'totem', label: '村庄图腾', x, y, w: 34, h: 64, radius: 18, hp: 48, maxHp: 48, solid: false, action: 'totem', nextAttackAt: now + 1800, guardUntil: now + 1400, outside: npc.outside, ownerRole: npc.role, owner: npc };
+    const totem = { kind: 'totem', label: '村庄图腾', x, y, w: 34, h: 64, radius: 18, hp: 48, maxHp: 48, solid: false, action: 'totem', nextAttackAt: now + 1800, guardUntil: now + 1400, attackRange: 245, outside: npc.outside, ownerRole: npc.role, owner: npc };
     removeExistingTotemsForOwner(npc);
     if (indoor) {
         state.indoor.objects.push(totem);
@@ -3574,6 +4617,7 @@ function updateVillageTotems(dt, now) {
         const ownerThreatened = totem.owner && totem.owner.hp > 0 && (totem.owner.playerAggro || totem.owner.animalAggressor || totem.owner.hurtUntil > now);
         const totemTarget = totem.owner?.animalAggressor || (totem.owner?.playerAggro ? state.player : null);
         if (!totemTarget) continue;
+        if (distance(totem, totemTarget) > (totem.attackRange || 245)) continue;
         if (!ownerThreatened || now < (totem.guardUntil || 0)) continue;
         if (now < (totem.nextAttackAt || 0)) continue;
         totem.nextAttackAt = now + 1180;
@@ -3596,8 +4640,14 @@ function updateVillageTotems(dt, now) {
         });
         spawnBurst(totem.x, totem.y - 38, '#ffd166', 8, 110, 14);
     }
-    if (state.indoor) state.indoor.objects = state.indoor.objects.filter(object => object.kind !== 'totem' || object.hp > 0);
-    state.outdoorVillagers = state.outdoorVillagers.filter(object => object.kind !== 'totem' || object.hp > 0);
+    if (state.indoor) state.indoor.objects = state.indoor.objects.filter(object => object.kind !== 'totem' || object.hp > 0 || markVillageTotemDestroyed(object, now));
+    state.outdoorVillagers = state.outdoorVillagers.filter(object => object.kind !== 'totem' || object.hp > 0 || markVillageTotemDestroyed(object, now));
+}
+
+function markVillageTotemDestroyed(totem, now = performance.now()) {
+    if (totem.kind !== 'totem') return false;
+    if (totem.owner) totem.owner.lastTotemDestroyedAt = now;
+    return false;
 }
 
 function updateOutdoorVillagers(dt, now) {
@@ -3608,12 +4658,17 @@ function updateOutdoorVillagers(dt, now) {
     maybeSendVillagersOutside(now);
     for (const npc of state.outdoorVillagers) {
         if (npc.hp <= 0) continue;
+        beginVillagerMotionFrame(npc);
         updateVillagerStatusEffects(npc, dt, now);
         if (npc.hp <= 0) continue;
         if (Math.abs(npc.knockX || 0) > 1 || Math.abs(npc.knockY || 0) > 1) {
             moveOutdoorVillager(npc, (npc.knockX || 0) * dt, (npc.knockY || 0) * dt);
             npc.knockX *= Math.pow(0.04, dt);
             npc.knockY *= Math.pow(0.04, dt);
+            if ((npc.staggerUntil || 0) > now) {
+                finishVillagerMotionFrame(npc, now);
+                continue;
+            }
         }
         if ((npc.rootedUntil || 0) > now) {
             if (npc.hurtUntil && now > npc.hurtUntil) npc.hurtUntil = 0;
@@ -3621,14 +4676,33 @@ function updateOutdoorVillagers(dt, now) {
         }
         const building = npc.homeBuilding;
         if (!building) continue;
+        if (building.destroyed) {
+            npc.returningHome = false;
+            npc.fleeingToGuard = false;
+            npc.homeDestroyed = true;
+            npc.mood = npc.playerAggro ? 'angry' : 'sad';
+        }
         const village = building.village || state.village;
-        if (updateCultHealerSupport(npc, dt, now)) continue;
-        if (updateVineSpeakerAutoControl(npc, now)) continue;
+        if (npc.follower) {
+            if (updateVillagerFollower(npc, dt, now)) {
+                finishVillagerMotionFrame(npc, now);
+                continue;
+            }
+        }
+        if (updateCultHealerSupport(npc, dt, now)) {
+            finishVillagerMotionFrame(npc, now);
+            continue;
+        }
+        if (updateVineSpeakerAutoControl(npc, now)) {
+            finishVillagerMotionFrame(npc, now);
+            continue;
+        }
         if (npc.role === 'basicElder' && npc.playerAggro && npc.hp < npc.maxHp * 0.35) {
             basicElderCallVillageForHelp(npc, now);
         }
         if (npc.pendingAttack) {
             updateVillagerPendingAttack(npc, now);
+            finishVillagerMotionFrame(npc, now);
             continue;
         }
         if (npc.villagerAggressor && (npc.villagerAggressor.hp <= 0 || !npc.villagerAggressor.outside || homeVillageFor(npc.villagerAggressor) === village || distance(npc, npc.villagerAggressor) > 700)) {
@@ -3638,16 +4712,16 @@ function updateOutdoorVillagers(dt, now) {
         const rival = chooseRivalVillagerTarget(npc);
         if (rival) {
             updateVillagerRivalCombat(npc, rival, dt, now);
+            finishVillagerMotionFrame(npc, now);
             continue;
         }
         if (npc.fleeingToGuard || (npc.role !== 'guard' && npc.role !== 'basicElder' && npc.playerAggro && npc.hp < npc.maxHp * 0.3)) {
             const guardHouse = nearestGuardHouseForVillager(npc);
-            if (guardHouse) {
+            if (guardHouse && !guardHouse.destroyed) {
                 npc.fleeingToGuard = true;
-                const dir = normalize(guardHouse.doorX - npc.x, guardHouse.doorY - npc.y);
-                moveOutdoorVillager(npc, dir.x * 138 * dt, dir.y * 138 * dt);
-                npc.facing = dir.x >= 0 ? 1 : -1;
-                if (distance(npc, { x: guardHouse.doorX, y: guardHouse.doorY }) <= 74) {
+                const guardPoint = villageHouseExitPoint(guardHouse);
+                moveOutdoorVillagerToward(npc, guardPoint, 138, dt);
+                if (distance(npc, guardPoint) <= 28) {
                     npc.fleeingToGuard = false;
                     npc.homeBuilding = guardHouse;
                     npc.playerAggro = false;
@@ -3655,32 +4729,49 @@ function updateOutdoorVillagers(dt, now) {
                     npc.mood = 'annoyed';
                     returnOutdoorVillagerHome(npc);
                 }
+                finishVillagerMotionFrame(npc, now);
                 continue;
+            } else {
+                npc.fleeingToGuard = false;
             }
         }
-        if (npc.animalAggressor?.hp > 0 && distance(npc, npc.animalAggressor) < 560) {
-            if (updateOutdoorVillagerCombat(npc, dt, now)) continue;
+        if (npc.animalAggressor?.hp > 0 && distance(npc, npc.animalAggressor) < villagerDefenseEngageRange(npc, npc.animalAggressor)) {
+            if (updateOutdoorVillagerCombat(npc, dt, now)) {
+                finishVillagerMotionFrame(npc, now);
+                continue;
+            }
         } else if (npc.animalAggressor && npc.animalAggressor.hp <= 0) {
             npc.animalAggressor = null;
             if (npc.mood === 'angry' && !npc.playerAggro) npc.mood = 'annoyed';
         }
-        if (npc.playerAggro && npc.hp >= npc.maxHp * 0.3) npc.returningHome = false;
+        if (updateProfessionWorkRoutine(npc, dt, now)) {
+            finishVillagerMotionFrame(npc, now);
+            continue;
+        }
+    if (npc.playerAggro && npc.hp >= npc.maxHp * 0.3) npc.returningHome = false;
         if (shouldOutdoorVillagerReturnHome(npc, now)) npc.returningHome = true;
-        const shouldRetreatHome = npc.returningHome || (npc.hp < npc.maxHp * 0.3 && !(npc.role === 'basicElder' && npc.playerAggro));
+        const hasUsableHome = !!building && !building.destroyed;
+        const shouldRetreatHome = hasUsableHome && (npc.returningHome || (npc.hp < npc.maxHp * 0.3 && !(npc.role === 'basicElder' && npc.playerAggro)));
         if (shouldRetreatHome) {
             npc.returningHome = true;
-            const dir = normalize(building.doorX - npc.x, building.doorY - npc.y);
-            moveOutdoorVillager(npc, dir.x * 125 * dt, dir.y * 125 * dt);
-            npc.facing = dir.x >= 0 ? 1 : -1;
-            if (distance(npc, { x: building.doorX, y: building.doorY }) <= 74) {
+            const homePoint = villageHouseExitPoint(building);
+            moveOutdoorVillagerToward(npc, homePoint, 125, dt);
+            if (distance(npc, homePoint) <= 30) {
                 returnOutdoorVillagerHome(npc);
             }
+            finishVillagerMotionFrame(npc, now);
             continue;
         }
         if (npc.mood === 'angry' || npc.animalAggressor) {
-            if (updateOutdoorVillagerCombat(npc, dt, now)) continue;
+            if (updateOutdoorVillagerCombat(npc, dt, now)) {
+                finishVillagerMotionFrame(npc, now);
+                continue;
+            }
         }
-        if (updateGuardNightPatrol(npc, dt, now)) continue;
+        if (updateGuardNightPatrol(npc, dt, now)) {
+            finishVillagerMotionFrame(npc, now);
+            continue;
+        }
         if (!npc.targetX || now > (npc.nextWanderAt || 0)) {
             setVillagerWorkState(npc, now, true);
             const angle = hash2(npc.x + now * 0.001, npc.y) * Math.PI * 2;
@@ -3689,16 +4780,458 @@ function updateOutdoorVillagers(dt, now) {
             npc.targetY = clamp(building.doorY + Math.sin(angle) * radius * 0.78, village.y - village.radius * 0.82, village.y + village.radius * 0.82);
             npc.nextWanderAt = now + 1800 + hash2(npc.targetX, npc.targetY) * 2400;
         }
-        const dir = normalize(npc.targetX - npc.x, npc.targetY - npc.y);
+        const target = { x: npc.targetX, y: npc.targetY };
+        const dir = normalize(target.x - npc.x, target.y - npc.y);
         if (Math.hypot(npc.targetX - npc.x, npc.targetY - npc.y) < 10) {
             npc.targetX = null;
             npc.targetY = null;
+            finishVillagerMotionFrame(npc, now);
             continue;
         }
-        moveOutdoorVillager(npc, dir.x * 58 * dt, dir.y * 58 * dt);
-        npc.facing = dir.x >= 0 ? 1 : -1;
+        moveOutdoorVillagerToward(npc, target, 58, dt);
+        finishVillagerMotionFrame(npc, now);
     }
     state.outdoorVillagers = state.outdoorVillagers.filter(npc => npc.outside);
+}
+
+function beginVillagerMotionFrame(npc) {
+    npc.frameStartX = npc.x;
+    npc.frameStartY = npc.y;
+    npc.frameStartFacing = npc.facing || 1;
+}
+
+function finishVillagerMotionFrame(npc, now = performance.now()) {
+    if (!Number.isFinite(npc.frameStartX) || npc.playerAggro || npc.animalAggressor || npc.villagerAggressor) return;
+    const moved = Math.hypot(npc.x - npc.frameStartX, npc.y - npc.frameStartY);
+    const flipped = npc.frameStartFacing && npc.facing && npc.frameStartFacing !== npc.facing;
+    if (moved < 1.8 && flipped) {
+        npc.stationaryFlipCount = (npc.stationaryFlipCount || 0) + 1;
+    } else if (moved > 4) {
+        npc.stationaryFlipCount = 0;
+    }
+    if ((npc.stationaryFlipCount || 0) >= 2) {
+        npc.facing = npc.stableFacing || npc.frameStartFacing || npc.facing || 1;
+        npc.facingLockUntil = now + 1200;
+        npc.stationaryFlipCount = 0;
+        npc.avoidWaypoint = null;
+        npc.avoidWaypointUntil = 0;
+        npc.targetX = null;
+        npc.targetY = null;
+        npc.nextWanderAt = now + 900;
+    } else if (moved > 2.5) {
+        npc.stableFacing = npc.facing || npc.stableFacing || 1;
+    }
+}
+
+function updateProfessionWorkRoutine(npc, dt, now) {
+    if (npc.playerAggro || npc.animalAggressor || npc.villagerAggressor || npc.follower || npc.fleeingToGuard) return false;
+    if (npc.role === 'carpenter') return updateCarpenterAutoRepair(npc, dt, now);
+    if (npc.role === 'hunter') return updateForestHunterTrapRoutine(npc, dt, now);
+    if (npc.role === 'miner') return updateMinerWorkRoutine(npc, dt, now);
+    if (npc.role === 'farmer') return updateFarmerWorkRoutine(npc, dt, now);
+    return false;
+}
+
+function isForestVillage(village) {
+    return ['forest', 'pine', 'birch', 'maple'].includes(village?.skin);
+}
+
+function isMineVillage(village) {
+    return village?.skin === 'mine';
+}
+
+function updateForestHunterTrapRoutine(npc, dt, now) {
+    const village = homeVillageFor(npc);
+    if (!isForestVillage(village) || now < (npc.nextTrapAt || 0)) return false;
+    let ownTraps = 0;
+    let villageTraps = 0;
+    for (const trap of state.bambooTraps) {
+        if (trap.used) continue;
+        if (trap.owner === npc) ownTraps++;
+        if (trap.village === village && isForestHunterTrapKind(trap.kind)) villageTraps++;
+    }
+    if (ownTraps >= 3 || villageTraps >= 18) return false;
+    const point = forestHunterTrapPoint(npc, village, now);
+    if (!point) {
+        npc.nextTrapAt = now + 2400;
+        return false;
+    }
+    npc.returningHome = false;
+    if (distance(npc, point) > 28) {
+        moveNpcTowardWorkPoint(npc, point, dt, 62);
+        npc.workState = '布陷阱';
+        npc.workStateUntil = now + 900;
+        return true;
+    }
+    state.bambooTraps.push({
+        kind: forestHunterTrapKind(npc, now),
+        x: point.x,
+        y: point.y,
+        radius: 18,
+        used: false,
+        owner: npc,
+        village,
+        villageTrap: true,
+        hidden: true,
+    });
+    npc.nextTrapAt = now + 13500 + hash2(npc.x, now * 0.001) * 7500;
+    npc.workState = '陷阱就绪';
+    npc.workStateUntil = now + 1200;
+    spawnBurst(point.x, point.y, '#d6a06a', 5, 70, 14);
+    return true;
+}
+
+function isForestHunterTrapKind(kind) {
+    return ['forestSnare', 'forestSpikeTrap', 'forestBellTrap'].includes(kind);
+}
+
+function forestHunterTrapKind(npc, now) {
+    const roll = hash2(npc.x + now * 0.001, npc.y);
+    if (roll > 0.76) return 'forestBellTrap';
+    if (roll > 0.42) return 'forestSpikeTrap';
+    return 'forestSnare';
+}
+
+function forestHunterTrapPoint(npc, village, now) {
+    const baseAngle = Math.atan2((npc.homeBuilding?.y || npc.y) - village.y, (npc.homeBuilding?.x || npc.x) - village.x);
+    const candidates = [];
+    for (let i = 0; i < 16; i++) {
+        const angle = baseAngle + (i % 2 ? -1 : 1) * (0.18 + Math.floor(i / 2) * 0.18);
+        const radius = village.radius * (0.98 + (i % 4) * 0.085);
+        candidates.push({
+            x: clamp(village.x + Math.cos(angle) * radius, 60, WORLD.width - 60),
+            y: clamp(village.y + Math.sin(angle) * radius * 0.82, 60, WORLD.height - 60),
+            radius: 18,
+        });
+    }
+    return candidates
+        .map(point => safeOutdoorPointNearForRadius(point, point, 90, 18))
+        .filter(point => terrainInfoAt(point.x, point.y).kind !== 'water')
+        .filter(point => !state.bambooTraps.some(trap => !trap.used && distance(trap, point) < 90))
+        .sort((a, b) => distance(npc, a) - distance(npc, b))[0] || null;
+}
+
+function updateCarpenterAutoRepair(npc, dt, now) {
+    const village = homeVillageFor(npc);
+    let target = isValidCarpenterRepairTarget(npc.carpenterRepairTarget)
+        ? npc.carpenterRepairTarget
+        : null;
+    if (!target) {
+        target = (village?.buildings || [])
+            .filter(building => building.maxHp && (building.destroyed || (building.hp ?? building.maxHp) < building.maxHp))
+            .sort((a, b) => distance(npc, a) - distance(npc, b))[0] || null;
+        npc.carpenterRepairTarget = target;
+        npc.carpenterRepairPoint = target ? villageHouseExitPoint(target) : null;
+    }
+    if (!target) return false;
+    const needed = carpenterRepairMaterialNeed(target);
+    if ((npc.carpenterWood || 0) < needed) {
+        return updateCarpenterGatherWood(npc, dt, now, needed);
+    }
+    npc.returningHome = false;
+    const repairPoint = npc.carpenterRepairPoint || villageHouseExitPoint(target);
+    const d = distance(npc, repairPoint);
+    if (d > 46) {
+        moveNpcTowardWorkPoint(npc, repairPoint, dt, 68);
+        npc.workState = '去修房';
+        npc.workStateUntil = now + 900;
+        return true;
+    }
+    const maxHp = target.maxHp || villageBuildingMaxHp(target);
+    if (target.destroyed) {
+        npc.carpenterWood = Math.max(0, (npc.carpenterWood || 0) - needed);
+        target.destroyed = false;
+        target.destroyedBy = '';
+        target.hp = Math.max(1, Math.floor(maxHp * 0.22));
+        for (const villager of state.outdoorVillagers || []) {
+            if (villager.homeBuilding !== target) continue;
+            villager.homeDestroyed = false;
+            if (villager.mood === 'sad') villager.mood = 'calm';
+        }
+        spawnBurst(target.x, target.y, '#d6a06a', 22, 170, Math.max(target.w, target.h) * 0.32);
+        addFloatText('木匠重建', target.x, target.y - target.h * 0.55, '#9cffb7');
+    } else {
+        const repaired = Math.min(dt * 12, maxHp - (target.hp ?? maxHp));
+        target.hp = Math.min(maxHp, (target.hp ?? maxHp) + repaired);
+        npc.carpenterWood = Math.max(0, (npc.carpenterWood || 0) - repaired * 0.055);
+    }
+    if (!isValidCarpenterRepairTarget(target)) {
+        npc.carpenterRepairTarget = null;
+        npc.carpenterRepairPoint = null;
+    }
+    target.lastDamagedAt = now;
+    npc.workState = '修房';
+    npc.workStateUntil = now + 900;
+    if (Math.abs(target.x - npc.x) > 8) npc.facing = target.x >= npc.x ? 1 : -1;
+    if (Math.random() < 0.12) spawnBurst(npc.x, npc.y - 12, '#d6a06a', 2, 70, 10);
+    return true;
+}
+
+function isValidCarpenterRepairTarget(building) {
+    return !!building && building.maxHp && (building.destroyed || (building.hp ?? building.maxHp) < building.maxHp);
+}
+
+function carpenterRepairMaterialNeed(building) {
+    if (!building) return 0;
+    if (building.destroyed) return 8;
+    const maxHp = building.maxHp || villageBuildingMaxHp(building);
+    const missing = Math.max(0, maxHp - (building.hp ?? maxHp));
+    return missing > 0 ? Math.min(6, Math.max(1, missing * 0.08)) : 0;
+}
+
+function updateCarpenterGatherWood(npc, dt, now, needed) {
+    let tree = npc.carpenterTreeTarget && (npc.carpenterTreeTarget.hp ?? 0) > 0
+        ? npc.carpenterTreeTarget
+        : null;
+    if (!tree) {
+        tree = nearestCarpenterTree(npc);
+        npc.carpenterTreeTarget = tree;
+        npc.carpenterTreeStand = tree ? carpenterStandPointForTree(npc, tree) : null;
+    }
+    if (!tree) {
+        npc.workState = `缺木材 ${Math.floor(npc.carpenterWood || 0)}/${Math.ceil(needed)}`;
+        npc.workStateUntil = now + 1200;
+        return false;
+    }
+    npc.returningHome = false;
+    const stand = npc.carpenterTreeStand || carpenterStandPointForTree(npc, tree);
+    if (distance(npc, stand) > 24) {
+        moveNpcTowardWorkPoint(npc, stand, dt, 70);
+        npc.workState = '去砍树';
+        npc.workStateUntil = now + 900;
+        return true;
+    }
+    npc.facing = tree.x >= npc.x ? 1 : -1;
+    npc.workState = '砍树备料';
+    npc.workStateUntil = now + 900;
+    tree.shakeUntil = now + 160;
+    tree.hp = Math.max(0, (tree.hp ?? tree.maxHp ?? 6) - dt * 2.8);
+    if (Math.random() < 0.16) spawnBurst(tree.x, tree.y, '#d6a06a', 2, 70, tree.radius * 0.45);
+    if (tree.hp <= 0) {
+        tree.deathAt = now;
+        npc.carpenterWood = (npc.carpenterWood || 0) + carpenterWoodYield(tree);
+        npc.carpenterTreeTarget = null;
+        npc.carpenterTreeStand = null;
+        addFloatText(`木材 +${carpenterWoodYield(tree)}`, tree.x, tree.y - 34, '#ffd166');
+        showToast(`木匠砍倒一棵树，储备木材 ${Math.floor(npc.carpenterWood)}。`);
+    }
+    return true;
+}
+
+function nearestCarpenterTree(npc) {
+    const village = homeVillageFor(npc);
+    const origin = npc.homeBuilding || npc;
+    return (state.resources || [])
+        .filter(item => BIOME_TREE_KINDS.includes(item.kind) && (item.hp ?? 0) > 0)
+        .filter(item => !village || distance(item, village) < village.radius + 680)
+        .sort((a, b) => distance(origin, a) - distance(origin, b))[0] || null;
+}
+
+function carpenterStandPointForTree(npc, tree) {
+    const home = npc.homeBuilding || npc;
+    const away = normalize(home.x - tree.x, home.y - tree.y);
+    const fallback = normalize(npc.x - tree.x, npc.y - tree.y || 1);
+    const dir = Math.abs(away.x) + Math.abs(away.y) > 0.01 ? away : fallback;
+    return {
+        x: clamp(tree.x + dir.x * ((tree.radius || 28) + 24), 40, WORLD.width - 40),
+        y: clamp(tree.y + dir.y * ((tree.radius || 28) + 24), 40, WORLD.height - 40),
+        radius: npc.radius || 17,
+    };
+}
+
+function carpenterWoodYield(tree) {
+    return tree.kind === 'buttressRoot' || tree.kind === 'hardwoodTree' ? 5 : 4;
+}
+
+function updateMinerWorkRoutine(npc, dt, now) {
+    const ore = nearestMinerOreTarget(npc);
+    const point = ore ? minerStandPointForOre(npc, ore) : (npc.homeBuilding?.minePoint || nearbyMineWorkPoint(npc.homeBuilding?.x || npc.x, npc.homeBuilding?.y || npc.y, 980));
+    if (!point) return false;
+    npc.returningHome = false;
+    if (distance(npc, point) > 18) {
+        moveNpcTowardWorkPoint(npc, point, dt, 62);
+        npc.workState = ore ? '去矿石' : '去矿区';
+        npc.workStateUntil = now + 900;
+        return true;
+    }
+    npc.workState = '采矿';
+    npc.workStateUntil = now + 900;
+    if (ore) {
+        const dir = normalize(ore.x - npc.x, ore.y - npc.y);
+        updateVillagerFacingFromDirection(npc, dir);
+        if (Math.random() < 0.16) spawnBurst(ore.x, ore.y - 8, '#8c98a4', 2, 80, 12);
+    } else {
+        if (Math.random() < 0.16) spawnBurst(npc.x + npc.facing * 16, npc.y - 14, '#8c98a4', 2, 80, 12);
+    }
+    return true;
+}
+
+function nearestMinerOreTarget(npc) {
+    const origin = npc.homeBuilding?.minePoint || npc.homeBuilding || npc;
+    return (state.resources || [])
+        .filter(item => item.kind === 'ore' && (item.hp ?? 1) > 0)
+        .filter(item => terrainInfoAt(item.x, item.y).kind === 'mine')
+        .filter(item => distance(item, origin) <= 620)
+        .sort((a, b) => distance(npc, a) - distance(npc, b))[0] || null;
+}
+
+function minerStandPointForOre(npc, ore) {
+    const home = npc.homeBuilding || npc;
+    const away = normalize((home.x || npc.x) - ore.x, (home.y || npc.y) - ore.y);
+    const dir = (Math.abs(away.x) + Math.abs(away.y)) > 0.01 ? away : normalize(npc.x - ore.x, npc.y - ore.y);
+    return {
+        x: clamp(ore.x + dir.x * ((ore.radius || 28) + 24), 80, WORLD.width - 80),
+        y: clamp(ore.y + dir.y * ((ore.radius || 28) + 24), 80, WORLD.height - 80),
+    };
+}
+
+function updateFarmerWorkRoutine(npc, dt, now) {
+    let target = npc.farmingTarget && isValidFarmerCropTarget(npc, npc.farmingTarget) && now < (npc.farmingTargetUntil || 0)
+        ? npc.farmingTarget
+        : null;
+    if (!target) {
+        target = nearestFarmerCropPatch(npc) || createFarmerCropPatchInEmptySpot(npc, now);
+        npc.farmingTarget = target;
+        npc.farmingTargetUntil = now + 3200;
+        npc.farmingWorkPoint = target ? farmerWorkPointForCrop(npc, target) : null;
+    }
+    if (!target) return false;
+    npc.returningHome = false;
+    const workPoint = npc.farmingWorkPoint || farmerWorkPointForCrop(npc, target);
+    if (distance(npc, workPoint) > 18) {
+        moveNpcTowardWorkPoint(npc, workPoint, dt, 56);
+        npc.workState = '去田里';
+        npc.workStateUntil = now + 900;
+        return true;
+    }
+    if (target.kind === 'emptyCropPatch') {
+        if (now < (npc.nextPlantAt || 0)) return false;
+        if (npc.plantingTarget !== target) {
+            npc.plantingTarget = target;
+            npc.plantingWorkPoint = workPoint;
+            npc.plantingStartedAt = now;
+            npc.plantingFinishAt = now + 3600;
+            updateVillagerFacingFromDirection(npc, normalize(target.x - npc.x, target.y - npc.y));
+        } else if (npc.plantingWorkPoint && distance(npc, npc.plantingWorkPoint) > 24) {
+            moveNpcTowardWorkPoint(npc, npc.plantingWorkPoint, dt, 42);
+            npc.workState = '站到田边';
+            npc.workStateUntil = now + 900;
+            return true;
+        }
+        target.tilledUntil = now + 900;
+        npc.workState = '播种中';
+        if (now >= (npc.plantingFinishAt || 0)) {
+            plantCropPatch(target, npc, now);
+            npc.nextPlantAt = now + 6500;
+            npc.plantingTarget = null;
+            npc.plantingWorkPoint = null;
+            npc.farmingTarget = null;
+            npc.farmingWorkPoint = null;
+            npc.farmingTargetUntil = 0;
+            npc.plantingStartedAt = 0;
+            npc.plantingFinishAt = 0;
+            npc.workState = '播种';
+        }
+    } else {
+        target.tilledUntil = now + 1800;
+        npc.farmingTargetUntil = now + 2400;
+        npc.workState = '耕地';
+        updateVillagerFacingFromDirection(npc, normalize(target.x - npc.x, target.y - npc.y));
+    }
+    npc.workStateUntil = now + 900;
+    if (Math.random() < 0.1) spawnBurst(target.x, target.y, '#8a5a32', 2, 80, 12);
+    return true;
+}
+
+function isValidFarmerCropTarget(npc, target) {
+    if (!target || !(isCropPatchKind(target.kind) || target.kind === 'emptyCropPatch')) return false;
+    const center = npc.homeBuilding?.fieldCenter;
+    return !center || distance(target, center) < 240;
+}
+
+function farmerWorkPointForCrop(npc, target) {
+    const center = npc.homeBuilding?.fieldCenter || npc.homeBuilding || npc;
+    const away = normalize(center.x - target.x, center.y - target.y);
+    const fallback = normalize(npc.x - target.x, npc.y - target.y || 1);
+    const dir = Math.abs(away.x) + Math.abs(away.y) > 0.01 ? away : fallback;
+    const radius = (target.radius || 14) + 34;
+    const preferred = {
+        x: clamp(target.x + dir.x * radius, 40, WORLD.width - 40),
+        y: clamp(target.y + dir.y * radius, 40, WORLD.height - 40),
+        radius: npc.radius || 17,
+    };
+    if (!collides(preferred) && terrainInfoAt(preferred.x, preferred.y).kind !== 'water') return preferred;
+    for (let i = 0; i < 10; i++) {
+        const angle = Math.atan2(dir.y, dir.x) + (i % 2 ? -1 : 1) * (0.4 + Math.floor(i / 2) * 0.24);
+        const point = {
+            x: clamp(target.x + Math.cos(angle) * (radius + 12), 40, WORLD.width - 40),
+            y: clamp(target.y + Math.sin(angle) * (radius + 12), 40, WORLD.height - 40),
+            radius: npc.radius || 17,
+        };
+        if (!collides(point) && terrainInfoAt(point.x, point.y).kind !== 'water') return point;
+    }
+    return preferred;
+}
+
+function nearestFarmerCropPatch(npc) {
+    const home = npc.homeBuilding;
+    const now = performance.now();
+    const canPlant = now >= (npc.nextPlantAt || 0) || npc.plantingTarget;
+    return (state.resources || [])
+        .filter(item => isCropPatchKind(item.kind) || item.kind === 'emptyCropPatch')
+        .filter(item => item.kind !== 'emptyCropPatch' || canPlant || item === npc.plantingTarget)
+        .filter(item => !home?.fieldCenter || distance(item, home.fieldCenter) < 230)
+        .sort((a, b) => {
+            const ae = a.kind === 'emptyCropPatch' && canPlant ? 0 : 1;
+            const be = b.kind === 'emptyCropPatch' && canPlant ? 0 : 1;
+            const at = a.tilledUntil && now < a.tilledUntil ? 1 : 0;
+            const bt = b.tilledUntil && now < b.tilledUntil ? 1 : 0;
+            return ae - be || at - bt || distance(npc, a) - distance(npc, b);
+        })[0] || null;
+}
+
+function plantCropPatch(target, npc, now) {
+    const cropKinds = ['cropCarrot', 'cropCorn', 'cropTomato'];
+    const crop = cropKinds[Math.floor(seededUnit(target.x + now * 0.001, target.y + (npc.homeBuilding?.x || 0)) * cropKinds.length) % cropKinds.length];
+    const config = {
+        cropCarrot: ['carrot', 3, 14],
+        cropCorn: ['corn', 3, 15],
+        cropTomato: ['tomato', 3, 15],
+    }[crop];
+    target.kind = crop;
+    target.gives = config[0];
+    target.hp = config[1];
+    target.maxHp = config[1];
+    target.radius = config[2];
+    target.tilledUntil = now + 1800;
+    target.emptySince = 0;
+    addFloatText('播种', target.x, target.y - 28, '#cde77b');
+}
+
+function createFarmerCropPatchInEmptySpot(npc, now) {
+    const center = npc.homeBuilding?.fieldCenter;
+    if (!center) return null;
+    const existing = (state.resources || []).filter(item => (isCropPatchKind(item.kind) || item.kind === 'emptyCropPatch') && distance(item, center) < 230);
+    if (existing.length >= 54) return null;
+    for (let r = 24; r <= 150; r += 26) {
+        for (let i = 0; i < 16; i++) {
+            const angle = i * Math.PI * 2 / 16 + now * 0.0007;
+            const point = { x: center.x + Math.cos(angle) * r, y: center.y + Math.sin(angle) * r * 0.78 };
+            if (terrainInfoAt(point.x, point.y).kind === 'water') continue;
+            if (state.resources.some(item => item.hp > 0 && distance(item, point) < item.radius + 24)) continue;
+            const patch = resource('emptyCropPatch', snapToGroundGrid(point.x), snapToGroundGrid(point.y), '', 0, 14);
+            state.resources.push(patch);
+            return patch;
+        }
+    }
+    return null;
+}
+
+function moveNpcTowardWorkPoint(npc, point, dt, speed) {
+    moveOutdoorVillagerToward(npc, point, speed, dt);
+    npc.targetX = point.x;
+    npc.targetY = point.y;
+    npc.nextWanderAt = Math.max(npc.nextWanderAt || 0, performance.now() + 700);
 }
 
 function updateVillagerRoutinesWhileIndoor(now, dt = 0) {
@@ -3723,6 +5256,195 @@ function updateVillagerRoutinesWhileIndoor(now, dt = 0) {
         if (npc.kind !== 'npc' || npc.hp <= 0) continue;
         updateVillagerStatusEffects(npc, dt, now);
     }
+}
+
+function updateVillagerFollower(npc, dt, now) {
+    if (npc.hp <= 0) return false;
+    npc.returningHome = false;
+    npc.fleeingToGuard = false;
+    if (state.updatingOutdoorWhileIndoor && state.indoor) {
+        waitOutsideForPlayer(npc, dt, now);
+        return true;
+    }
+    if (npc.hp < (npc.maxHp || 80) * 0.24) {
+        dismissVillagerFollower(npc, '撤退');
+        npc.retreatUntil = now + 5000;
+        addFloatText('撤退', npc.x, npc.y - 54, '#ffd166');
+        return false;
+    }
+    if (updateFollowerSupport(npc, now)) return true;
+    const target = chooseFollowerCombatTarget(npc);
+    if (target) {
+        if (distance(npc, state.player) > 320 && !(target.attackTarget === state.player || target.villagerTarget === npc || target === npc.assistTarget)) {
+            npc.animalAggressor = null;
+            npc.villagerAggressor = null;
+            followPlayerAsVillager(npc, dt, now);
+            return true;
+        }
+        if (target.kind === 'npc') npc.villagerAggressor = target;
+        else npc.animalAggressor = target;
+        npc.playerAggro = false;
+        npc.mood = 'calm';
+        return updateOutdoorVillagerCombat(npc, dt, now);
+    }
+    npc.animalAggressor = null;
+    npc.villagerAggressor = null;
+    followPlayerAsVillager(npc, dt, now);
+    return true;
+}
+
+function chooseFollowerCombatTarget(npc) {
+    const ownVillage = homeVillageFor(npc);
+    const now = performance.now();
+    if (npc.assistTarget?.hp > 0 && (npc.assistUntil || 0) > now && distance(npc.assistTarget, state.player) < 680) {
+        return npc.assistTarget;
+    }
+    const directThreat = state.enemies
+        .filter(enemy => enemy.hp > 0 && !isPassiveCreature(enemy.kind))
+        .filter(enemy => (enemy.attackTarget === state.player && distance(enemy, state.player) < 520)
+            || enemy.attackTarget === npc
+            || enemy.villagerTarget === npc
+            || ((enemy.attackedByPlayerUntil || 0) > now && distance(enemy, state.player) < 680))
+        .filter(enemy => distance(enemy, npc) < 780 || enemy.attackTarget === state.player || enemy.attackTarget === npc)
+        .sort((a, b) => {
+            const aThreat = (a.attackTarget === state.player || a.villagerTarget === npc) ? -300 : 0;
+            const bThreat = (b.attackTarget === state.player || b.villagerTarget === npc) ? -300 : 0;
+            return distance(npc, a) + aThreat - (distance(npc, b) + bThreat);
+        })[0];
+    if (directThreat) return directThreat;
+    const rival = state.outdoorVillagers
+        .filter(other => other !== npc && other.kind === 'npc' && other.hp > 0 && other.outside)
+        .filter(other => followerCanAttackVillager(npc, other, ownVillage))
+        .filter(other => distance(other, state.player) < 520 || other.villagerAggressor === npc)
+        .sort((a, b) => distance(npc, a) - distance(npc, b))[0];
+    return rival || null;
+}
+
+function followerCanAttackVillager(follower, target, ownVillage = homeVillageFor(follower)) {
+    const targetVillage = homeVillageFor(target);
+    if (!ownVillage || !targetVillage || ownVillage === targetVillage) return false;
+    if (target.playerAggro || target.animalAggressor) return false;
+    return villagesWillFight(ownVillage, targetVillage, follower, target);
+}
+
+function followPlayerAsVillager(npc, dt, now) {
+    const index = activeVillagerFollowers().indexOf(npc);
+    const formation = followerFormationForRole(npc, index, now);
+    const desired = {
+        x: state.player.x + formation.x,
+        y: state.player.y + formation.y,
+    };
+    const dist = distance(npc, desired);
+    const playerDistance = distance(npc, state.player);
+    if (playerDistance > 340) {
+        const dir = normalize(state.player.x - npc.x, state.player.y - npc.y);
+        moveOutdoorVillager(npc, dir.x * followerCatchupSpeed(npc, playerDistance) * dt, dir.y * followerCatchupSpeed(npc, playerDistance) * dt);
+        updateVillagerFacingFromDirection(npc, dir);
+        npc.workState = '追上你';
+        npc.workStateUntil = now + 700;
+        return;
+    }
+    if (playerDistance < 140) {
+        npc.workState = '跟随你';
+        npc.workStateUntil = now + 700;
+        npc.facing = state.player.x >= npc.x ? 1 : -1;
+        return;
+    }
+    if (dist > 24) {
+        const dir = normalize(desired.x - npc.x, desired.y - npc.y);
+        moveOutdoorVillager(npc, dir.x * followerMoveSpeed(npc) * dt, dir.y * followerMoveSpeed(npc) * dt);
+        updateVillagerFacingFromDirection(npc, dir);
+    }
+    npc.workState = '跟随你';
+    npc.workStateUntil = now + 700;
+}
+
+function waitOutsideForPlayer(npc, dt, now) {
+    const exit = { x: state.indoor.outsideX, y: state.indoor.outsideY };
+    const index = activeVillagerFollowers().indexOf(npc);
+    const waitPoint = { x: exit.x - 48 + index * 48, y: exit.y + 72 };
+    if (distance(npc, waitPoint) > 24) {
+        const dir = normalize(waitPoint.x - npc.x, waitPoint.y - npc.y);
+        moveOutdoorVillager(npc, dir.x * 96 * dt, dir.y * 96 * dt);
+        updateVillagerFacingFromDirection(npc, dir);
+    }
+    npc.workState = '在屋外等待';
+    npc.workStateUntil = now + 900;
+    npc.animalAggressor = null;
+    npc.villagerAggressor = null;
+}
+
+function followerFormationForRole(npc, index, now = performance.now()) {
+    const sway = Math.sin(now * 0.001 + index) * 10;
+    if (['guard', 'blacksmith', 'cultGuard'].includes(npc.role)) return { x: -30 + index * 28, y: 36 + sway * 0.5 };
+    if (['apothecary', 'elder', 'cultPriest', 'cultHealer', 'cultHerbalist'].includes(npc.role)) return { x: -58 + index * 34, y: 56 + sway * 0.5 };
+    if (['merchant', 'kitchen'].includes(npc.role)) return { x: 50 - index * 32, y: 54 + sway * 0.5 };
+    return { x: -42 + index * 36, y: 48 + sway * 0.5 };
+}
+
+function followerMoveSpeed(npc) {
+    if (['guard', 'blacksmith', 'cultGuard'].includes(npc.role)) return 112;
+    if (['apothecary', 'elder', 'cultPriest', 'cultHealer', 'cultHerbalist'].includes(npc.role)) return 98;
+    return 132;
+}
+
+function followerCatchupSpeed(npc, distanceToPlayer) {
+    return followerMoveSpeed(npc) * (distanceToPlayer > 620 ? 2.1 : 1.65);
+}
+
+function updateFollowerSupport(npc, now) {
+    if (!['apothecary', 'elder', 'cultHealer', 'kitchen'].includes(npc.role)) return false;
+    if (now < (npc.nextFollowerSupportAt || 0)) return false;
+    const allies = [state.player, ...activeVillagerFollowers()]
+        .filter(target => target && target !== npc)
+        .filter(target => (target.hp ?? target.maxHp ?? 100) < (target.maxHp || 100) * 0.68)
+        .sort((a, b) => (a.hp / (a.maxHp || a.hp || 1)) - (b.hp / (b.maxHp || b.hp || 1)));
+    const target = allies[0];
+    if (!target || distance(npc, target) > 260) return false;
+    const amount = npc.role === 'kitchen' ? 5 : (npc.role === 'cultHealer' ? 10 : 8);
+    target.hp = Math.min(target.maxHp || 100, (target.hp || 0) + amount);
+    npc.nextFollowerSupportAt = now + (npc.role === 'kitchen' ? 6200 : 5200);
+    npc.attackAnim = { startedAt: now, duration: 460, weapon: npc.role === 'kitchen' ? '递食物' : '随从治疗', style: 'heal', dir: normalize(target.x - npc.x, target.y - npc.y) };
+    spawnBurst(target.x, target.y - 18, '#9cffb7', 12, 120, 18);
+    addFloatText(`+${amount}`, target.x, target.y - 54, '#9cffb7');
+    return true;
+}
+
+function activeVillagerFollowers() {
+    return state.outdoorVillagers.filter(npc => npc.kind === 'npc' && npc.hp > 0 && npc.follower);
+}
+
+function markEnemyAttackedByPlayer(enemy, now = performance.now()) {
+    if (!enemy || enemy.hp <= 0) return;
+    enemy.attackedByPlayerUntil = now + 6500;
+    for (const follower of activeVillagerFollowers()) {
+        follower.assistTarget = enemy;
+        follower.assistUntil = now + 6500;
+    }
+}
+
+function dismissVillagerFollower(npc, reason = '') {
+    npc.follower = false;
+    npc.followTarget = null;
+    npc.animalAggressor = null;
+    npc.villagerAggressor = null;
+    npc.playerAggro = false;
+    npc.mood = npc.homeBuilding?.destroyed ? 'sad' : 'calm';
+    if (reason) showToast(`${npc.label}${reason === '撤退' ? '伤势太重，退出队伍。' : '停止跟随。'}`);
+}
+
+function dismissNearestVillagerFollower() {
+    const follower = activeVillagerFollowers()
+        .map(npc => ({ npc, d: distance(npc, state.player) }))
+        .filter(item => item.d <= 180)
+        .sort((a, b) => a.d - b.d)[0]?.npc;
+    if (!follower) {
+        showToast('附近没有可解散的随从。');
+        return false;
+    }
+    dismissVillagerFollower(follower, '停止');
+    renderHud();
+    return true;
 }
 
 function updateOutdoorWorldWhileIndoor(dt, now) {
@@ -3774,7 +5496,9 @@ function setVillagerWorkState(npc, now, outside) {
 }
 
 function shouldOutdoorVillagerReturnHome(npc, now) {
+    if (npc.follower) return false;
     if (npc.playerAggro || npc.animalAggressor || npc.villagerAggressor || npc.villageWarTargetVillage) return false;
+    if (npc.homeBuilding?.destroyed) return false;
     if (npc.returningHome) return true;
     const village = homeVillageFor(npc);
     if (!village) return false;
@@ -3809,9 +5533,7 @@ function updateGuardNightPatrol(npc, dt, now) {
         npc.workState = guardPatrolLabel(npc.patrolTarget);
         npc.workStateUntil = now + 3600;
     }
-    const dir = normalize(npc.targetX - npc.x, npc.targetY - npc.y);
-    moveOutdoorVillager(npc, dir.x * 76 * dt, dir.y * 76 * dt);
-    npc.facing = dir.x >= 0 ? 1 : -1;
+    moveOutdoorVillagerToward(npc, { x: npc.targetX, y: npc.targetY }, 76, dt);
     return true;
 }
 
@@ -3855,13 +5577,18 @@ function updatePendingVillagerExits(now) {
     if (!state.pendingVillagerExits?.length) return;
     for (const exit of state.pendingVillagerExits) {
         if (now < exit.exitAt || exit.npc.outside || exit.npc.hp <= 0) continue;
+        if (exit.building?.destroyed) {
+            exit.done = true;
+            continue;
+        }
         removeFromInteriorObjects(exit.npc);
         exit.npc.outside = true;
         exit.npc.returnedHome = false;
         exit.npc.returningHome = false;
         exit.npc.homeBuilding = exit.building;
-        exit.npc.x = exit.building.doorX;
-        exit.npc.y = exit.building.doorY + 46;
+        const exitPoint = villageHouseExitPoint(exit.building);
+        exit.npc.x = exitPoint.x;
+        exit.npc.y = exitPoint.y;
         setOutdoorVillagerDoorExitTarget(exit.npc, exit.building);
         if (!state.outdoorVillagers.includes(exit.npc)) state.outdoorVillagers.push(exit.npc);
         exit.done = true;
@@ -3871,14 +5598,192 @@ function updatePendingVillagerExits(now) {
 }
 
 function scheduleVillagerExit(npc, building, now, delay = 700, message = `${npc.label}听到警钟后出了屋子。`) {
+    if (building?.destroyed) return;
     state.pendingVillagerExits ||= [];
     if (npc.outside || npc.hp <= 0 || state.pendingVillagerExits.some(exit => exit.npc === npc)) return;
     state.pendingVillagerExits.push({ npc, building, exitAt: now + delay, message });
 }
 
+function moveOutdoorVillagerToward(npc, target, speed, dt) {
+    target = safeOutdoorVillagerTarget(npc, target);
+    const waypoint = outdoorVillagerPathWaypoint(npc, target);
+    const dir = normalize(waypoint.x - npc.x, waypoint.y - npc.y);
+    moveOutdoorVillager(npc, dir.x * speed * dt, dir.y * speed * dt);
+    updateVillagerFacingFromDirection(npc, dir);
+}
+
+function safeOutdoorVillagerTarget(npc, target) {
+    if (!target) return npc;
+    const now = performance.now();
+    if (npc.safeTargetRaw && npc.safeTarget && now < (npc.safeTargetUntil || 0) && distance(npc.safeTargetRaw, target) < 18) {
+        return npc.safeTarget;
+    }
+    const probe = {
+        x: clamp(target.x, npc.radius || 17, WORLD.width - (npc.radius || 17)),
+        y: clamp(target.y, npc.radius || 17, WORLD.height - (npc.radius || 17)),
+        radius: npc.radius || 17,
+    };
+    const safe = terrainInfoAt(probe.x, probe.y).kind !== 'water' && !collides(probe)
+        ? probe
+        : safeOutdoorPointNearForRadius(probe, npc, 220, npc.radius || 17);
+    npc.safeTargetRaw = { x: target.x, y: target.y };
+    npc.safeTarget = safe;
+    npc.safeTargetUntil = now + 700;
+    return safe;
+}
+
+function safeOutdoorPointNearForRadius(preferred, origin = preferred, searchRadius = 220, radius = 17) {
+    const candidates = [{ x: preferred.x, y: preferred.y }];
+    for (let r = 28; r <= searchRadius; r += 28) {
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+            candidates.push({ x: origin.x + Math.cos(a) * r, y: origin.y + Math.sin(a) * r });
+        }
+    }
+    let best = null;
+    let bestScore = Infinity;
+    for (const candidate of candidates) {
+        const point = {
+            x: snapToGroundGrid(clamp(candidate.x, radius + 8, WORLD.width - radius - 8)),
+            y: snapToGroundGrid(clamp(candidate.y, radius + 8, WORLD.height - radius - 8)),
+            radius,
+        };
+        if (terrainInfoAt(point.x, point.y).kind === 'water' || collides(point)) continue;
+        const score = distance(point, preferred) + distance(point, origin) * 0.18;
+        if (score < bestScore) {
+            best = point;
+            bestScore = score;
+        }
+    }
+    return best || probeLikeOutdoorPoint(preferred, radius);
+}
+
+function probeLikeOutdoorPoint(point, radius = 17) {
+    return {
+        x: snapToGroundGrid(clamp(point.x, radius + 8, WORLD.width - radius - 8)),
+        y: snapToGroundGrid(clamp(point.y, radius + 8, WORLD.height - radius - 8)),
+        radius,
+    };
+}
+
+function updateVillagerFacingFromDirection(npc, dir, threshold = 0.14) {
+    if ((npc.facingLockUntil || 0) > performance.now()) return;
+    if (Math.abs(dir.x) < threshold) return;
+    const next = dir.x >= 0 ? 1 : -1;
+    if (npc.facing !== next && Math.abs(dir.x) < threshold * 1.8 && (performance.now() - (npc.facingChangedAt || 0)) < 420) return;
+    npc.facing = next;
+    npc.facingChangedAt = performance.now();
+}
+
+function outdoorVillagerPathWaypoint(npc, target) {
+    if (!target) return npc;
+    const now = performance.now();
+    if (npc.avoidTarget && distance(npc.avoidTarget, target) > 28) {
+        npc.avoidWaypoint = null;
+        npc.avoidWaypointUntil = 0;
+        npc.avoidBuilding = null;
+    }
+    npc.avoidTarget = { x: target.x, y: target.y };
+    if (npc.avoidWaypoint && (npc.avoidWaypointUntil || 0) > now) {
+        if (distance(npc, npc.avoidWaypoint) > 22) {
+            return npc.avoidWaypoint;
+        }
+        const stillBlocked = firstBuildingBlockingSegment(npc, target);
+        if (stillBlocked && npc.avoidBuilding === stillBlocked.building) {
+            npc.avoidWaypoint = nextBuildingCornerWaypoint(npc, target, stillBlocked, npc.avoidWaypoint);
+            npc.avoidWaypointUntil = now + 1900;
+            return npc.avoidWaypoint;
+        }
+        npc.avoidWaypoint = null;
+        npc.avoidWaypointUntil = 0;
+        npc.avoidBuilding = null;
+    }
+    const obstacle = firstBuildingBlockingSegment(npc, target);
+    if (!obstacle) {
+        npc.avoidWaypoint = null;
+        npc.avoidWaypointUntil = 0;
+        return target;
+    }
+    const waypoint = bestBuildingCornerWaypoint(npc, target, obstacle);
+    npc.avoidWaypoint = waypoint;
+    npc.avoidWaypointUntil = now + 1900;
+    npc.avoidBuilding = obstacle.building;
+    return waypoint;
+}
+
+function firstBuildingBlockingSegment(start, target) {
+    let best = null;
+    for (const village of allVillages()) {
+        for (const building of village.buildings || []) {
+            const rect = expandedRect(villageBuildingCollisionRect(building), 34);
+            if (!segmentSamplesHitRect(start, target, rect)) continue;
+            const d = distance(start, rect);
+            if (!best || d < best.d) best = { building, rect, d };
+        }
+    }
+    return best;
+}
+
+function segmentSamplesHitRect(start, end, rect) {
+    const length = Math.max(1, distance(start, end));
+    const steps = Math.min(28, Math.max(4, Math.ceil(length / 28)));
+    for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const point = { x: lerp(start.x, end.x, t), y: lerp(start.y, end.y, t) };
+        if (pointInRect(point, rect)) return true;
+    }
+    return false;
+}
+
+function pointInRect(point, rect) {
+    return Math.abs(point.x - rect.x) <= rect.w / 2 && Math.abs(point.y - rect.y) <= rect.h / 2;
+}
+
+function expandedRect(rect, amount) {
+    return { ...rect, w: rect.w + amount * 2, h: rect.h + amount * 2 };
+}
+
+function bestBuildingCornerWaypoint(npc, target, obstacle) {
+    const corners = buildingCornerWaypoints(npc, obstacle);
+    const valid = corners.filter(point => !collides(point));
+    const pool = valid.length ? valid : corners;
+    return pool
+        .map(point => {
+            const pathPenalty = segmentSamplesHitRect(npc, point, obstacle.rect) ? 420 : 0;
+            const exitPenalty = segmentSamplesHitRect(point, target, obstacle.rect) ? 160 : 0;
+            return { point, score: distance(npc, point) + distance(point, target) * 0.82 + pathPenalty + exitPenalty };
+        })
+        .sort((a, b) => a.score - b.score)[0].point;
+}
+
+function nextBuildingCornerWaypoint(npc, target, obstacle, current) {
+    const corners = buildingCornerWaypoints(npc, obstacle)
+        .filter(point => distance(point, current) > 18 && !collides(point));
+    if (!corners.length) return bestBuildingCornerWaypoint(npc, target, obstacle);
+    return corners
+        .map(point => ({ point, score: distance(npc, point) * 0.65 + distance(point, target) }))
+        .sort((a, b) => a.score - b.score)[0].point;
+}
+
+function buildingCornerWaypoints(npc, obstacle) {
+    const rect = expandedRect(obstacle.rect, Math.max(44, (npc.radius || 17) + 24));
+    return [
+        { x: rect.x - rect.w / 2, y: rect.y - rect.h / 2 },
+        { x: rect.x + rect.w / 2, y: rect.y - rect.h / 2 },
+        { x: rect.x - rect.w / 2, y: rect.y + rect.h / 2 },
+        { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 },
+    ].map(point => ({
+        x: snapToGroundGrid(clamp(point.x, npc.radius || 17, WORLD.width - (npc.radius || 17))),
+        y: snapToGroundGrid(clamp(point.y, npc.radius || 17, WORLD.height - (npc.radius || 17))),
+        radius: npc.radius || 17,
+    }));
+}
+
 function moveOutdoorVillager(npc, dx, dy) {
     const oldX = npc.x;
     const oldY = npc.y;
+    const adjusted = outdoorVillagerBuildingAvoidanceStep(npc, dx, dy);
+    dx = adjusted.x;
+    dy = adjusted.y;
     moveCircle(npc, dx, dy);
     if (Math.hypot(npc.x - oldX, npc.y - oldY) < Math.hypot(dx, dy) * 0.25) {
         npc.x = oldX;
@@ -3891,12 +5796,78 @@ function moveOutdoorVillager(npc, dx, dy) {
     }
 }
 
+function outdoorVillagerBuildingAvoidanceStep(npc, dx, dy) {
+    const speed = Math.hypot(dx, dy);
+    if (speed < 0.05) return { x: dx, y: dy };
+    const now = performance.now();
+    const probe = { x: npc.x + dx, y: npc.y + dy, radius: npc.radius || 17 };
+    const blocking = nearestVillageBuildingCollisionRect(probe);
+    if (!blocking) {
+        if ((npc.avoidBuildingUntil || 0) < now) {
+            npc.avoidBuilding = null;
+            npc.avoidSide = 0;
+            npc.avoidVec = null;
+        }
+        return { x: dx, y: dy };
+    }
+    const dir = normalize(dx, dy);
+    const awayX = probe.x - blocking.rect.x;
+    const awayY = probe.y - blocking.rect.y;
+    const away = normalize(Math.abs(awayX) > 0.01 ? awayX : -dir.y, Math.abs(awayY) > 0.01 ? awayY : dir.x || 1);
+    const freshSide = (dir.x * -away.y + dir.y * away.x) >= 0 ? 1 : -1;
+    const sameBuilding = npc.avoidBuilding === blocking.building && (npc.avoidBuildingUntil || 0) > now;
+    const side = sameBuilding && npc.avoidSide ? npc.avoidSide : freshSide;
+    npc.avoidBuilding = blocking.building;
+    npc.avoidSide = side;
+    npc.avoidBuildingUntil = now + 900;
+    const tangent = { x: -away.y * side, y: away.x * side };
+    const desired = normalize(away.x * 0.55 + tangent.x * 0.95, away.y * 0.55 + tangent.y * 0.95);
+    const previous = npc.avoidVec || desired;
+    const smoothed = normalize(lerp(previous.x, desired.x, 0.32), lerp(previous.y, desired.y, 0.32));
+    npc.avoidVec = smoothed;
+    return { x: smoothed.x * speed, y: smoothed.y * speed };
+}
+
+function nearestVillageBuildingCollisionRect(entity) {
+    let best = null;
+    for (const village of allVillages()) {
+        for (const building of village.buildings || []) {
+            const rect = villageBuildingCollisionRect(building);
+            if (!rectCircleOverlap({ ...rect, w: rect.w + 4, h: rect.h + 4 }, entity)) continue;
+            const d = distance(entity, rect);
+            if (!best || d < best.d) best = { rect, building, d };
+        }
+    }
+    return best;
+}
+
+function villageBuildingCollisionRect(building) {
+    if (['carpenter', 'hunter', 'outerHunter', 'miner', 'farmer'].includes(building.kind)) {
+        return {
+            x: building.x,
+            y: building.y + building.h * 0.31,
+            w: building.w * 0.58,
+            h: building.h * 0.3,
+        };
+    }
+    return {
+        x: building.x,
+        y: building.y + building.h * 0.32,
+        w: building.w * 0.68,
+        h: building.h * 0.34,
+    };
+}
+
 function tryOutdoorVillagerAvoidance(npc, dx, dy) {
     const speed = Math.hypot(dx, dy);
     if (speed < 0.05) return false;
     const dir = normalize(dx, dy);
     const angles = [0.45, -0.45, 0.8, -0.8, 1.15, -1.15, Math.PI / 2, -Math.PI / 2, 2.25, -2.25];
     const options = [
+        ...(npc.avoidVec ? [
+            { x: npc.avoidVec.x * speed, y: npc.avoidVec.y * speed },
+            { x: npc.avoidVec.x * speed * 1.4, y: npc.avoidVec.y * speed * 1.4 },
+        ] : []),
         { x: dx, y: 0 },
         { x: 0, y: dy },
         ...angles.flatMap(angle => {
@@ -3952,8 +5923,10 @@ function updateOutdoorVillagerCombat(npc, dt, now) {
         updateVillagerPendingAttack(npc, now);
         return true;
     }
-    if (npc.villagerAggressor?.hp > 0 && npc.villagerAggressor.outside && homeVillageFor(npc.villagerAggressor) !== homeVillageFor(npc)) {
+    if (npc.villagerAggressor?.hp > 0 && npc.villagerAggressor.outside && canVillagerAttackVillager(npc, npc.villagerAggressor)) {
         return updateVillagerRivalCombat(npc, npc.villagerAggressor, dt, now);
+    } else if (npc.villagerAggressor) {
+        npc.villagerAggressor = null;
     }
     const animal = chooseVillagerAnimalTarget(npc);
     if (animal) {
@@ -3966,8 +5939,16 @@ function updateOutdoorVillagerCombat(npc, dt, now) {
     }
     const dist = distance(npc, state.player);
     const profile = villagerAttackProfile(npc, dist);
+    if (npc.role === 'elder' && isForestVillage(homeVillageFor(npc))) {
+        updateForestElderCombat(npc, dt, now, state.player, dist);
+        return true;
+    }
+    if (npc.role === 'elder' && isMineVillage(homeVillageFor(npc))) {
+        updateMineElderCombat(npc, dt, now, state.player, dist);
+        return true;
+    }
     if (['apothecary', 'elder', 'cultPriest', 'cultHerbalist', 'cultHealer'].includes(npc.role)) {
-        if (npc.role === 'elder' && !activeVillageTotem(npc) && villagerCanAttack(npc, now)) {
+        if (npc.role === 'elder' && canElderSummonTotem(npc, now) && villagerCanAttack(npc, now)) {
             summonVillageTotem(npc, now);
             return true;
         }
@@ -3984,7 +5965,8 @@ function updateOutdoorVillagerCombat(npc, dt, now) {
             moveOutdoorVillager(npc, dir.x * 62 * dt, dir.y * 62 * dt);
             npc.facing = dir.x >= 0 ? 1 : -1;
         } else if (villagerCanAttack(npc, now) && (npc.role !== 'cultHealer' || npc.playerAggro)) {
-            if (npc.role === 'elder') castElderSpell(npc, now);
+            if (npc.role === 'elder' && canElderSummonTotem(npc, now)) summonVillageTotem(npc, now);
+            else if (npc.role === 'elder') castElderSpell(npc, now);
             else if (npc.role === 'cultHerbalist') commandJungleMonsters(npc, now);
             else if (npc.role === 'cultHealer') castCultHealerVines(npc, now);
             else throwPoisonBottle(npc, now);
@@ -4075,6 +6057,10 @@ function nearestVillageWarTarget(npc, enemyVillage) {
 }
 
 function setVillagerRivalAggro(npc, rival) {
+    if (rival && !canVillagerAttackVillager(npc, rival)) {
+        npc.villagerAggressor = null;
+        return;
+    }
     npc.villagerAggressor = rival;
     npc.animalAggressor = null;
     npc.playerAggro = false;
@@ -4148,8 +6134,16 @@ function isVillageWarTarget(npc, target) {
         && homeVillageFor(npc) !== homeVillageFor(target);
 }
 
+function canVillagerAttackVillager(npc, target) {
+    if (!npc || !target || npc.kind !== 'npc' || target.kind !== 'npc') return false;
+    const ownVillage = homeVillageFor(npc);
+    const targetVillage = homeVillageFor(target);
+    if (!ownVillage || !targetVillage || ownVillage === targetVillage) return false;
+    return villagesWillFight(ownVillage, targetVillage, npc, target);
+}
+
 function updateVillagerRivalCombat(npc, rival, dt, now) {
-    if (!rival || rival.hp <= 0 || !rival.outside) {
+    if (!rival || rival.hp <= 0 || !rival.outside || !canVillagerAttackVillager(npc, rival)) {
         npc.villagerAggressor = null;
         return false;
     }
@@ -4158,8 +6152,20 @@ function updateVillagerRivalCombat(npc, rival, dt, now) {
     const profile = villagerAttackProfile(npc, dist);
     const dir = normalize(rival.x - npc.x, rival.y - npc.y);
     npc.facing = dir.x >= 0 ? 1 : -1;
-    const rangedRole = ['apothecary', 'elder', 'cultPriest', 'cultHerbalist', 'cultHealer'].includes(npc.role);
+    if (npc.role === 'elder' && isForestVillage(homeVillageFor(npc))) {
+        updateForestElderCombat(npc, dt, now, rival, dist);
+        return true;
+    }
+    if (npc.role === 'elder' && isMineVillage(homeVillageFor(npc))) {
+        updateMineElderCombat(npc, dt, now, rival, dist);
+        return true;
+    }
+    const rangedRole = ['apothecary', 'elder', 'hunter', 'cultPriest', 'cultHerbalist', 'cultHealer'].includes(npc.role);
     if (rangedRole) {
+        if (npc.role === 'hunter') {
+            updateRangedVillagerCombatAgainstTarget(npc, rival, dt, now, 145, 285);
+            return true;
+        }
         if (dist < 135) {
             moveOutdoorVillager(npc, -dir.x * 108 * dt, -dir.y * 108 * dt);
         } else if (dist > 230) {
@@ -4207,11 +6213,32 @@ function chooseVillagerAnimalTarget(npc) {
         if (attacker.villagerTarget === npc) attacker.villagerTarget = null;
         return null;
     }
-    if (attacker && distance(npc, attacker) < 560) return attacker;
+    if (attacker && distance(npc, attacker) < villagerDefenseEngageRange(npc, attacker)) return attacker;
+    const engageRange = villagerDefenseEngageRange(npc);
     return state.enemies
-        .filter(e => e.hp > 0 && e.villagerTarget === npc && distance(npc, e) < 560)
+        .filter(e => e.hp > 0 && e.villagerTarget === npc && distance(npc, e) < villagerDefenseEngageRange(npc, e, engageRange))
         .filter(e => !shouldIgnoreJungleMonster(npc, e))
         .sort((a, b) => distance(npc, a) - distance(npc, b))[0] || null;
+}
+
+function villagerDefenseEngageRange(npc, enemy = null, base = null) {
+    const roleRange = {
+        farmer: 170,
+        carpenter: 210,
+        unemployed: 190,
+        merchant: 180,
+        basicElder: 220,
+        kitchen: 260,
+        miner: 300,
+        apothecary: 320,
+        hunter: 520,
+        guard: 560,
+        blacksmith: 430,
+        elder: 470,
+    }[npc.role] || 300;
+    const range = base ?? roleRange;
+    if (enemy?.attackTarget === npc || enemy?.villagerTarget === npc) return Math.max(range, 280);
+    return range;
 }
 
 function shouldIgnoreJungleMonster(npc, animal) {
@@ -4221,17 +6248,25 @@ function shouldIgnoreJungleMonster(npc, animal) {
 function updateVillagerAnimalCounter(npc, animal, dt, now) {
     setVillagerAnimalAggro(npc, animal);
     const dist = distance(npc, animal);
-    if (npc.role === 'guard' && isStrongGuardTarget(animal)) {
+    if (npc.role === 'guard' && (isStrongGuardTarget(animal) || isForestVillage(homeVillageFor(npc)))) {
         updateGuardRangedCombatAgainstStrongTarget(npc, animal, dist, dt, now);
         return;
     }
-    const range = npc.role === 'blacksmith' ? 82 : (['apothecary', 'elder', 'cultHealer'].includes(npc.role) ? 190 : 58);
-    if (['apothecary', 'elder', 'cultHealer'].includes(npc.role)) {
+    if (npc.role === 'elder' && isForestVillage(homeVillageFor(npc))) {
+        updateForestElderCombat(npc, dt, now, animal, dist);
+        return;
+    }
+    if (npc.role === 'elder' && isMineVillage(homeVillageFor(npc))) {
+        updateMineElderCombat(npc, dt, now, animal, dist);
+        return;
+    }
+    const range = npc.role === 'blacksmith' ? 82 : (['apothecary', 'elder', 'cultHealer', 'hunter'].includes(npc.role) ? 190 : 58);
+    if (['apothecary', 'elder', 'cultHealer', 'hunter'].includes(npc.role)) {
         if (npc.role === 'cultHealer' && dist <= 235 && villagerCanAttack(npc, now)) {
             castCultHealerVines(npc, now, animal);
             return;
         }
-        updateRangedVillagerCombatAgainstTarget(npc, animal, dt, now, npc.role === 'elder' ? 165 : 155, npc.role === 'elder' ? 240 : 225);
+        updateRangedVillagerCombatAgainstTarget(npc, animal, dt, now, npc.role === 'elder' ? 165 : (npc.role === 'hunter' ? 145 : 155), npc.role === 'elder' ? 240 : (npc.role === 'hunter' ? 285 : 225));
         return;
     }
     const dir = normalize(animal.x - npc.x, animal.y - npc.y);
@@ -4254,11 +6289,13 @@ function isStrongGuardTarget(target) {
 }
 
 function updateGuardRangedCombatAgainstStrongTarget(npc, target, dist, dt, now) {
-    const minRange = 165;
-    const maxRange = 330;
+    const mineGuard = isMineVillage(homeVillageFor(npc));
+    const profile = mineGuard ? villagerAttackProfile(npc, dist) : guardArrowAttackProfile();
+    const minRange = mineGuard ? 145 : 165;
+    const maxRange = mineGuard ? profile.range : 330;
     const dirToTarget = normalize(target.x - npc.x, target.y - npc.y);
     npc.facing = dirToTarget.x >= 0 ? 1 : -1;
-    npc.workState = '远射强敌';
+    npc.workState = mineGuard ? '投掷煤火弹' : '远射强敌';
     npc.workStateUntil = now + 1400;
     if (dist < minRange) {
         moveOutdoorVillager(npc, -dirToTarget.x * 118 * dt, -dirToTarget.y * 118 * dt);
@@ -4271,7 +6308,7 @@ function updateGuardRangedCombatAgainstStrongTarget(npc, target, dist, dt, now) 
         return;
     }
     if (villagerCanAttack(npc, now)) {
-        startVillagerMeleeAttack(npc, guardArrowAttackProfile(), now, target);
+        startVillagerMeleeAttack(npc, profile, now, target);
     }
     keepVillagerNearVillage(npc);
 }
@@ -4280,12 +6317,64 @@ function guardArrowAttackProfile() {
     return { weapon: '鹿筋弓', damage: 7, force: 240, shake: 8, burst: 8, color: '#d8e5f2', range: 245, duration: 390, cooldown: 1050, style: 'guardArrow' };
 }
 
+function updateForestElderCombat(npc, dt, now, target, dist) {
+    npc.workState = '鹿角号令';
+    npc.workStateUntil = now + 1200;
+    npc.facing = target.x >= npc.x ? 1 : -1;
+    if (now >= (npc.nextForestHornAt || 0)) {
+        npc.nextForestHornAt = now + 4200;
+        spawnBurst(npc.x, npc.y - 42, '#d6a06a', 14, 150, 28);
+        addFloatText('林地号令', npc.x, npc.y - 62, '#ffd166');
+        commandForestVillageAllies(npc, target, now, { maxCount: 4, includeUnloaded: false, label: '响应号令' });
+    }
+    if (dist < 90) {
+        const away = normalize(npc.x - target.x, npc.y - target.y);
+        moveOutdoorVillager(npc, away.x * 88 * dt, away.y * 88 * dt);
+        if (dist < 58 && villagerCanAttack(npc, now)) {
+            startVillagerMeleeAttack(npc, { ...villagerAttackProfile(npc, dist), weapon: '鹿角杖', damage: 6, force: 190, color: '#d6a06a', range: 58, style: 'staff' }, now, target);
+        }
+    }
+}
+
+function updateMineElderCombat(npc, dt, now, target, dist) {
+    npc.workState = '矿钟号令';
+    npc.workStateUntil = now + 1200;
+    npc.facing = target.x >= npc.x ? 1 : -1;
+    if (now >= (npc.nextMineBellAt || 0)) {
+        npc.nextMineBellAt = now + 4600;
+        spawnBurst(npc.x, npc.y - 36, '#ffd166', 12, 130, 24);
+        addFloatText('矿钟号令', npc.x, npc.y - 62, '#ffd166');
+        let count = 0;
+        for (const ally of state.outdoorVillagers || []) {
+            if (count >= 5 || ally === npc || ally.hp <= 0 || homeVillageFor(ally) !== homeVillageFor(npc)) continue;
+            if (!['miner', 'guard', 'blacksmith'].includes(ally.role)) continue;
+            ally.mineGuardUntil = Math.max(ally.mineGuardUntil || 0, now + 5200);
+            ally.workState = '矿钟护村';
+            ally.workStateUntil = now + 1800;
+            if (target === state.player) setVillagerPlayerAggro(ally);
+            else if (target?.hp > 0) {
+                if (target.kind === 'npc') ally.villagerAggressor = target;
+                else setVillagerAnimalAggro(ally, target);
+            }
+            count++;
+        }
+    }
+    if (dist < 70) {
+        const away = normalize(npc.x - target.x, npc.y - target.y);
+        moveOutdoorVillager(npc, away.x * 70 * dt, away.y * 70 * dt);
+        if (dist < 52 && villagerCanAttack(npc, now)) {
+            startVillagerMeleeAttack(npc, { ...villagerAttackProfile(npc, dist), weapon: '矿头铁杖', damage: 5, force: 210, color: '#ffd166', range: 54, style: 'club' }, now, target);
+        }
+    }
+}
+
 function updateRangedVillagerCombatAgainstTarget(npc, target, dt, now, minRange, maxRange) {
     const dist = distance(npc, target);
     const away = normalize(npc.x - target.x, npc.y - target.y);
     npc.facing = target.x >= npc.x ? 1 : -1;
     if (dist <= maxRange && villagerCanAttack(npc, now)) {
         if (npc.role === 'elder') castElderSpellAt(npc, target, now);
+        else if (npc.role === 'hunter') startVillagerMeleeAttack(npc, villagerAttackProfile(npc, dist), now, target);
         else throwPoisonBottleAt(npc, target, now);
     }
     if (dist < minRange) {
@@ -4310,7 +6399,12 @@ function keepVillagerNearVillage(npc) {
 }
 
 function followPlayerIntoHouse(npc) {
-    if (!npc.homeBuilding) return;
+    if (!npc.homeBuilding || npc.homeBuilding.destroyed) {
+        npc.returningHome = false;
+        npc.homeDestroyed = true;
+        showToast(`${npc.label}的家已经成了废墟，无法进屋。`);
+        return;
+    }
     removeFromOutdoorVillagers(npc);
     npc.outside = false;
     npc.returningHome = false;
@@ -4330,6 +6424,7 @@ function maybeSendVillagersOutside(now) {
     for (const village of allVillages()) {
     if (distance(state.player, village) > village.radius + 260) continue;
     for (const building of village.buildings) {
+        if (building.destroyed) continue;
         building.interiorObjects ||= createIndoorObjects(building.kind, building);
         const npc = building.interiorObjects.find(object => object.kind === 'npc');
         if (!npc || npc.outside || npc.hp <= 0 || npc.playerAggro) continue;
@@ -4356,14 +6451,22 @@ function maybeSendVillagersOutside(now) {
 }
 
 function sendVillagerOutside(building, npc, now) {
+    if (building?.destroyed) {
+        npc.outside = true;
+        npc.returningHome = false;
+        npc.homeDestroyed = true;
+        if (!state.outdoorVillagers.includes(npc)) state.outdoorVillagers.push(npc);
+        return;
+    }
     removeFromInteriorObjects(npc);
     npc.outside = true;
     npc.returnedHome = false;
     npc.returningHome = false;
     npc.mood = npc.playerAggro && npc.hp >= npc.maxHp * 0.3 ? 'angry' : 'annoyed';
     npc.homeBuilding = building;
-    npc.x = building.doorX;
-    npc.y = building.doorY + 34;
+    const exitPoint = villageHouseExitPoint(building);
+    npc.x = exitPoint.x;
+    npc.y = exitPoint.y;
     npc.radius ||= 17;
     setOutdoorVillagerDoorExitTarget(npc, building);
     if (!state.outdoorVillagers.includes(npc)) state.outdoorVillagers.push(npc);
@@ -4373,6 +6476,13 @@ function sendVillagerOutside(building, npc, now) {
 }
 
 function returnOutdoorVillagerHome(npc) {
+    if (npc.homeBuilding?.destroyed) {
+        npc.returningHome = false;
+        npc.homeDestroyed = true;
+        npc.mood = npc.playerAggro ? 'angry' : 'sad';
+        addFloatText('家已成废墟', npc.x, npc.y - 54, '#ffd166');
+        return;
+    }
     removeFromOutdoorVillagers(npc);
     npc.outside = false;
     npc.returningHome = false;
@@ -4399,7 +6509,7 @@ function returnOutdoorVillagerHome(npc) {
 function updateAllVillagerHomeHealing(dt, now) {
     if (!state.village) return;
     for (const village of allVillages()) for (const building of village.buildings) {
-        building.interiorObjects ||= createIndoorObjects(building.kind, building);
+        if (!building.interiorObjects) continue;
         for (const npc of building.interiorObjects.filter(object => object.kind === 'npc' && !object.outside && object.hp > 0 && object.hp < object.maxHp && !object.playerAggro && !object.animalAggressor && object.mood !== 'angry')) {
             const rate = npc.hp < npc.maxHp * 0.3 ? 5.5 : 2.2;
             npc.hp = Math.min(npc.maxHp, npc.hp + rate * dt);
@@ -4572,6 +6682,11 @@ function damageAnimalByVillagerMelee(animal, npc, profile) {
 
 function damageVillagerByVillager(target, attacker, profile) {
     if (!target || target.hp <= 0 || target.kind !== 'npc') return;
+    if (!canVillagerAttackVillager(attacker, target)) {
+        attacker.villagerAggressor = null;
+        addFloatText('不攻击同伴', attacker.x, attacker.y - 52, '#ffd166');
+        return;
+    }
     const now = performance.now();
     const damage = Math.max(1, Math.floor(profile.damage * 0.82));
     target.hp -= damage;
@@ -4689,8 +6804,21 @@ function villagerAttackProfile(npc, dist = Infinity) {
     if (npc.role === 'cultVillager') {
         return { weapon: '藤棍', damage: 6, force: 260, shake: 7, burst: 8, color: '#9cffb7', range: 58, duration: 270, cooldown: 860, style: 'slash', root: 450 };
     }
-        if (npc.role === 'guard') {
-            return dist > 92
+    if (npc.role === 'hunter') {
+        return dist > 84
+            ? { weapon: '猎弓', damage: 6, force: 210, shake: 7, burst: 8, color: '#d7f28a', range: 235, duration: 360, cooldown: 980, style: 'guardArrow' }
+            : { weapon: '猎刀', damage: 6, force: 300, shake: 8, burst: 8, color: '#d7f28a', range: 54, duration: 260, cooldown: 820, style: 'slash' };
+    }
+    if (npc.role === 'miner') return { weapon: '矿镐', damage: 8, force: 380, shake: 10, burst: 10, color: '#d8e5f2', range: 62, duration: 330, cooldown: 980, style: 'pick' };
+    if (npc.role === 'carpenter') return { weapon: '木斧', damage: 7, force: 360, shake: 9, burst: 9, color: '#d6a06a', range: 60, duration: 300, cooldown: 900, style: 'chop' };
+    if (npc.role === 'farmer') return { weapon: '草叉', damage: 5, force: 260, shake: 6, burst: 7, color: '#cde77b', range: 74, duration: 300, cooldown: 900, style: 'thrust' };
+    if (npc.role === 'guard') {
+        if (isMineVillage(homeVillageFor(npc))) {
+            return dist > 112
+                ? { weapon: '煤火弹投掷', damage: 7, force: 230, shake: 11, burst: 16, color: '#ff9f1c', range: 340, duration: 540, cooldown: 1380, style: 'guardArrow', blast: true }
+                : { weapon: '矿卫镐锤', damage: 10, force: 520, shake: 13, burst: 12, color: '#ffd166', range: 64, duration: 360, cooldown: 980, style: 'pick', stunChance: 0.22 };
+        }
+        return dist > 92
             ? { weapon: '鹿筋弓', damage: 7, force: 240, shake: 8, burst: 8, color: '#d8e5f2', range: 245, duration: 390, cooldown: 1050, style: 'guardArrow' }
             : { weapon: '铁剑', damage: 9, force: 430, shake: 11, burst: 10, color: '#d8e5f2', range: 66, duration: 300, cooldown: 780, style: 'slash' };
     }
@@ -4753,7 +6881,7 @@ function castCultHealerVines(npc, now, target = state.player) {
     if (target === state.player) {
         state.player.slowUntil = Math.max(state.player.slowUntil || 0, now + 2600);
         state.player.dizzyUntil = Math.max(state.player.dizzyUntil || 0, now + 650);
-        state.player.stamina = Math.max(0, state.player.stamina - 16);
+        state.player.stamina = Math.max(0, state.player.stamina - playerStaminaDrainAmount(16));
         addFloatText('藤蔓缠身', state.player.x, state.player.y - 56, '#9cffb7');
     } else if (target?.kind === 'npc') {
         target.rootedUntil = Math.max(target.rootedUntil || 0, now + 1400);
@@ -4942,13 +7070,16 @@ function throwKitchenKnifeAt(npc, target, now) {
 
 function beginGuardArrowCharge(npc, target, now, profile = villagerAttackProfile(npc, distance(npc, target))) {
     npc.nextAttackAt = now + profile.cooldown;
-    npc.attackAnim = { startedAt: now, duration: profile.duration, weapon: profile.weapon, style: 'guardArrowCharge', dir: normalize(target.x - npc.x, target.y - npc.y) };
+    const coalThrow = profile.weapon?.includes('煤');
+    npc.attackAnim = { startedAt: now, duration: profile.duration, weapon: profile.weapon, style: coalThrow ? 'coalThrowCharge' : 'guardArrowCharge', dir: normalize(target.x - npc.x, target.y - npc.y) };
     npc.attackFlashUntil = now + profile.duration;
     npc.pendingAttack = { profile, target, dir: normalize(target.x - npc.x, target.y - npc.y), hitAt: now + profile.duration * 0.62, guardArrow: true };
 }
 
 function shootGuardArrowAt(npc, target, now, profile = villagerAttackProfile(npc, distance(npc, target)), dir = normalize(target.x - npc.x, target.y - npc.y)) {
-    npc.attackAnim = { startedAt: now, duration: 180, weapon: profile.weapon, style: 'guardArrowRelease', dir };
+    const coalThrow = profile.weapon?.includes('煤');
+    npc.attackAnim = { startedAt: now, duration: 180, weapon: profile.weapon, style: coalThrow ? 'coalThrowRelease' : 'guardArrowRelease', dir };
+    const range = coalThrow ? (profile.range || 340) : 520;
     state.indoorProjectiles ||= [];
     state.indoorProjectiles.push({
         kind: 'guardArrow',
@@ -4959,22 +7090,26 @@ function shootGuardArrowAt(npc, target, now, profile = villagerAttackProfile(npc
         startX: npc.x + (npc.facing === -1 ? -18 : 18),
         startY: npc.y - 28,
         target,
-        targetX: npc.x + dir.x * 520,
-        targetY: npc.y - 10 + dir.y * 520,
+        targetX: npc.x + dir.x * range,
+        targetY: npc.y - 10 + dir.y * range,
         startedAt: now,
-        duration: 320,
+        duration: coalThrow ? 520 : 320,
         profile,
-        splashRadius: (target.radius || state.player.radius) + 6,
+        splashRadius: coalThrow ? 74 : (target.radius || state.player.radius) + 6,
         villageWar: isVillageWarTarget(npc, target),
     });
-    spawnBurst(npc.x + npc.facing * 18, npc.y - 28, '#d8e5f2', 5, 80, 8);
+    spawnBurst(npc.x + npc.facing * 18, npc.y - 28, coalThrow ? '#ff9f1c' : '#d8e5f2', coalThrow ? 8 : 5, coalThrow ? 120 : 80, 8);
 }
 
 function castElderSpell(npc, now) {
+    if (isForestVillage(homeVillageFor(npc))) return;
+    if (isMineVillage(homeVillageFor(npc))) return;
     castElderSpellAt(npc, state.player, now);
 }
 
 function castElderSpellAt(npc, target, now) {
+    if (isForestVillage(homeVillageFor(npc))) return;
+    if (isMineVillage(homeVillageFor(npc))) return;
     const variants = [
         { kind: 'elderSpell', weapon: '权杖法术', damage: 9, force: 165, shake: 7, burst: 12, color: '#b77dff', duration: 430, cooldown: 1050, style: 'spell', effect: 'arcane' },
         { kind: 'elderRoot', weapon: '精准束缚法术', damage: 5, force: 55, shake: 6, burst: 12, color: '#ffd166', duration: 480, cooldown: 1250, style: 'spell', effect: 'root', homing: 0.18 },
@@ -5010,7 +7145,8 @@ function updateIndoorProjectiles(dt, now) {
         if (!!state.indoor !== !!projectile.indoor) continue;
         const previous = { x: projectile.x, y: projectile.y };
         const progress = clamp((now - projectile.startedAt) / projectile.duration, 0, 1);
-        const arc = projectile.kind === 'guardArrow' ? 0 : Math.sin(progress * Math.PI) * 26;
+        const coalProjectile = isCoalGuardProjectile(projectile);
+        const arc = coalProjectile ? Math.sin(progress * Math.PI) * 34 : ((projectile.kind === 'guardArrow' || isDirectProjectile(projectile.kind)) ? 0 : Math.sin(progress * Math.PI) * 26);
         const liveTarget = projectile.target?.hp > 0 ? projectile.target : (projectile.villageWar ? null : state.player);
         if (projectile.villageWar && !liveTarget) {
             projectile.done = true;
@@ -5037,6 +7173,10 @@ function updateIndoorProjectiles(dt, now) {
         const hitRadius = projectile.splashRadius || state.player.radius + 10;
         if ((projectile.kind === 'guardArrow' || projectile.owner === 'player') && indoorProjectileBlockedByWall(previous, projectile)) {
             projectile.done = true;
+            if (coalProjectile) {
+                explodeVillagerCoalProjectile(projectile, now);
+                continue;
+            }
             impactIndoorProjectileWall(projectile);
             continue;
         }
@@ -5052,6 +7192,11 @@ function updateIndoorProjectiles(dt, now) {
             continue;
         }
         const directHit = progress < 1 && progress > 0.1 && projectileHitsTarget(projectile, previous, liveTarget, (liveTarget.radius || state.player.radius) + 10);
+        if (coalProjectile && (directHit || progress >= 1)) {
+            projectile.done = true;
+            explodeVillagerCoalProjectile(projectile, now);
+            continue;
+        }
         const landingHit = progress >= 1 && indoorProjectileLandingHitsPlayer(projectile, hitRadius);
         if (directHit || landingHit) {
             projectile.done = true;
@@ -5066,7 +7211,7 @@ function updateIndoorProjectiles(dt, now) {
 
 function findIndoorPlayerProjectileHit(projectile, previous) {
     return (state.indoor?.objects || [])
-        .filter(object => ['npc', 'totem'].includes(object.kind) && (object.hp ?? 0) > 0)
+        .filter(object => ['npc', 'totem', 'mineMonster'].includes(object.kind) && (object.hp ?? 0) > 0)
         .map(object => ({ target: object, d: distanceToSegment(object, previous, projectile), radius: (object.radius || 17) + 10 }))
         .filter(hit => hit.d <= hit.radius)
         .sort((a, b) => a.d - b.d)[0]?.target || null;
@@ -5076,7 +7221,8 @@ function applyIndoorPlayerProjectileHit(projectile, target) {
     const now = performance.now();
     const damage = directProjectileDamage(projectile);
     const attackProfile = { name: directProjectileName(projectile), damage, dir: projectile.dir || state.player.facing };
-    if (target.kind === 'totem') damageVillageTotem(target, now, attackProfile);
+    if (target.kind === 'mineMonster') damageMineCaveMonster(target, now, attackProfile);
+    else if (target.kind === 'totem') damageVillageTotem(target, now, attackProfile);
     else damageVillager(target, now, attackProfile);
     if ((projectile.kind === 'poisonArrow' || projectile.kind === 'crossbowPoisonBolt') && target.kind !== 'totem' && target.hp > 0) {
         target.poisonUntil = Math.max(target.poisonUntil || 0, now + 5200);
@@ -5163,17 +7309,17 @@ function applyIndoorProjectileHit(projectile) {
     if (projectile.profile?.effect === 'poison') {
         p.poisonUntil = Math.max(p.poisonUntil || 0, performance.now() + 6200);
         p.poisonTickAt = Math.min(p.poisonTickAt || performance.now() + 900, performance.now() + 900);
-        p.stamina = Math.max(0, p.stamina - 18);
+        p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(18));
         addFloatText('强毒', p.x, p.y - 52, '#8cff66');
     } else if (projectile.profile?.effect === 'slow') {
         p.speedBoostUntil = Math.min(p.speedBoostUntil || 0, performance.now());
         p.slowUntil = Math.max(p.slowUntil || 0, performance.now() + 15000);
         p.dizzyUntil = Math.max(p.dizzyUntil || 0, performance.now() + 450);
-        p.stamina = Math.max(0, p.stamina - 28);
+        p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(28));
         addFloatText('迟缓 -50%', p.x, p.y - 52, '#7dcbe8');
     } else if (projectile.profile?.effect === 'dizzy' || projectile.profile?.effect === 'root') {
         p.dizzyUntil = Math.max(p.dizzyUntil || 0, performance.now() + (projectile.profile.effect === 'root' ? 1100 : 1050));
-        p.stamina = Math.max(0, p.stamina - (projectile.profile.effect === 'root' ? 24 : 38));
+        p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(projectile.profile.effect === 'root' ? 24 : 38));
         addFloatText(projectile.profile.effect === 'root' ? '束缚' : '眩晕', p.x, p.y - 52, projectile.profile.color);
     } else if (projectile.profile?.effect === 'neuro') {
         p.neuroToxinUntil = Math.max(p.neuroToxinUntil || 0, performance.now() + 5200);
@@ -5218,6 +7364,71 @@ function applyIndoorProjectileHit(projectile) {
     renderHud();
 }
 
+function isCoalGuardProjectile(projectile) {
+    return projectile?.kind === 'guardArrow' && projectile.profile?.weapon?.includes('煤');
+}
+
+function explodeVillagerCoalProjectile(projectile, now = performance.now()) {
+    const radius = projectile.splashRadius || 74;
+    const center = { x: projectile.x, y: projectile.y };
+    const source = projectile.npc;
+    let hitCount = 0;
+    const damageAt = target => Math.max(1, Math.round((projectile.profile?.damage || 6) * (1 - Math.min(1, distance(target, center) / radius)) + 2));
+    const applyKnock = target => {
+        const dir = normalize(target.x - center.x, target.y - center.y);
+        target.knockX = (target.knockX || 0) + dir.x * (projectile.profile?.force || 220);
+        target.knockY = (target.knockY || 0) + dir.y * (projectile.profile?.force || 220);
+    };
+    if (projectile.indoor && state.indoor) {
+        for (const object of state.indoor.objects || []) {
+            if (!['npc', 'totem', 'mineMonster'].includes(object.kind) || (object.hp ?? 0) <= 0) continue;
+            if (distance(object, center) > radius + (object.radius || 17)) continue;
+            const damage = damageAt(object);
+            object.hp = Math.max(0, (object.hp ?? object.maxHp ?? 80) - damage);
+            object.hurtUntil = now + 220;
+            applyKnock(object);
+            addFloatText(`-${damage}`, object.x, object.y - 42, '#ffd166');
+            hitCount++;
+        }
+    } else {
+        for (const enemy of state.enemies || []) {
+            if (enemy.hp <= 0 || distance(enemy, center) > radius + enemy.radius) continue;
+            const damage = damageAt(enemy);
+            enemy.hp = Math.max(0, enemy.hp - damage);
+            enemy.hurtUntil = now + 220;
+            enemy.villagerTarget = source;
+            applyKnock(enemy);
+            addFloatText(`-${damage}`, enemy.x, enemy.y - 42, '#ffd166');
+            if (enemy.hp <= 0) enemy.deathAt = now;
+            hitCount++;
+        }
+        for (const villager of state.outdoorVillagers || []) {
+            if (villager.hp <= 0 || distance(villager, center) > radius + (villager.radius || 17)) continue;
+            const damage = damageAt(villager);
+            villager.hp = Math.max(0, villager.hp - damage);
+            villager.hurtUntil = now + 220;
+            applyKnock(villager);
+            addFloatText(`-${damage}`, villager.x, villager.y - 42, '#ffd166');
+            if (villager.hp <= 0) villager.mood = 'down';
+            hitCount++;
+        }
+    }
+    if (distance(state.player, center) <= radius + state.player.radius) {
+        const damage = incomingDamageAfterArmor(damageAt(state.player), false);
+        state.player.hp = Math.max(0, state.player.hp - damage);
+        closeInventoryOnPlayerHit();
+        applyKnock(state.player);
+        state.player.invincibleUntil = now + 480;
+        addFloatText(`-${damage}`, state.player.x, state.player.y - 44, '#ffb3b3');
+        if (state.player.hp <= 0) triggerPlayerDeath('你被煤火弹爆炸击倒了。');
+        hitCount++;
+        renderHud();
+    }
+    state.cameraShake = Math.max(state.cameraShake, projectile.profile?.shake || 10);
+    spawnBurst(center.x, center.y, '#ff9f1c', 36, 240, radius * 0.5);
+    addFloatText(hitCount ? `爆炸 ${hitCount}` : '爆炸', center.x, center.y - 30, '#ffd166');
+}
+
 function damageAnimalByVillagerProjectile(projectile) {
     const animal = projectile.target;
     const profile = projectile.profile;
@@ -5249,9 +7460,9 @@ function updateHunger(dt, now) {
         || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight')
         || Math.abs(touchInput.moveX) > 0.05 || Math.abs(touchInput.moveY) > 0.05;
     const idleDrain = 33 / state.dayLength;
-    const parasiteDrain = state.equipment.armor === '绿母寄生甲' ? 0.35 : 0;
+    const parasiteDrain = hasEquippedArmor('绿母寄生甲') ? 0.35 : 0;
     const drain = idleDrain * (1 + parasiteDrain + (moving ? 0.7 : 0) + (keys.has('Shift') ? 0.8 : 0) + (isAimingDirectRanged() ? 0.35 : 0));
-    if (state.equipment.armor === '绿母寄生甲' && p.hp < p.maxHp && p.hunger > 18) {
+    if (hasEquippedArmor('绿母寄生甲') && p.hp < p.maxHp && p.hunger > 18) {
         p.hp = Math.min(p.maxHp, p.hp + 0.75 * dt);
     }
     p.hunger = clamp(p.hunger - drain * dt, 0, p.maxHunger);
@@ -5344,12 +7555,18 @@ function moveCircle(entity, dx, dy) {
 function moveIndoorPlayer(player, dx, dy) {
     const oldX = player.x;
     const oldY = player.y;
-    player.x = clamp(player.x + dx, 230, VIEW.width - 230);
-    player.y = clamp(player.y + dy, 182, VIEW.height - 170);
+    const bounds = indoorMovementBounds();
+    player.x = clamp(player.x + dx, bounds.left, bounds.right);
+    player.y = clamp(player.y + dy, bounds.top, bounds.bottom);
     if (indoorCollides(player)) {
         player.x = oldX;
         player.y = oldY;
     }
+}
+
+function indoorMovementBounds() {
+    if (state.indoor?.building?.kind === 'mineCaveInterior') return { left: 90, right: VIEW.width - 90, top: 90, bottom: VIEW.height - 82 };
+    return { left: 230, right: VIEW.width - 230, top: 182, bottom: VIEW.height - 170 };
 }
 
 function moveIndoorEntitySafely(entity, dx, dy) {
@@ -5398,9 +7615,10 @@ function escapeIndoorCollision(entity) {
         [42, 0], [-42, 0], [0, 42], [0, -42],
     ];
     const origin = { x: entity.x, y: entity.y };
+    const bounds = indoorMovementBounds();
     for (const [ox, oy] of candidates) {
-        entity.x = clamp(origin.x + ox, 230, VIEW.width - 230);
-        entity.y = clamp(origin.y + oy, 182, VIEW.height - 170);
+        entity.x = clamp(origin.x + ox, bounds.left, bounds.right);
+        entity.y = clamp(origin.y + oy, bounds.top, bounds.bottom);
         if (!indoorCollides(entity)) return;
     }
     entity.x = VIEW.width / 2;
@@ -5415,7 +7633,7 @@ function indoorCollides(entity) {
 
 function indoorCollisionRect(object) {
     if (object.kind === 'npc') return { ...object, w: 0, h: 0 };
-    if (['forge', 'potionTable', 'hearth', 'map', 'noticeBoard', 'rack', 'herbRack', 'meatRack', 'shopShelf', 'brokenShelf', 'flag'].includes(object.kind)) {
+    if (['forge', 'potionTable', 'hearth', 'map', 'noticeBoard', 'rack', 'herbRack', 'meatRack', 'shopShelf', 'brokenShelf', 'flag', 'hunterTrophy', 'trapRack', 'mineBellStand'].includes(object.kind)) {
         return { ...object, h: Math.max(22, object.h * 0.55), y: object.y - object.h * 0.08 };
     }
     if (['chest', 'crate', 'foodCrate'].includes(object.kind)) {
@@ -5423,22 +7641,23 @@ function indoorCollisionRect(object) {
     }
     if (object.kind === 'bed' || object.kind === 'brokenBed') return { ...object, w: object.w * 0.72, h: object.h * 0.72 };
     if (['brokenTable', 'debris'].includes(object.kind)) return { ...object, w: object.w * 0.78, h: object.h * 0.78 };
-    if (['coalPile', 'basket', 'cookPot'].includes(object.kind)) return { ...object, w: object.w * 0.72, h: object.h * 0.72 };
+    if (['coalPile', 'basket', 'cookPot', 'trapBasket', 'targetDummy'].includes(object.kind)) return { ...object, w: object.w * 0.72, h: object.h * 0.72 };
     return object;
 }
 
 function indoorWallCollides(entity) {
-    const left = 196 + 28;
-    const right = VIEW.width - 224;
-    const top = 132 + 28;
-    const bottom = VIEW.height - 138;
-    const doorLeft = VIEW.width / 2 - 48;
-    const doorRight = VIEW.width / 2 + 48;
+    const mine = state.indoor?.building?.kind === 'mineCaveInterior';
+    const bounds = mine
+        ? { left: 84, right: VIEW.width - 84, top: 84, bottom: VIEW.height - 82, doorHalf: 72, doorLimit: VIEW.height - 30 }
+        : { left: 196 + 28, right: VIEW.width - 224, top: 132 + 28, bottom: VIEW.height - 138, doorHalf: 48, doorLimit: VIEW.height - 42 };
+    const { left, right, top, bottom } = bounds;
+    const doorLeft = VIEW.width / 2 - bounds.doorHalf;
+    const doorRight = VIEW.width / 2 + bounds.doorHalf;
     const combatNpc = entity.kind === 'npc' && (entity.playerAggro || entity.animalAggressor || entity.mood === 'angry');
     if (entity.x - entity.radius < left || entity.x + entity.radius > right || entity.y - entity.radius < top) return true;
     if (entity.y + entity.radius > bottom && (entity.x < doorLeft || entity.x > doorRight)) return true;
     if (!combatNpc && entity.y + entity.radius > bottom + 38 && entity.x >= doorLeft && entity.x <= doorRight) return true;
-    if (entity.y > VIEW.height - 42) return true;
+    if (entity.y > bounds.doorLimit) return true;
     return false;
 }
 
@@ -5460,6 +7679,10 @@ function collides(entity) {
     for (const station of state.placedStations) {
         if (distance(entity, station) < entity.radius + station.radius * 0.75) return true;
     }
+    for (const hive of state.waspHives || []) {
+        const collisionScale = hive.state === 'ruined' ? 0.48 : 0.78;
+        if (distance(entity, hive) < entity.radius + hive.radius * collisionScale) return true;
+    }
     if (distance(entity, state.ruins) < entity.radius + state.ruins.radius && !state.ruins.opened) return true;
     for (const village of allVillages()) {
         for (const building of village.buildings) {
@@ -5468,10 +7691,7 @@ function collides(entity) {
                     && Math.abs(entity.y - building.y) < entity.radius + building.h * 0.62;
                 if (nearHouse) continue;
             }
-            const halfW = building.w * 0.38;
-            const frontY = building.y + building.h * 0.28;
-            const halfH = building.h * 0.2;
-            if (Math.abs(entity.x - building.x) < entity.radius + halfW && Math.abs(entity.y - frontY) < entity.radius + halfH) return true;
+            if (rectCircleOverlap(villageBuildingCollisionRect(building), entity)) return true;
         }
         if (village.well && distance(entity, village.well) < entity.radius + village.well.radius) return true;
         if (fortressWallCollides(village, entity)) return true;
@@ -5524,23 +7744,125 @@ function resourceCollisionScale(item, entity) {
 function updateBambooTraps(now) {
     for (const trap of state.bambooTraps) {
         if (trap.used) continue;
-        const target = state.enemies.find(enemy => enemy.hp > 0 && distance(enemy, trap) < enemy.radius + trap.radius);
-        if (!target) continue;
+        const radius = trap.kind === 'vineNetTrap' ? trap.radius + 58 : trap.radius;
+        if (!state.indoor && !state.underground && trapCanHitPlayer(trap) && distance(state.player, trap) < state.player.radius + radius) {
+            triggerGroundTrapOnPlayer(trap, now);
+            continue;
+        }
+        const targets = state.enemies
+            .filter(enemy => enemy.hp > 0 && distance(enemy, trap) < enemy.radius + radius)
+            .sort((a, b) => distance(a, trap) - distance(b, trap));
+        if (!targets.length) continue;
         trap.used = true;
-        target.hp -= 5;
-        target.hurtUntil = now + 220;
-        target.rootedUntil = Math.max(target.rootedUntil, now + 1700);
-        target.attackCooldown = Math.max(target.attackCooldown, 0.8);
-        spawnBurst(target.x, target.y, '#d7f28a', 16, 130, target.radius);
-        addFloatText('竹刺', target.x, target.y - 42, '#eaffad');
-        if (target.hp <= 0) {
-            markSpawnAreaCleared(target.x, target.y, now);
-            const drops = grantEnemyDrops(target);
-            addFloatText(drops.floatText, target.x, target.y - 56, '#9cffb7');
-            showToast(`竹刺陷阱击败 ${target.name}，获得 ${drops.toastText}`);
-            renderHud();
+        const affected = targets.slice(0, trap.kind === 'vineNetTrap' ? 4 : 1);
+        affected.forEach(target => triggerGroundTrapOnEnemy(trap, target, now));
+        showToast(`${RESOURCE_LABELS[trap.kind || 'bambooTrap']}触发，影响 ${affected.length} 个敌人。`);
+    }
+}
+
+function triggerGroundTrapOnEnemy(trap, target, now) {
+    const kind = trap.kind || 'bambooTrap';
+    const rootDuration = {
+        forestSnare: 2300,
+        forestSpikeTrap: 1000,
+        forestBellTrap: 650,
+        snare: 2600,
+        bambooTrap: 1700,
+        vineNetTrap: 2300,
+        toxicVineSnare: 1500,
+        poisonBambooTrap: 1700,
+    }[kind] || 1600;
+    const damage = {
+        forestSnare: 1,
+        forestSpikeTrap: 5,
+        forestBellTrap: 0,
+        snare: 1,
+        bambooTrap: 5,
+        vineNetTrap: 1,
+        toxicVineSnare: 2,
+        poisonBambooTrap: 6,
+    }[kind] || 3;
+    target.hp -= damage;
+    target.hurtUntil = now + 220;
+    target.rootedUntil = Math.max(target.rootedUntil || 0, now + rootDuration);
+    target.windupUntil = 0;
+    target.strikeAt = 0;
+    target.chargeUntil = 0;
+    target.leapUntil = 0;
+    target.attackCooldown = Math.max(target.attackCooldown || 0, 0.8);
+    if (kind === 'forestBellTrap') {
+        for (const npc of state.outdoorVillagers || []) {
+            if (!trap.village || homeVillageFor(npc) !== trap.village || !['hunter', 'guard'].includes(npc.role) || distance(npc, trap) > 560) continue;
+            setVillagerAnimalAggro(npc, target);
+            npc.workState = '铃声警戒';
+            npc.workStateUntil = now + 1800;
         }
     }
+    if ((kind === 'toxicVineSnare' || kind === 'poisonBambooTrap') && target.kind !== 'golem') {
+        target.poisonUntil = Math.max(target.poisonUntil || 0, now + 5200);
+        target.poisonTickAt = Math.min(target.poisonTickAt || now + 800, now + 800);
+        addFloatText('中毒', target.x, target.y - 52, '#9cff7a');
+    }
+    const color = kind === 'snare' ? '#ffd166' : (kind === 'bambooTrap' || kind === 'poisonBambooTrap' ? '#d7f28a' : '#8cff66');
+    spawnBurst(target.x, target.y, color, 16, 130, target.radius);
+    addFloatText(kind === 'snare' || kind === 'forestSnare' ? '夹住' : (kind === 'forestBellTrap' ? '响铃' : (kind === 'bambooTrap' || kind === 'poisonBambooTrap' || kind === 'forestSpikeTrap' ? '尖刺' : '缠绕')), target.x, target.y - 42, '#eaffad');
+    if (damage > 0) addFloatText(`-${damage}`, target.x, target.y - 58, '#fff3b0');
+    if (target.hp <= 0) {
+        markSpawnAreaCleared(target.x, target.y, now);
+        const drops = grantEnemyDrops(target);
+        addFloatText(drops.floatText, target.x, target.y - 56, '#9cffb7');
+        renderHud();
+    }
+}
+
+function trapCanHitPlayer(trap) {
+    if (trap.owner === 'player') return false;
+    if (trap.villageTrap) return true;
+    return false;
+}
+
+function triggerGroundTrapOnPlayer(trap, now) {
+    const kind = trap.kind || 'bambooTrap';
+    trap.used = true;
+    const p = state.player;
+    if (kind === 'forestSnare' || kind === 'snare') {
+        p.trappedUntil = Math.max(p.trappedUntil || 0, now + (kind === 'forestSnare' ? 2200 : 2600));
+        p.slowUntil = Math.max(p.slowUntil || 0, now + 4200);
+        p.hp = Math.max(0, p.hp - (kind === 'forestSnare' ? 1 : 2));
+        addFloatText('被陷阱套住', p.x, p.y - 54, '#ffd166');
+    } else if (kind === 'forestBellTrap') {
+        p.slowUntil = Math.max(p.slowUntil || 0, now + 1200);
+        addFloatText('响铃', p.x, p.y - 54, '#ffd166');
+        (state.outdoorVillagers || [])
+            .filter(npc => ['hunter', 'guard'].includes(npc.role) && homeVillageFor(npc) === trap.village && distance(npc, trap) < 560)
+            .forEach(npc => {
+                npc.workState = '铃声警戒';
+                npc.workStateUntil = now + 1800;
+            });
+    } else if (kind === 'forestSpikeTrap') {
+        p.trappedUntil = Math.max(p.trappedUntil || 0, now + 850);
+        p.slowUntil = Math.max(p.slowUntil || 0, now + 3800);
+        p.hp = Math.max(0, p.hp - 4);
+        addFloatText('踩中尖木', p.x, p.y - 54, '#ffb3b3');
+    } else {
+        p.trappedUntil = Math.max(p.trappedUntil || 0, now + 1200);
+        p.slowUntil = Math.max(p.slowUntil || 0, now + 3600);
+        p.hp = Math.max(0, p.hp - 4);
+        addFloatText('踩中陷阱', p.x, p.y - 54, '#ffb3b3');
+    }
+    if (trap.villageTrap) {
+        const reputation = villageReputation(trap.village);
+        if (reputation < -1) {
+            (state.outdoorVillagers || [])
+                .filter(npc => npc.role === 'hunter' && homeVillageFor(npc) === trap.village && distance(npc, trap) < 520)
+                .forEach(npc => setVillagerPlayerAggro(npc));
+        } else {
+            showToast('你踩中了林地猎户布下的防兽陷阱。按 E 可加快挣脱。');
+        }
+    }
+    spawnBurst(p.x, p.y, '#ffd166', 18, 120, p.radius);
+    if (p.hp <= 0) triggerPlayerDeath('你被陷阱重创倒下。');
+    renderHud();
 }
 
 function tallGrassCoverAt(entity) {
@@ -5608,6 +7930,10 @@ function updateEnemies(dt, now) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
         }
+        if (updateEnemyAgainstVillageBuilding(e, dt, now, dist)) {
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
+        }
         if (dist > 1400 && e.kind !== 'wolf' && !e.boss && e.rootedUntil <= now && !e.chargeUntil && !e.leapUntil && !e.swoopUntil) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
             continue;
@@ -5664,6 +7990,7 @@ function updateEnemies(dt, now) {
             e.y = lerp(e.leapStartY, e.leapTargetY, progress) - arc * 10;
             if (e.leapDamage !== false && !e.leapHit && progress > 0.55 && distance(e, target) < e.radius + target.radius + 18) {
                 applyEnemyDamageToTarget(e, target, e.attack, '跳扑', now);
+                if (e.kind === 'swampMireling' && shouldApplyEnemyContactEffects(e, target)) slowCombatTarget(target, now, 1800);
                 e.leapHit = true;
             }
             if (e.leapDamage !== false && !e.leapHitVillager && progress > 0.55 && tryAccidentalEnemyHitVillager(e, 18, now, '跳扑误伤')) {
@@ -5701,9 +8028,14 @@ function updateEnemies(dt, now) {
             e.y = lerp(e.swoopStartY, e.swoopTargetY, progress) - Math.sin(progress * Math.PI) * 24;
             if (!e.swoopHit && progress > 0.42 && distance(e, target) < e.radius + target.radius + 24) {
                 applyEnemyDamageToTarget(e, target, e.attack, '掠袭', now);
-                if (target === state.player || target.kind === 'npc') {
-                    drainCombatTargetStamina(target, e.kind === 'meadowMoth' ? 18 : 10);
+                if ((target === state.player || target.kind === 'npc') && shouldApplyEnemyContactEffects(e, target)) {
+                    drainCombatTargetStamina(target, e.kind === 'meadowMoth' ? 10 : (e.kind === 'waspQueen' ? 4 : 3));
                     if (e.kind === 'drySandWasp') poisonCombatTarget(target, now, 4200);
+                    if (e.kind === 'waspQueen') {
+                        poisonCombatTarget(target, now, 5200);
+                        slowCombatTarget(target, now, 1100);
+                        addFloatText('王毒麻痹', target.x, target.y - 62, '#ffd166');
+                    }
                     if (e.kind === 'mineCrystalBat') {
                         target.knockX = (target.knockX || 0) + e.attackDir.x * 220;
                         target.knockY = (target.knockY || 0) + e.attackDir.y * 220;
@@ -6021,8 +8353,12 @@ function livingCultHerbalist() {
 
 function poisonCombatTarget(target, now, duration) {
     if (target === state.player) {
-        if (state.equipment.armor === '泥沼护甲') duration = Math.floor(duration * 0.55);
+        if (hasEquippedArmor('泥沼护甲')) duration = Math.floor(duration * 0.55);
         poisonPlayer(now, duration);
+        return;
+    }
+    if (isStoneCreature(target)) {
+        addFloatText('免疫', target.x, target.y - 54, '#c5d6df');
         return;
     }
     target.poisonUntil = Math.max(target.poisonUntil || 0, now + duration);
@@ -6038,7 +8374,7 @@ function markCultHerbalistAttacked(npc) {
 
 function slowCombatTarget(target, now, duration) {
     if (target === state.player) {
-        if (state.equipment.armor === '湿地甲壳甲') duration = Math.floor(duration * 0.5);
+        if (hasEquippedArmor('湿地甲壳甲')) duration = Math.floor(duration * 0.5);
         target.slowUntil = Math.max(target.slowUntil || 0, now + duration);
         return;
     }
@@ -6048,16 +8384,127 @@ function slowCombatTarget(target, now, duration) {
 
 function drainCombatTargetStamina(target, amount) {
     if (target === state.player) {
-        target.stamina = Math.max(0, target.stamina - amount);
+        target.stamina = Math.max(0, target.stamina - playerStaminaDrainAmount(amount));
         return;
     }
     target.fatigue = Math.min(100, (target.fatigue || 0) + amount);
 }
 
+function playerStaminaDrainAmount(amount) {
+    return Math.max(0, Math.round(amount * (performance.now() < (state.player.royalJellyUntil || 0) ? 0.45 : 1)));
+}
+
 function applyEnemyDamageToTarget(e, target, damage, verb, now = performance.now()) {
     if (target === state.player) return applyEnemyDamage(e, damage, verb);
     if (isAggroTotemStation(target)) return damageAggroTotemByEnemy(target, e, damage, verb, now);
+    if (isVillageBuildingTarget(target)) return damageVillageBuilding(target, e, damage, now);
     return damageVillagerByAnimal(target, e, now, verb);
+}
+
+function isVillageBuildingTarget(target) {
+    return target && target.village && Number.isFinite(target.maxHp) && Object.prototype.hasOwnProperty.call(target, 'destroyed');
+}
+
+function damageVillageBuilding(building, attacker, rawDamage = 1, now = performance.now()) {
+    if (!building || building.destroyed) return false;
+    const attackerKind = attacker?.mineKind || attacker?.kind || '';
+    const structureBonus = attacker?.kind === 'golem' || attacker?.boss ? 2.4
+        : (['boar', 'forestBear', 'bambooPanda', 'ruinsBoneGuard', 'stoneCrawler'].includes(attackerKind) ? 1.7 : 1);
+    const damage = Math.max(1, Math.round(rawDamage * structureBonus));
+    building.hp = Math.max(0, (building.hp ?? building.maxHp ?? villageBuildingMaxHp(building)) - damage);
+    building.lastDamagedAt = now;
+    spawnBurst(building.x, building.y + building.h * 0.18, '#d6a06a', 8, 120, 34);
+    addFloatText(`房屋 -${damage}`, building.x, building.y - building.h * 0.54, '#ffb3b3');
+    if (attacker) attacker.attackTarget = building;
+    if (building.hp > 0) return true;
+    building.destroyedBy = attacker?.kind === 'player' || attacker?.kind === 'playerProjectile' ? 'player' : 'monster';
+    destroyVillageBuilding(building, now);
+    return true;
+}
+
+function destroyVillageBuilding(building, now = performance.now()) {
+    if (building.destroyed) return;
+    building.destroyed = true;
+    building.hp = 0;
+    building.destroyedAt = now;
+    state.cameraShake = Math.max(state.cameraShake, 18);
+    spawnBurst(building.x, building.y + building.h * 0.2, '#8a6a3d', 34, 240, Math.max(building.w, building.h) * 0.55);
+    evacuateDestroyedBuilding(building);
+    for (const npc of state.outdoorVillagers || []) {
+        if (npc.homeBuilding !== building) continue;
+        npc.returningHome = false;
+        npc.mood = npc.playerAggro ? 'angry' : 'sad';
+        npc.homeDestroyed = true;
+        addFloatText('无家可归', npc.x, npc.y - 56, '#ffd166');
+    }
+    showToast(`${building.label}被摧毁，变成了废墟！`);
+}
+
+function evacuateDestroyedBuilding(building) {
+    const exitPoint = villageHouseExitPoint(building);
+    const safeExit = safeOutdoorPointNear(exitPoint, exitPoint, 280);
+    if (state.indoor?.building === building) {
+        state.openChest = null;
+        state.openIndoorContainer = null;
+        state.indoorProjectiles = [];
+        state.player.x = safeExit.x;
+        state.player.y = safeExit.y;
+        state.player.knockX = 0;
+        state.player.knockY = 0;
+        state.indoor = null;
+        state.cameraShake = Math.max(state.cameraShake, 20);
+        addFloatText('逃出废墟', state.player.x, state.player.y - 54, '#ffd166');
+    }
+    for (const object of building.interiorObjects || []) {
+        if (object.kind !== 'npc' || object.hp <= 0) continue;
+        object.outside = true;
+        object.returningHome = false;
+        object.homeDestroyed = true;
+        object.homeBuilding = building;
+        object.x = safeExit.x + (Math.random() - 0.5) * 80;
+        object.y = safeExit.y + (Math.random() - 0.5) * 70;
+        object.mood = object.playerAggro ? 'angry' : 'sad';
+        if (!state.outdoorVillagers.includes(object)) state.outdoorVillagers.push(object);
+    }
+}
+
+function villageBuildingHitTarget(building) {
+    const rect = villageBuildingCollisionRect(building);
+    return {
+        x: rect.x,
+        y: rect.y,
+        radius: Math.max(rect.w, rect.h) * 0.5,
+        rect,
+        hp: building.hp,
+        maxHp: building.maxHp,
+        village: building.village,
+        destroyed: building.destroyed,
+    };
+}
+
+function damageVillageBuildingsInRadius(center, radius, attacker, rawDamage, now = performance.now(), label = '震击波及') {
+    let count = 0;
+    for (const building of allVillages().flatMap(village => village.buildings || [])) {
+        if (building.destroyed) continue;
+        if (distanceToRect(center, villageBuildingCollisionRect(building)) > radius) continue;
+        damageVillageBuilding(building, attacker, rawDamage, now);
+        addFloatText(label, building.x, building.y - building.h * 0.58, '#ffd166');
+        count++;
+    }
+    return count;
+}
+
+function damageVillageBuildingsAlongSegment(start, end, width, attacker, rawDamage, now = performance.now(), label = '冲击波及') {
+    let count = 0;
+    for (const building of allVillages().flatMap(village => village.buildings || [])) {
+        if (building.destroyed) continue;
+        const target = villageBuildingHitTarget(building);
+        if (distanceSegmentToRect(start, end, target.rect) > width) continue;
+        damageVillageBuilding(building, attacker, rawDamage, now);
+        addFloatText(label, building.x, building.y - building.h * 0.58, '#ffd166');
+        count++;
+    }
+    return count;
 }
 
 function damageAggroTotemByEnemy(totem, enemy, damage, verb = '', now = performance.now()) {
@@ -6133,6 +8580,57 @@ function updateAnimalVillagerConflict(e, dt, now) {
     return true;
 }
 
+function updateEnemyAgainstVillageBuilding(e, dt, now, playerDist = distance(e, state.player)) {
+    if (isPassiveCreature(e.kind) || e.kind === 'bat') return false;
+    if (!VILLAGER_HOSTILE_MONSTERS.has(e.kind) && !e.boss && !e.spawnedByHive) return false;
+    if (playerDist < 260 && !e.attackTarget?.destroyed) return false;
+    const target = chooseEnemyBuildingTarget(e);
+    if (!target) return false;
+    e.attackTarget = target;
+    const dist = distance(e, target);
+    const dir = normalize(target.x - e.x, target.y - e.y);
+    e.facing = dir;
+    const attackReach = villageBuildingAttackReach(e, target);
+    if (dist > attackReach) {
+        moveEnemy(e, dir.x * e.speed * 0.72 * dt, dir.y * e.speed * 0.72 * dt);
+    } else if ((e.attackCooldown || 0) <= 0 && !e.windupUntil) {
+        damageVillageBuilding(target, e, buildingDamageFromEnemy(e), now);
+        e.attackCooldown = e.boss ? 1.2 : (e.kind === 'boar' || e.kind === 'golem' ? 1.45 : 2.1);
+        e.retreatUntil = Math.max(e.retreatUntil || 0, now + 220);
+    }
+    return true;
+}
+
+function villageBuildingAttackReach(e, building) {
+    const buildingFace = Math.max(building.w || 80, building.h || 80) * 0.34;
+    if (isDistantBuildingAttacker(e)) return e.radius + buildingFace + (e.range || 70) + 18;
+    if (e.kind === 'boar' || e.kind === 'golem' || e.boss) return e.radius + buildingFace + 34;
+    return e.radius + buildingFace + 14;
+}
+
+function isDistantBuildingAttacker(e) {
+    return ['drySandWasp', 'waspQueen', 'meadowMoth', 'mineCrystalBat', 'shade'].includes(e.kind);
+}
+
+function buildingDamageFromEnemy(e) {
+    const base = Math.max(1, e.attack || 2);
+    if (e.boss) return base + 10;
+    if (e.kind === 'golem') return base + 7;
+    if (['boar', 'forestBear', 'bambooPanda', 'ruinsBoneGuard'].includes(e.kind)) return base + 4;
+    if (['wolf', 'vineStalker', 'jungleSnake', 'drySandWasp', 'waspQueen'].includes(e.kind)) return base + 1;
+    return Math.max(1, Math.ceil(base * 0.65));
+}
+
+function chooseEnemyBuildingTarget(e) {
+    if (isVillageBuildingTarget(e.attackTarget) && !e.attackTarget.destroyed && distance(e, e.attackTarget) < 520) return e.attackTarget;
+    return allVillages()
+        .flatMap(village => village.buildings || [])
+        .filter(building => !building.destroyed)
+        .map(building => ({ building, d: distance(e, building) }))
+        .filter(item => item.d < (e.boss ? 520 : 360))
+        .sort((a, b) => a.d - b.d)[0]?.building || null;
+}
+
 function callVillagersToDefendAgainst(enemy, victim) {
     if (enemy.defenseCallAt && performance.now() - enemy.defenseCallAt < 1800) return;
     enemy.defenseCallAt = performance.now();
@@ -6206,7 +8704,7 @@ function chooseAnimalVillagerTarget(e, villagers) {
     }
     const nearby = villagers
         .map(npc => ({ npc, d: distance(e, npc) }))
-        .filter(item => item.d < 280)
+        .filter(item => item.d < Math.min(280, villagerDefenseEngageRange(item.npc, e)))
         .sort((a, b) => a.d - b.d);
     if (!nearby.length) return null;
     if (e.kind === 'wolf') {
@@ -6232,12 +8730,12 @@ function tryAccidentalEnemyHitVillager(e, range, now, verb = '误伤') {
 }
 
 function damageVillagerByAnimal(npc, e, now, verb = '攻击') {
-    const damage = Math.max(1, e.attack || (e.kind === 'wolf' ? 4 : 2));
+    const damage = villagerIncomingDamageAfterBuff(npc, Math.max(1, e.attack || (e.kind === 'wolf' ? 4 : 2)), now);
     npc.hp = Math.max(0, (npc.hp ?? 80) - damage);
     npc.hurtUntil = now + 180;
     setVillagerAnimalAggro(npc, e);
     npc.nextAttackAt = Math.min(npc.nextAttackAt || now, now + 220);
-    npc.returningHome = npc.hp < (npc.maxHp || 80) * 0.18;
+    npc.returningHome = !npc.homeBuilding?.destroyed && npc.hp < (npc.maxHp || 80) * 0.18;
     const dir = normalize(npc.x - e.x, npc.y - e.y);
     const force = monsterKnockbackForce(e, verb);
     npc.knockX = (npc.knockX || 0) + dir.x * force;
@@ -6254,12 +8752,18 @@ function damageVillagerByAnimal(npc, e, now, verb = '攻击') {
     return true;
 }
 
+function villagerIncomingDamageAfterBuff(npc, damage, now = performance.now()) {
+    if ((npc.mineGuardUntil || 0) > now) return Math.max(1, Math.floor(damage * 0.68));
+    return damage;
+}
+
 function monsterKnockbackForce(e, verb = '') {
+    if (verb.includes('蜂针')) return 55;
+    if (verb.includes('掠袭') && ['bee', 'drySandWasp', 'meadowMoth', 'waspQueen'].includes(e.kind)) return e.kind === 'waspQueen' ? 90 : 45;
     if (verb.includes('冲撞')) return 380;
     if (verb.includes('跳扑')) return 280;
     if (verb.includes('撕咬')) return 230;
     if (verb.includes('毒刺')) return 210;
-    if (verb.includes('蜂针')) return 170;
     if (verb.includes('震地')) return 340;
     return e.kind === 'wolf' ? 230 : (e.kind === 'boar' ? 320 : (e.boss ? 360 : 190));
 }
@@ -6292,6 +8796,7 @@ function updateDynamicSpawns(now) {
     const alive = state.enemies.filter(enemyItem => enemyItem.hp > 0);
     if (alive.length >= Math.round(MAX_ENEMIES * wildernessSettings.monsterDensity)) return;
     const nearby = alive.filter(enemyItem => distance(enemyItem, state.player) < 850);
+    if (nearbyNormalEnemyCount(850) >= nearbyNormalEnemyLimit()) return;
     if (nearby.length >= Math.round(MAX_NEARBY_ENEMIES * wildernessSettings.monsterDensity) + (night > 0.45 ? 5 : 0)) return;
 
     if (trySpawnFromDen(now, alive)) return;
@@ -6311,7 +8816,8 @@ function trySpawnFromDen(now, alive) {
         const point = { x: den.x + Math.cos(angle) * 70, y: den.y + Math.sin(angle) * 70 };
         if (!canDynamicSpawn(kind, point.x, point.y, alive)) continue;
         state.enemies.push(makeEnemy(kind, point.x, point.y));
-        den.nextSpawnAt = now + (kind === 'bat' && nightAmount() > 0.25 ? 5200 : (nightAmount() > 0.2 ? 14000 : 24000));
+        const flyingDelay = ['bat', 'bee', 'meadowMoth', 'drySandWasp', 'mineCrystalBat'].includes(kind) ? 1.7 : 1.12;
+        den.nextSpawnAt = now + (kind === 'bat' && nightAmount() > 0.25 ? 5200 : (nightAmount() > 0.2 ? 14000 : 24000)) * flyingDelay;
         return true;
     }
     return false;
@@ -6342,32 +8848,165 @@ function trySpawnAroundPlayer(now, alive) {
 function chooseDynamicSpawnKind(x, y, night) {
     const terrain = terrainInfoAt(x, y).kind;
     const n = valueNoise(x * 0.012 + night * 9, y * 0.012 - 3);
-    if (night > 0.32 && n > 0.66 && ['grass', 'shore', 'forest', 'mine', 'ruins'].includes(terrain)) return 'bat';
-    if (night > 0.62 && n > 0.54 && ['grass', 'shore', 'forest', 'bamboo'].includes(terrain)) return 'bat';
+    if (night > 0.32 && n > 0.78 && ['grass', 'shore', 'forest', 'mine', 'ruins'].includes(terrain)) return 'bat';
+    if (night > 0.62 && n > 0.68 && ['grass', 'shore', 'forest', 'bamboo'].includes(terrain)) return 'bat';
     if (terrain === 'shore') return n > 0.28 ? 'frog' : 'slime';
     if (terrain === 'mud' || terrain === 'swamp') return n > 0.42 ? 'swampMireling' : (n > 0.2 ? 'frog' : '');
-    if (terrain === 'dry') return n > 0.52 ? 'drySandWasp' : (night > 0.15 || n > 0.36 ? 'scorpion' : '');
-    if (terrain === 'mine') return n > 0.56 ? 'mineCrystalBat' : (night > 0.08 || n > 0.44 ? 'bat' : (n > 0.74 ? 'golem' : ''));
-    if (terrain === 'ruins') return n > 0.56 ? 'ruinsBoneGuard' : (night > 0.08 || n > 0.44 ? 'bat' : (n > 0.74 ? 'golem' : ''));
-    if (terrain === 'meadow') return n > 0.48 ? 'meadowMoth' : (n > 0.28 ? 'bee' : (n > 0.08 ? 'hare' : ''));
+    if (terrain === 'dry') return n > 0.7 ? 'drySandWasp' : (night > 0.15 || n > 0.42 ? 'scorpion' : '');
+    if (terrain === 'mine') return n > 0.74 ? 'mineCrystalBat' : (night > 0.08 || n > 0.54 ? 'bat' : (n > 0.8 ? 'golem' : ''));
+    if (terrain === 'ruins') return n > 0.74 ? 'ruinsBoneGuard' : (night > 0.08 || n > 0.54 ? 'bat' : (n > 0.8 ? 'golem' : ''));
+    if (terrain === 'meadow') return n > 0.68 ? 'meadowMoth' : (n > 0.5 ? 'bee' : (n > 0.16 ? 'hare' : ''));
     if (terrain === 'birch') return n > 0.46 ? 'birchStag' : (n > 0.32 ? 'deer' : (n > 0.12 ? 'hare' : ''));
     if (terrain === 'maple') return n > 0.46 ? 'mapleFox' : (n > 0.32 ? 'deer' : (n > 0.12 ? 'hare' : ''));
     if (terrain === 'pine') return n > 0.46 ? 'pineLynx' : (n > 0.32 ? 'deer' : '');
     if (terrain === 'darkForest') return night > 0.08 || n > 0.38 ? 'shade' : '';
-    if (terrain === 'jungle') return n > 0.72 ? 'vineStalker' : (n > 0.36 ? 'jungleSnake' : (n > 0.14 ? 'bee' : ''));
+    if (terrain === 'jungle') return n > 0.76 ? 'vineStalker' : (n > 0.42 ? 'jungleSnake' : (n > 0.34 ? 'bee' : ''));
     if (terrain === 'reedWetland') return n > 0.32 ? 'reedCrab' : '';
     if (terrain === 'tallgrass') return n > 0.48 ? 'tallgrassRaptor' : (night > 0.12 || n > 0.32 ? 'wolf' : 'slime');
     if (terrain === 'forest') return n > 0.52 ? 'forestBear' : (night > 0.2 && n > 0.28 ? 'wolf' : (n > 0.48 ? 'boar' : ''));
     if (terrain === 'bamboo') return n > 0.52 ? 'bambooPanda' : (night > 0.2 && n > 0.28 ? 'wolf' : (n > 0.48 ? 'boar' : ''));
-    if (terrain === 'grass') return n > 0.58 ? 'grassRunner' : (night > 0.22 && n > 0.42 ? 'bat' : (n > 0.52 ? 'slime' : ''));
+    if (terrain === 'grass') return n > 0.62 ? 'grassRunner' : (night > 0.22 && n > 0.58 ? 'bat' : (n > 0.54 ? 'slime' : ''));
     return '';
 }
 
 function canDynamicSpawn(kind, x, y, alive) {
     if (!canSpawnEnemyAt(kind, x, y, alive)) return false;
     if (distance({ x, y }, state.player) < DYNAMIC_SPAWN_MIN_DISTANCE || distance({ x, y }, state.player) > DYNAMIC_SPAWN_MAX_DISTANCE + 360) return false;
+    if (distance({ x, y }, state.player) < 850 && nearbyNormalEnemyCount(850, alive) >= nearbyNormalEnemyLimit()) return false;
     const localAll = alive.filter(enemyItem => distance(enemyItem, { x, y }) < 420).length;
     return localAll < 8;
+}
+
+function isNormalEnemyForNearbyCap(enemy) {
+    return enemy.hp > 0 && !enemy.boss && enemy.kind !== 'waspQueen';
+}
+
+function nearbyNormalEnemyLimit() {
+    return Math.max(5, Math.round(MAX_PLAYER_NEARBY_NORMAL_ENEMIES * wildernessSettings.monsterDensity));
+}
+
+function nearbyNormalEnemyCount(radius = 850, list = state.enemies) {
+    return list.filter(enemy => isNormalEnemyForNearbyCap(enemy) && distance(enemy, state.player) < radius).length;
+}
+
+function updateWaspHives(now) {
+    for (const hive of state.waspHives || []) {
+        if (hive.state === 'ruined') continue;
+        const ratio = hive.hp / hive.maxHp;
+        const nextStage = ratio <= 0.25 ? 3 : (ratio <= 0.5 ? 2 : (ratio <= 0.75 ? 1 : 0));
+        if (nextStage > (hive.stage || 0)) {
+            hive.stage = nextStage;
+            summonWaspHiveWave(hive, 2 + nextStage, now);
+            addFloatText(`蜂群阶段 ${nextStage}`, hive.x, hive.y - 94, '#ffd166');
+        }
+        const active = hive.hp < hive.maxHp;
+        if (active && now >= (hive.nextSummonAt || 0)) {
+            summonWaspHiveWave(hive, hive.stage >= 2 ? 1 : 0, now);
+            hive.nextSummonAt = now + (hive.stage >= 3 ? 9200 : 11800);
+        }
+    }
+    const queens = state.enemies.filter(enemy => enemy.kind === 'waspQueen' && enemy.hp > 0);
+    for (const queen of queens) {
+        if (now < (queen.nextQueenSummonAt || 0) || distance(queen, state.player) > 620) continue;
+        if (nearbyHiveWaspCount(queen, 720) >= 5) {
+            queen.nextQueenSummonAt = now + 3600;
+            continue;
+        }
+        summonWaspMinion(queen.x, queen.y, now, valueNoise(queen.x * 0.02 + now * 0.001, queen.y * 0.02) > 0.62 ? 'drySandWasp' : 'bee');
+        if (queen.hp < queen.maxHp * 0.45) summonWaspMinion(queen.x, queen.y, now, 'bee');
+        queen.nextQueenSummonAt = now + (queen.hp < queen.maxHp * 0.45 ? 8200 : 11000);
+        addFloatText('召唤蜂群', queen.x, queen.y - 72, '#ffd166');
+    }
+}
+
+function summonWaspHiveWave(hive, count, now = performance.now()) {
+    if (count <= 0) return;
+    const existing = nearbyHiveWaspCount(hive, 720);
+    count = Math.max(0, Math.min(count, 6 - existing));
+    if (count <= 0) {
+        hive.nextSummonAt = Math.max(hive.nextSummonAt || 0, now + 4200);
+        return;
+    }
+    for (let i = 0; i < count; i++) {
+        summonWaspMinion(hive.x, hive.y, now, i % 3 === 2 || hive.stage >= 3 ? 'drySandWasp' : 'bee', i);
+    }
+    hive.nextSummonAt = Math.max(hive.nextSummonAt || 0, now + 5200);
+    spawnBurst(hive.x, hive.y - 48, '#ffd166', 18, 180, hive.radius * 0.8);
+}
+
+function summonWaspMinion(x, y, now = performance.now(), kind = 'bee', index = 0) {
+    const angle = hash2(x * 0.03 + now * 0.001 + index, y * 0.03 - index) * Math.PI * 2;
+    const radius = 70 + hash2(y * 0.05 + index, x * 0.05) * 44;
+    const enemyItem = makeEnemy(kind, clamp(x + Math.cos(angle) * radius, 32, WORLD.width - 32), clamp(y + Math.sin(angle) * radius, 32, WORLD.height - 32));
+    if (!enemyItem) return;
+    enemyItem.spawnedByHive = true;
+    enemyItem.hurtUntil = now + 260;
+    enemyItem.attackCooldown = 0.35;
+    if (kind === 'drySandWasp') {
+        enemyItem.name = '黄蜂守卫';
+        enemyItem.hp = Math.max(enemyItem.hp, 16);
+        enemyItem.maxHp = enemyItem.hp;
+        enemyItem.attack = Math.max(enemyItem.attack, 3);
+    }
+    state.enemies.push(enemyItem);
+}
+
+function nearbyHiveWaspCount(point, radius) {
+    return state.enemies.filter(enemy => enemy.hp > 0 && enemy.spawnedByHive && distance(enemy, point) < radius).length;
+}
+
+function damageWaspHive(hive, now, attackProfile = currentAttackProfile()) {
+    if (!hive || hive.state === 'ruined') return;
+    const damage = Math.max(1, Math.round((attackProfile.damage || 1) * (attackProfile.style === 'pick' ? 1.35 : 1)));
+    hive.hp = Math.max(0, hive.hp - damage);
+    hive.hurtUntil = now + 260;
+    hive.lastHitAt = now;
+    addFloatText(`-${damage}`, hive.x, hive.y - 70, '#fff3b0');
+    spawnBurst(hive.x, hive.y - 42, '#ffd166', 12, 120, hive.radius * 0.55);
+    if (hive.hp > 0) {
+        if (now >= (hive.nextRetaliateAt || 0)) {
+            summonWaspHiveWave(hive, Math.min(2, 1 + (hive.stage || 0)), now);
+            hive.nextRetaliateAt = now + 6200;
+        }
+        showToast('黄蜂巢被激怒了，蜂群从花海里涌出！');
+        return;
+    }
+    breakWaspHive(hive, now);
+}
+
+function breakWaspHive(hive, now) {
+    if (hive.state === 'ruined') return;
+    hive.state = 'ruined';
+    hive.hp = 0;
+    hive.brokenAt = now;
+    state.cameraShake = Math.max(state.cameraShake, 16);
+    grantItemBundle({ honey: 8, beeswax: 7, beeStinger: 5, pollenDust: 4, flower: 6 }, hive.x, hive.y - 72, '黄蜂巢崩塌，获得');
+    spawnBurst(hive.x, hive.y - 44, '#ffbf4d', 60, 300, hive.radius);
+    if (!hive.queenSpawned) {
+        const queen = makeEnemy('waspQueen', hive.x + 96, hive.y - 22, true);
+        if (queen) {
+            queen.name = '蜂后';
+            queen.nextQueenSummonAt = now + 2400;
+            queen.hurtUntil = now + 700;
+            state.enemies.push(queen);
+            addFloatText('蜂后出现！', queen.x, queen.y - 76, '#ffd166');
+            showToast('黄蜂巢崩塌！蜂后从巢心飞出。');
+        }
+        hive.queenSpawned = true;
+    }
+}
+
+function grantItemBundle(bundle, x, y, prefix = '获得') {
+    const gained = [];
+    for (const [key, amount] of Object.entries(bundle)) {
+        if (amount <= 0) continue;
+        if (addInventoryItem(key, amount)) gained.push(`${RESOURCE_LABELS[key]} x${amount}`);
+    }
+    if (gained.length) {
+        addFloatText(`+${gained[0]}${gained.length > 1 ? '…' : ''}`, x, y, '#9cffb7');
+        showToast(`${prefix} ${gained.join('、')}`);
+    }
+    renderHud();
 }
 
 function spawnCooldownKey(x, y) {
@@ -6383,6 +9022,18 @@ function markSpawnAreaCleared(x, y, now = performance.now()) {
 }
 
 function updateEnemyPoison(e, dt, now) {
+    if (isStoneCreature(e)) {
+        e.poisonUntil = 0;
+        e.bleedUntil = 0;
+        e.burnUntil = 0;
+        return;
+    }
+    updateEnemyBurnAndBleed(e, now);
+    if (e.hp <= 0) {
+        e.deathAt = now;
+        markSpawnAreaCleared(e.x, e.y, now);
+        return;
+    }
     if (!e.poisonUntil || e.poisonUntil <= now) {
         e.poisonPower = 0;
         return;
@@ -6403,7 +9054,36 @@ function updateEnemyPoison(e, dt, now) {
     }
 }
 
+function updateEnemyBurnAndBleed(e, now) {
+    if (e.burnUntil && e.burnUntil > now && now >= (e.burnTickAt || 0)) {
+        e.burnTickAt = now + 900;
+        const damage = e.burnPower || 1;
+        e.hp -= damage;
+        e.hurtUntil = now + 120;
+        spawnBurst(e.x, e.y - 8, '#ff9f1c', 2, 42, e.radius * 0.3);
+        addFloatText(`-${damage} 烧`, e.x, e.y - 58, '#ffd166');
+    } else if (e.burnUntil && e.burnUntil <= now) {
+        e.burnPower = 0;
+    }
+    if (e.bleedUntil && e.bleedUntil > now && now >= (e.bleedTickAt || 0)) {
+        e.bleedTickAt = now + 850;
+        const moving = Math.hypot(e.knockX || 0, e.knockY || 0) > 12 || e.attackTarget || e.villagerTarget;
+        const damage = (e.bleedPower || 1) + (moving ? 1 : 0);
+        e.hp -= damage;
+        e.hurtUntil = now + 120;
+        addFloatText(`-${damage} 流血`, e.x, e.y - 64, '#ff6b6b');
+    } else if (e.bleedUntil && e.bleedUntil <= now) {
+        e.bleedPower = 0;
+    }
+}
+
 function updateVillagerStatusEffects(npc, dt, now) {
+    updateVillagerBurnAndBleed(npc, now);
+    if ((npc.hp ?? 80) <= 0) {
+        npc.mood = 'down';
+        npc.solid = false;
+        return;
+    }
     if (!npc.poisonUntil || npc.poisonUntil <= now) {
         npc.poisonPower = 0;
         return;
@@ -6419,6 +9099,29 @@ function updateVillagerStatusEffects(npc, dt, now) {
         npc.mood = 'down';
         npc.solid = false;
         showToast(`${npc.label || '村民'} 被持续效果击倒了。`);
+    }
+}
+
+function updateVillagerBurnAndBleed(npc, now) {
+    if (npc.burnUntil && npc.burnUntil > now && now >= (npc.burnTickAt || 0)) {
+        npc.burnTickAt = now + 900;
+        const damage = npc.burnPower || 1;
+        npc.hp = Math.max(0, (npc.hp ?? 80) - damage);
+        npc.hurtUntil = now + 120;
+        spawnBurst(npc.x, npc.y - 8, '#ff9f1c', 2, 38, (npc.radius || 17) * 0.3);
+        addFloatText(`-${damage} 烧`, npc.x, npc.y - 58, '#ffd166');
+    } else if (npc.burnUntil && npc.burnUntil <= now) {
+        npc.burnPower = 0;
+    }
+    if (npc.bleedUntil && npc.bleedUntil > now && now >= (npc.bleedTickAt || 0)) {
+        npc.bleedTickAt = now + 850;
+        const moving = !!(npc.targetX || npc.targetY || npc.returningHome || npc.playerAggro || npc.animalAggressor);
+        const damage = (npc.bleedPower || 1) + (moving ? 1 : 0);
+        npc.hp = Math.max(0, (npc.hp ?? 80) - damage);
+        npc.hurtUntil = now + 120;
+        addFloatText(`-${damage} 流血`, npc.x, npc.y - 64, '#ff6b6b');
+    } else if (npc.bleedUntil && npc.bleedUntil <= now) {
+        npc.bleedPower = 0;
     }
 }
 
@@ -6549,7 +9252,7 @@ function startEnemyAttack(e, now, target = state.player) {
     } else if (['forestBear', 'bambooPanda', 'ruinsBoneGuard'].includes(e.kind)) {
         e.windupUntil = now + 650;
         e.strikeAt = now + 470;
-    } else if (['meadowMoth', 'drySandWasp', 'mineCrystalBat'].includes(e.kind)) {
+    } else if (['meadowMoth', 'drySandWasp', 'mineCrystalBat', 'waspQueen'].includes(e.kind)) {
         e.windupUntil = now + 280;
         e.strikeAt = now + 200;
     } else if (e.kind === 'swampMireling') {
@@ -6613,10 +9316,10 @@ function resolveEnemyAttack(e, now) {
         const playerSide = Math.abs((p.x - e.x) * -e.attackDir.y + (p.y - e.y) * e.attackDir.x);
         if (playerForward > 0 && playerForward < tongueReach && playerSide < p.radius + 13) {
             const hit = applyEnemyDamageToTarget(e, p, e.attack, '舌头卷住', now);
-            if (hit) {
+            if (hit && shouldApplyEnemyContactEffects(e, p)) {
                 p.knockX += toPlayer.x * 520;
                 p.knockY += toPlayer.y * 520;
-                p.stamina = Math.max(0, p.stamina - 14);
+                p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(14));
                 addFloatText('被拉住', p.x, p.y - 54, '#9cffb7');
             }
         }
@@ -6637,7 +9340,7 @@ function resolveEnemyAttack(e, now) {
         moveEnemy(e, e.attackDir.x * 48, e.attackDir.y * 48);
         if (distance(e, p) < e.radius + p.radius + 18) {
             const hit = applyEnemyDamageToTarget(e, p, e.attack, '毒刺', now);
-            if (hit) {
+            if (hit && shouldApplyEnemyContactEffects(e, p)) {
                 poisonCombatTarget(p, now, 5200);
                 drainCombatTargetStamina(p, 16);
             }
@@ -6675,8 +9378,8 @@ function resolveEnemyAttack(e, now) {
     } else if (e.kind === 'bee') {
         moveEnemy(e, e.attackDir.x * 82, e.attackDir.y * 82);
         if (distance(e, p) < e.radius + p.radius + 14) {
-            if (applyEnemyDamageToTarget(e, p, e.attack, '蜂针', now)) {
-                drainCombatTargetStamina(p, 8);
+            if (applyEnemyDamageToTarget(e, p, e.attack, '蜂针', now) && shouldApplyEnemyContactEffects(e, p)) {
+                drainCombatTargetStamina(p, 2);
             }
         }
         e.retreatUntil = now + 320;
@@ -6686,7 +9389,7 @@ function resolveEnemyAttack(e, now) {
         moveEnemy(e, e.attackDir.x * 72, e.attackDir.y * 72);
         if (distance(e, p) < e.radius + p.radius + 18) {
             const hit = applyEnemyDamageToTarget(e, p, e.attack, '毒牙咬击', now);
-            if (hit) {
+            if (hit && shouldApplyEnemyContactEffects(e, p)) {
                 poisonCombatTarget(p, now, 6200);
                 drainCombatTargetStamina(p, 10);
                 addFloatText('蛇毒', p.x, p.y - 56, '#9cff7a');
@@ -6705,7 +9408,7 @@ function resolveEnemyAttack(e, now) {
         const side = Math.abs((p.x - e.x) * -e.attackDir.y + (p.y - e.y) * e.attackDir.x);
         if (forward > 0 && forward < reach && side < p.radius + 18) {
             const hit = applyEnemyDamageToTarget(e, p, e.attack, '藤蔓缠绕', now);
-            if (hit) {
+            if (hit && shouldApplyEnemyContactEffects(e, p)) {
                 slowCombatTarget(p, now, 3200);
                 drainCombatTargetStamina(p, 18);
                 addFloatText('缠绕', p.x, p.y - 58, '#9cffb7');
@@ -6720,7 +9423,7 @@ function resolveEnemyAttack(e, now) {
         if (distance(e, p) < e.radius + p.radius + 22) {
             const verb = e.kind === 'birchStag' ? '角撞' : (e.kind === 'mapleFox' ? '狐影爪' : '迅爪');
             const hit = applyEnemyDamageToTarget(e, p, e.attack, verb, now);
-            if (hit && e.kind === 'mapleFox') drainCombatTargetStamina(p, 10);
+            if (hit && e.kind === 'mapleFox' && shouldApplyEnemyContactEffects(e, p)) drainCombatTargetStamina(p, 10);
         }
         e.retreatUntil = now + 360;
         e.attackCooldown = e.kind === 'grassRunner' ? 1.15 : 1.45;
@@ -6729,7 +9432,7 @@ function resolveEnemyAttack(e, now) {
         moveEnemy(e, e.attackDir.x * 42, e.attackDir.y * 42);
         if (distance(e, p) < e.radius + p.radius + 20) {
             const hit = applyEnemyDamageToTarget(e, p, e.attack, '钳夹', now);
-            if (hit) {
+            if (hit && shouldApplyEnemyContactEffects(e, p)) {
                 slowCombatTarget(p, now, 1300);
                 addFloatText('夹住', p.x, p.y - 54, '#d7f28a');
             }
@@ -6740,23 +9443,24 @@ function resolveEnemyAttack(e, now) {
         const slamRadius = e.kind === 'ruinsBoneGuard' ? 82 : 96;
         state.cameraShake = Math.max(state.cameraShake, e.kind === 'forestBear' ? 12 : 9);
         spawnBurst(e.x, e.y, e.kind === 'ruinsBoneGuard' ? '#d8d0bd' : '#b98f68', 20, 170, slamRadius * 0.45);
+        damageVillageBuildingsInRadius(e, slamRadius * 0.72, e, Math.max(2, Math.ceil(e.attack * 0.75)), now, '震地波及');
         if (distance(e, p) < slamRadius) {
             applyEnemyDamageToTarget(e, p, e.attack, e.kind === 'ruinsBoneGuard' ? '骨盾震击' : '重掌震地', now);
             p.knockX = (p.knockX || 0) + e.attackDir.x * 220;
             p.knockY = (p.knockY || 0) + e.attackDir.y * 220;
         }
         e.attackCooldown = 2.15;
-    } else if (['meadowMoth', 'drySandWasp', 'mineCrystalBat'].includes(e.kind)) {
+    } else if (['meadowMoth', 'drySandWasp', 'mineCrystalBat', 'waspQueen'].includes(e.kind)) {
         e.swoopStartAt = now;
-        e.swoopUntil = now + (e.kind === 'mineCrystalBat' ? 560 : 440);
+        e.swoopUntil = now + (e.kind === 'waspQueen' ? 620 : (e.kind === 'mineCrystalBat' ? 560 : 440));
         e.swoopStartX = e.x;
         e.swoopStartY = e.y;
-        e.swoopTargetX = clamp(p.x + e.attackDir.x * 70, e.radius, WORLD.width - e.radius);
-        e.swoopTargetY = clamp(p.y + e.attackDir.y * 70, e.radius, WORLD.height - e.radius);
+        e.swoopTargetX = clamp(p.x + e.attackDir.x * (e.kind === 'waspQueen' ? 96 : 70), e.radius, WORLD.width - e.radius);
+        e.swoopTargetY = clamp(p.y + e.attackDir.y * (e.kind === 'waspQueen' ? 96 : 70), e.radius, WORLD.height - e.radius);
         e.swoopHit = false;
         e.swoopHitVillager = false;
-        e.attackCooldown = e.kind === 'drySandWasp' ? 1.5 : 1.9;
-        spawnBurst(e.x, e.y, e.kind === 'meadowMoth' ? '#ffd166' : (e.kind === 'drySandWasp' ? '#8cff66' : '#7dcbe8'), 8, 110, e.radius * 0.6);
+        e.attackCooldown = e.kind === 'waspQueen' ? 1.35 : (e.kind === 'drySandWasp' ? 1.5 : 1.9);
+        spawnBurst(e.x, e.y, e.kind === 'meadowMoth' ? '#ffd166' : (e.kind === 'drySandWasp' || e.kind === 'waspQueen' ? '#8cff66' : '#7dcbe8'), e.kind === 'waspQueen' ? 16 : 8, 130, e.radius * 0.6);
     } else if (e.kind === 'swampMireling') {
         e.leapStartAt = now;
         e.leapUntil = now + 430;
@@ -6767,7 +9471,6 @@ function resolveEnemyAttack(e, now) {
         e.leapHit = false;
         e.leapHitVillager = false;
         e.leapDamage = true;
-        if (distance(e, p) < e.radius + p.radius + 28) slowCombatTarget(p, now, 1800);
         e.attackCooldown = 2.0;
         spawnBurst(e.x, e.y, '#6d5438', 14, 135, e.radius * 0.75);
     } else if (e.kind === 'shade') {
@@ -6777,8 +9480,8 @@ function resolveEnemyAttack(e, now) {
         const side = Math.abs((p.x - e.x) * -e.attackDir.y + (p.y - e.y) * e.attackDir.x);
         spawnBurst(e.x + e.attackDir.x * 52, e.y + e.attackDir.y * 52, night > 0.35 ? '#b77dff' : '#8f6bd8', 16 + Math.floor(night * 10), 130 + night * 80, 32 + night * 20);
         if (forward > 0 && forward < reach && side < p.radius + 22 + night * 10) {
-            if (applyEnemyDamageToTarget(e, p, e.attack + 1 + Math.floor(night * 2), night > 0.55 ? '夜影爪' : '暗影爪', now) && !targetIsVillager) {
-                p.stamina = Math.max(0, p.stamina - (14 + night * 10));
+            if (applyEnemyDamageToTarget(e, p, e.attack + 1 + Math.floor(night * 2), night > 0.55 ? '夜影爪' : '暗影爪', now) && !targetIsVillager && shouldApplyEnemyContactEffects(e, p)) {
+                p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(14 + night * 10));
             }
         }
         e.retreatUntil = now + (260 - night * 80);
@@ -6793,6 +9496,7 @@ function resolveEnemyAttack(e, now) {
         const slamRadius = e.boss ? 145 : 86;
         state.cameraShake = Math.max(state.cameraShake, e.boss ? 24 : 10);
         spawnBurst(e.x, e.y, e.boss ? '#ffd166' : '#b77dff', e.boss ? 42 : 18, e.boss ? 240 : 180, slamRadius * 0.42);
+        damageVillageBuildingsInRadius(e, slamRadius * (e.boss ? 0.88 : 0.72), e, Math.max(3, Math.ceil(e.attack * (e.boss ? 0.9 : 0.7))), now, e.boss ? '王者震地波及' : '震地波及');
         if (distance(e, p) < slamRadius) applyEnemyDamageToTarget(e, p, e.attack, e.boss ? '王者震地' : '震地', now);
         if (e.boss && !targetIsVillager && distance(e, p) < slamRadius * 0.72) {
             p.knockX += e.attackDir.x * 260;
@@ -6809,6 +9513,7 @@ function resolveJungleRuinGuardianAttack(e, target, now) {
     const radius = slam ? 128 : 92;
     state.cameraShake = Math.max(state.cameraShake, slam ? 13 : 8);
     spawnBurst(e.x, e.y, slam ? '#b77dff' : '#8cff66', slam ? 30 : 18, 190, radius * 0.42);
+    if (slam) damageVillageBuildingsInRadius(e, radius * 0.7, e, Math.max(3, Math.ceil(e.attack * 0.7)), now, '藤根震裂波及');
     const forward = (target.x - e.x) * e.attackDir.x + (target.y - e.y) * e.attackDir.y;
     const side = Math.abs((target.x - e.x) * -e.attackDir.y + (target.y - e.y) * e.attackDir.x);
     const hit = slam
@@ -6816,7 +9521,7 @@ function resolveJungleRuinGuardianAttack(e, target, now) {
         : (forward > -12 && forward < 156 && side < (target.radius || 17) + 34);
     if (hit) {
         applyEnemyDamageToTarget(e, target, slam ? e.attack + 2 : e.attack, slam ? '藤根震裂' : '根鞭横扫', now);
-        slowCombatTarget(target, now, slam ? 1900 : 1300);
+        if (shouldApplyEnemyContactEffects(e, target)) slowCombatTarget(target, now, slam ? 1900 : 1300);
         const dir = normalize(target.x - e.x, target.y - e.y);
         target.knockX = (target.knockX || 0) + dir.x * (slam ? 240 : 150);
         target.knockY = (target.knockY || 0) + dir.y * (slam ? 240 : 150);
@@ -6837,6 +9542,15 @@ function resolveBossGolemSkill(e, now) {
     if (e.bossSkill === 'shockwave') {
         const dir = e.attackDir || normalize(p.x - e.x, p.y - e.y);
         state.cameraShake = Math.max(state.cameraShake, 26);
+        damageVillageBuildingsAlongSegment(
+            { x: e.x + dir.x * 30, y: e.y + dir.y * 30 },
+            { x: e.x + dir.x * 330, y: e.y + dir.y * 330 },
+            46,
+            e,
+            e.attack + 2,
+            now,
+            '冲击波及'
+        );
         for (let i = 1; i <= 4; i++) {
             const px = e.x + dir.x * i * 70;
             const py = e.y + dir.y * i * 70;
@@ -6862,6 +9576,7 @@ function resolveBossGolemSkill(e, now) {
             const px = p.x + Math.cos(angle) * 42;
             const py = p.y + Math.sin(angle) * 42;
             spawnBurst(px, py, '#b77dff', 12, 160, 16);
+            damageVillageBuildingsInRadius({ x: px, y: py }, 42, e, Math.max(3, Math.ceil(e.attack * 0.55)), now, '岩刺波及');
         }
         if (distance(e, p) < 260) applyEnemyDamageToTarget(e, p, e.attack + 1, '岩刺', now);
     } else {
@@ -6912,6 +9627,7 @@ function separateEnemies() {
 
 function applyEnemyDamage(e, rawDamage, verb) {
     const p = state.player;
+    e.lastAttackBlocked = false;
     if (state.indoor) {
         e.attackTarget = e.attackTarget === p ? null : e.attackTarget;
         e.windupUntil = 0;
@@ -6937,23 +9653,27 @@ function applyEnemyDamage(e, rawDamage, verb) {
     const block = getBlockResult(e, rawDamage, verb);
     const damage = incomingDamageAfterArmor(block.damage, block.blocked);
     if (block.blocked) {
+        e.lastAttackBlocked = true;
         spawnBurst(p.x + p.attackDir.x * 22, p.y + p.attackDir.y * 22, '#ffd166', 10, 120, 12);
         addFloatText('格挡', p.x, p.y - 42, '#fff3b0');
+        damageItemDurability(shieldKeyForName(state.equipment.shield), Math.max(1, Math.ceil(rawDamage / 3)));
     }
     if (damage <= 0) {
         p.invincibleUntil = performance.now() + 260;
-        p.stamina = Math.max(0, p.stamina - block.staminaCost);
+        p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount(block.staminaCost));
         renderHud();
         return false;
     }
     p.hp = Math.max(0, p.hp - damage);
+    damageEquippedArmorDurability(Math.max(1, Math.ceil((rawDamage + damage) / 4)));
+    if (state.equipment.shield !== '无') damageItemDurability(shieldKeyForName(state.equipment.shield), Math.max(1, Math.ceil(damage / 6)));
     closeInventoryOnPlayerHit();
     p.invincibleUntil = performance.now() + 620;
     const dir = normalize(p.x - e.x, p.y - e.y);
-    const force = (e.kind === 'boar' ? 430 : (e.kind === 'golem' ? 330 : 260)) * (state.equipment.armor === '厚毛皮衣' ? 0.55 : 1);
+    const force = (e.kind === 'boar' ? 430 : (e.kind === 'golem' ? 330 : 260)) * (hasEquippedArmor('厚毛皮衣') ? 0.55 : 1);
     p.knockX += dir.x * force;
     p.knockY += dir.y * force;
-    p.stamina = Math.max(0, p.stamina - (e.kind === 'boar' ? 18 : 10) - block.staminaCost);
+    p.stamina = Math.max(0, p.stamina - playerStaminaDrainAmount((e.kind === 'boar' ? 18 : 10) + block.staminaCost));
     state.cameraShake = Math.max(state.cameraShake, e.boss ? 14 : 8);
     spawnBurst(p.x, p.y, '#ff6b6b', 10, 170, p.radius * 0.55);
     addFloatText(`-${damage}`, p.x, p.y - 36, '#ffb3b3');
@@ -6965,34 +9685,43 @@ function applyEnemyDamage(e, rawDamage, verb) {
     return true;
 }
 
+function shouldApplyEnemyContactEffects(e, target) {
+    return target !== state.player || !e.lastAttackBlocked;
+}
+
 function incomingDamageAfterArmor(rawDamage, blocked) {
     if (rawDamage <= 0) return 0;
     if (blocked && rawDamage < 1) return 0;
-    const reduction = armorReduction() + passiveShieldReduction();
+    const reduction = Math.min(0.82, armorReduction() + passiveShieldReduction());
     return Math.max(1, Math.round(rawDamage * (1 - reduction)));
 }
 
 function armorReduction() {
-    const boost = performance.now() < state.player.ironSkinUntil ? 0.28 : 0;
-    const base = state.equipment.armor === '魔晶甲' ? 0.45
-        : (state.equipment.armor === '蝎壳甲' ? 0.34
-            : (state.equipment.armor === '泥沼护甲' ? 0.36
-                : (state.equipment.armor === '湿地甲壳甲' ? 0.28
-                    : (state.equipment.armor === '板根木甲' ? 0.3
-                        : (state.equipment.armor === '绿母寄生甲' ? 0.26
-                            : (state.equipment.armor === '厚毛皮衣' ? 0.22
-                                : (state.equipment.armor === '铁甲' ? 0.32
-                                    : (state.equipment.armor === '皮甲' ? 0.18
-                                        : (state.equipment.armor === '毒菇面罩' ? 0.12
-                                            : (state.equipment.armor === '丛林叶披肩' || state.equipment.armor === '兔毛披肩' ? 0.08 : 0))))))))));
-    return Math.min(0.62, base + boost);
+    const boost = performance.now() < state.player.ironSkinUntil ? 0.32 : 0;
+    const reductions = {
+        魔晶甲: 0.56,
+        泥沼护甲: 0.46,
+        蝎壳甲: 0.44,
+        铁甲: 0.42,
+        板根木甲: 0.4,
+        湿地甲壳甲: 0.38,
+        绿母寄生甲: 0.36,
+        厚毛皮衣: 0.3,
+        皮甲: 0.26,
+        毒菇面罩: 0.2,
+        丛林叶披肩: 0.16,
+        兔毛披肩: 0.16,
+        布衣: 0.1,
+    };
+    const base = equippedArmorNames().reduce((sum, name) => sum + (reductions[name] || 0), 0);
+    return Math.min(0.74, base + boost);
 }
 
 function passiveShieldReduction() {
-    if (state.equipment.shield === '铁盾') return 0.12;
-    if (state.equipment.shield === '板根盾') return 0.1;
-    if (state.equipment.shield === '木盾') return 0.08;
-    if (state.equipment.shield === '藤编圆盾') return 0.06;
+    if (state.equipment.shield === '铁盾') return 0.18;
+    if (state.equipment.shield === '板根盾') return 0.16;
+    if (state.equipment.shield === '木盾') return 0.12;
+    if (state.equipment.shield === '藤编圆盾') return 0.1;
     return 0;
 }
 
@@ -7002,7 +9731,7 @@ function poisonPlayer(now, duration) {
         addFloatText('抗毒', p.x, p.y - 58, '#d6ff9c');
         return;
     }
-    if (state.equipment.armor === '毒菇面罩') duration = Math.floor(duration * 0.62);
+    if (hasEquippedArmor('毒菇面罩')) duration = Math.floor(duration * 0.62);
     p.poisonUntil = Math.max(p.poisonUntil, now + duration);
     p.poisonTickAt = Math.min(p.poisonTickAt || now + 700, now + 700);
     spawnBurst(p.x, p.y - 10, '#8cff66', 14, 120, p.radius * 0.65);
@@ -7029,7 +9758,7 @@ function moveEnemy(e, dx, dy) {
     const startX = e.x;
     const startY = e.y;
     const terrain = terrainInfoAt(e.x, e.y);
-    const flying = ['bat', 'bee', 'meadowMoth', 'drySandWasp', 'mineCrystalBat'].includes(e.kind);
+    const flying = ['bat', 'bee', 'meadowMoth', 'drySandWasp', 'mineCrystalBat', 'waspQueen'].includes(e.kind);
     if (!flying && terrain.kind === 'water') {
         const current = waterCurrentAt(e.x, e.y);
         dx = dx * 0.45 + (current.x / 60) * 1.6;
@@ -7121,6 +9850,15 @@ function updateEnemyFacingFromMovement(e, startX, startY) {
 }
 
 function updateCamera() {
+    if (state.underground) {
+        camera.x = clamp(state.player.x - VIEW.width / 2, 0, state.underground.width - VIEW.width);
+        camera.y = clamp(state.player.y - VIEW.height / 2, 0, state.underground.height - VIEW.height);
+        if (state.cameraShake > 0) {
+            camera.x = clamp(camera.x + (Math.random() - 0.5) * state.cameraShake, 0, state.underground.width - VIEW.width);
+            camera.y = clamp(camera.y + (Math.random() - 0.5) * state.cameraShake, 0, state.underground.height - VIEW.height);
+        }
+        return;
+    }
     if (state.indoor) {
         camera.x = 0;
         camera.y = 0;
@@ -7155,6 +9893,10 @@ function updateFloatTexts(dt) {
 
 function interact() {
     if (state.win || state.lose) return;
+    if (state.underground) {
+        interactUnderground();
+        return;
+    }
     if (state.indoor) {
         interactIndoor();
         return;
@@ -7175,11 +9917,13 @@ function interact() {
     if (target.type === 'villageBell') ringVillageBell(target.item);
     if (target.type === 'greenMotherAltar') interactGreenMotherAltar(target.item);
     if (target.type === 'jungleRuin') interactJungleRuin(target.item);
+    if (target.type === 'mineCave') enterMineCave(target.item);
 }
 
 function interactPromptText(target) {
     if (!target) return '';
     if (target.type === 'resource') return `长按 E 采集：${resourceName(target.item.kind)}`;
+    if (target.type === 'villageHouse' && target.item.destroyed) return `${target.item.label}已成废墟`;
     if (target.type === 'villageHouse') return `按 E 进入：${target.item.label}`;
     if (target.type === 'villager') return villagerPromptText(target.item);
     if (target.type === 'villageNotice') return '按 E 查看村庄告示';
@@ -7190,6 +9934,7 @@ function interactPromptText(target) {
         if (!jungleRuinGuardianDefeated(target.item)) return '击败根缠石像守卫后可进入';
         return '按 E 进入丛林遗迹';
     }
+    if (target.type === 'mineCave') return '按 E 进入废弃矿洞';
     if (target.type === 'chest') return '按 E 打开木箱';
     if (target.type === 'camp') return '按 E 使用营地';
     if (target.type === 'ruins') return state.ruins.opened ? '废墟门已打开' : '按 E 打开废墟门';
@@ -7198,6 +9943,7 @@ function interactPromptText(target) {
 
 function indoorPromptText(object) {
     if (!object) return '';
+    if (object.caveResource) return `长按 E 采集：${resourceName(object.kind)}`;
     if (object.action === 'leave') return '按 E 离开房屋';
     if (object.action === 'steal') return `按 E 打开：${object.label}`;
     if (object.action === 'npc') return villagerPromptText(object);
@@ -7208,10 +9954,12 @@ function indoorPromptText(object) {
 
 function villagerPromptText(npc) {
     if ((npc.hp ?? 80) <= 0) return `${npc.label} 已倒下`;
+    if (npc.follower) return `${npc.label} 正在跟随（按 K 解散）`;
     if (npc.playerAggro || npc.mood === 'angry') return `${npc.label} 正在战斗`;
     if (npc.animalAggressor) return `${npc.label} 正在护村`;
     if (npc.returningHome) return `${npc.label} 正在回家`;
     if ((npc.hp ?? npc.maxHp) < (npc.maxHp || 80)) return `按 E 关心：${npc.label}（受伤）`;
+    if (npc.homeBuilding?.destroyed || npc.homeDestroyed) return `按 E 招募/安慰：${npc.label}（房屋被毁）`;
     const task = state.villageTasks?.[npc.role];
     if (task?.status === 'new') return `按 E 交谈：${npc.label}（可查看任务）`;
     if (task?.status === 'accepted') return `按 E 交谈：${npc.label}（任务进行中）`;
@@ -7247,6 +9995,9 @@ function nearestInteractable() {
     (state.decorations || [])
         .filter(item => item.kind === 'jungleRuin' && distance(p, item) <= item.radius + 42)
         .forEach(item => specials.push({ type: 'jungleRuin', item, d: distance(p, item) - 20 }));
+    (state.decorations || [])
+        .filter(item => item.kind === 'mineCave' && distance(p, item) <= item.radius + 44)
+        .forEach(item => specials.push({ type: 'mineCave', item, d: distance(p, item) - 18 }));
     return [...resources, ...specials].sort((a, b) => a.d - b.d)[0] || null;
 }
 
@@ -7291,6 +10042,484 @@ function enterJungleRuin(ruin) {
     showToast('进入丛林遗迹。空气里有绿母祭坛留下的潮湿气味。');
 }
 
+function enterMineCave(cave) {
+    const underground = cave.underground || createUndergroundMine(cave);
+    cave.underground = underground;
+    state.underground = underground;
+    state.indoor = null;
+    state.openChest = null;
+    state.openIndoorContainer = null;
+    state.undergroundProjectiles = [];
+    state.player.x = underground.entryX;
+    state.player.y = underground.entryY;
+    camera.x = 0;
+    camera.y = 0;
+    showToast(cave.warned ? '进入废弃矿洞。' : '进入废弃矿洞。洞里很暗，火把或夜视会更安全。');
+    cave.warned = true;
+}
+
+function enterMineCaveOldInterior(cave) {
+    const building = cave.interiorBuilding || createMineCaveInteriorBuilding(cave);
+    cave.interiorBuilding = building;
+    building.interiorObjects ||= createIndoorObjects(building.kind, building);
+    state.openChest = null;
+    state.openIndoorContainer = null;
+    state.indoorProjectiles = [];
+    state.indoor = {
+        building,
+        outsideX: cave.x - 82,
+        outsideY: cave.y + 84,
+        objects: building.interiorObjects,
+    };
+    state.player.x = VIEW.width / 2;
+    state.player.y = VIEW.height - 170;
+    camera.x = 0;
+    camera.y = 0;
+    showToast(cave.warned ? '进入废弃矿洞。' : '进入废弃矿洞。洞里很暗，火把或夜视会更安全。');
+    cave.warned = true;
+}
+
+function leaveUnderground() {
+    const underground = state.underground;
+    if (!underground) return;
+    state.undergroundProjectiles = [];
+    state.underground = null;
+    const safe = safeOutdoorPointNear({ x: underground.exitWorldX, y: underground.exitWorldY }, { x: underground.exitWorldX, y: underground.exitWorldY }, 280);
+    state.player.x = safe.x;
+    state.player.y = safe.y;
+    showToast('离开矿洞。');
+}
+
+function interactUnderground() {
+    const target = nearestUndergroundInteractable();
+    if (!target) {
+        showToast('靠近矿洞出口、资源或箱子后按 E。');
+        return;
+    }
+    if (target.type === 'exit') leaveUnderground();
+    else if (target.type === 'resource') beginHarvest(target.item);
+    else if (target.type === 'chest') openUndergroundChest(target.item);
+    else if (target.type === 'collapse') clearUndergroundCollapse(target.item);
+    else if (target.type === 'feature') interactUndergroundFeature(target.item);
+}
+
+function undergroundPromptText(target = nearestUndergroundInteractable()) {
+    if (!target) return '';
+    if (target.type === 'exit') return '按 E 离开矿洞';
+    if (target.type === 'resource') return `长按 E 采集：${resourceName(target.item.kind)}`;
+    if (target.type === 'chest') return `按 E 打开：${target.item.label}`;
+    if (target.type === 'collapse') return `按 E 清理：${target.item.label}`;
+    if (target.type === 'feature') return `按 E 查看：${target.item.label}`;
+    return '按 E 互动';
+}
+
+function interactUndergroundFeature(object) {
+    if (object.kind === 'abandonedCamp') {
+        if (!object.searched) {
+            object.searched = true;
+            grantItems({ torch: 1, bandage: 1, coal: 2 });
+            showToast('翻找矿工遗物，获得火把、绷带和煤。');
+        } else showToast('矿工遗物已经被翻过了。');
+    } else if (object.kind === 'batNest') {
+        object.disturbed = true;
+        showToast('矿蝠巢里传出尖叫声。攻击它会惊动里面的矿蝠。');
+        spawnBurst(object.x, object.y, '#66737f', 12, 160, 28);
+    } else if (object.kind === 'crystalEggs') {
+        showToast('晶虫卵簇发出细小的裂响，最好别久留。');
+        spawnBurst(object.x, object.y, '#b77dff', 10, 120, 24);
+    }
+    renderHud();
+}
+
+function createMineCaveInteriorBuilding(cave) {
+    return {
+        kind: 'mineCaveInterior',
+        label: '废弃矿洞',
+        x: cave.x,
+        y: cave.y,
+        doorX: cave.x - 82,
+        doorY: cave.y + 84,
+        outsideX: cave.x - 82,
+        outsideY: cave.y + 84,
+        village: activeAdvancedVillage || state.village,
+        cave,
+    };
+}
+
+function createUndergroundMine(cave) {
+    const seed = Math.floor((cave.x * 13.17 + cave.y * 7.91 + worldSeed) % 100000);
+    const underground = {
+        kind: 'mineCave',
+        width: 3200,
+        height: 2300,
+        entryX: 220,
+        entryY: 1570,
+        exitX: 180,
+        exitY: 1600,
+        exitWorldX: cave.x - 82,
+        exitWorldY: cave.y + 84,
+        cave,
+        rooms: [],
+        tunnels: [],
+        resources: [],
+        enemies: [],
+        objects: [],
+        seed,
+        nextSpawnAt: 0,
+    };
+    createUndergroundLayout(underground);
+    createUndergroundFeatures(underground);
+    const entryRoom = underground.rooms.find(room => room.id === 'entry');
+    const bossRoom = underground.rooms.find(room => room.type === 'boss') || underground.rooms[underground.rooms.length - 1];
+    const coalRoom = underground.rooms.find(room => room.type === 'coal') || underground.rooms[1] || entryRoom;
+    const gateTunnel = underground.tunnels.find(tunnel => tunnel.deepGate) || underground.tunnels[Math.floor(underground.tunnels.length * 0.52)];
+    underground.entryX = entryRoom.x - entryRoom.w * 0.28;
+    underground.entryY = entryRoom.y + entryRoom.h * 0.28;
+    underground.exitX = entryRoom.x - entryRoom.w * 0.38;
+    underground.exitY = entryRoom.y + entryRoom.h * 0.36;
+    underground.objects.push(
+        { kind: 'exit', label: '矿洞出口', x: underground.exitX, y: underground.exitY, radius: 48 },
+        { kind: 'mineChest', label: '旧矿工箱', x: coalRoom.x, y: coalRoom.y + 34, radius: 30, storage: randomContainerLoot('mineCave', null) },
+        { kind: 'mineChest', label: '深层矿箱', x: bossRoom.x + bossRoom.w * 0.22, y: bossRoom.y - bossRoom.h * 0.16, radius: 34, storage: randomContainerLoot('mineCaveDeep', null), lockedByBoss: true },
+        createUndergroundCollapse(gateTunnel)
+    );
+    createUndergroundResources(underground);
+    createUndergroundEnemies(underground);
+    normalizeUndergroundPlacements(underground);
+    return underground;
+}
+
+function createUndergroundFeatures(underground) {
+    underground.rooms.forEach((room, index) => {
+        const r = salt => seededUnit(underground.seed + index * 23.7, salt);
+        if (room.type === 'crystal' || room.type === 'boss' || r(1) > 0.68) {
+            const count = room.type === 'crystal' || room.type === 'boss' ? 3 : 1;
+            for (let i = 0; i < count; i++) underground.resources.push(createWallCrystalFeature(underground, room, index * 5 + i));
+        }
+        if (room.type === 'coal' && r(2) > 0.45) underground.objects.push(createRoomFeature(room, 'railTracks', '断裂矿轨'));
+        if (room.type === 'stone' && r(3) > 0.4) underground.objects.push(createRoomFeature(room, 'abandonedCamp', '矿工遗物'));
+        if (room.type === 'crystal' && r(4) > 0.35) underground.objects.push(createRoomFeature(room, 'crystalEggs', '晶虫卵簇'));
+        if (room.branch && r(5) > 0.5) underground.objects.push({ ...createRoomFeature(room, 'batNest', '矿蝠巢'), hp: 18, maxHp: 18 });
+    });
+}
+
+function createWallCrystalFeature(underground, room, index) {
+    const r = salt => seededUnit(underground.seed + index * 31.1 + room.x, salt);
+    const side = Math.floor(r(1) * 4);
+    const inset = 18;
+    const xSpan = room.w / 2 - 42;
+    const ySpan = room.h / 2 - 42;
+    const point = side === 0 ? { x: room.x + (r(2) - 0.5) * xSpan * 2, y: room.y - room.h / 2 + inset }
+        : side === 1 ? { x: room.x + room.w / 2 - inset, y: room.y + (r(3) - 0.5) * ySpan * 2 }
+            : side === 2 ? { x: room.x + (r(4) - 0.5) * xSpan * 2, y: room.y + room.h / 2 - inset }
+                : { x: room.x - room.w / 2 + inset, y: room.y + (r(5) - 0.5) * ySpan * 2 };
+    return { kind: 'wallCrystal', label: '发光晶簇', x: point.x, y: point.y, gives: 'crystal', amount: 1, hp: 7, maxHp: 7, radius: 18, undergroundResource: true, wallCrystal: true, glowRadius: room.type === 'boss' ? 190 : 145, color: r(6) > 0.5 ? '#b77dff' : '#7dcbe8', wallSide: side };
+}
+
+function createRoomFeature(room, kind, label) {
+    return { kind, label, x: room.x + room.w * 0.18, y: room.y + room.h * 0.22, radius: 28 };
+}
+
+function createUndergroundLayout(underground) {
+    const rand = salt => seededUnit(underground.seed, salt);
+    const roomCount = 7 + Math.floor(rand(1) * 5);
+    const entry = { id: 'entry', type: 'entry', x: 260 + rand(2) * 160, y: underground.height - 300 - rand(3) * 160, w: 320 + rand(4) * 120, h: 240 + rand(5) * 100, depth: 0 };
+    underground.rooms = [entry];
+    const types = ['coal', 'iron', 'stone', 'iron', 'cross', 'coal', 'crystal', 'bone'];
+    for (let i = 1; i < roomCount; i++) {
+        const progress = i / (roomCount - 1);
+        const type = i === roomCount - 1 ? 'boss' : (progress > 0.62 && rand(40 + i) > 0.45 ? 'crystal' : types[Math.floor(rand(20 + i) * types.length) % types.length]);
+        const w = (type === 'boss' ? 390 : 280) + rand(60 + i) * (type === 'boss' ? 160 : 170);
+        const h = (type === 'boss' ? 280 : 210) + rand(80 + i) * (type === 'boss' ? 130 : 130);
+        const parent = chooseUndergroundRoomParent(underground, i, rand, type);
+        const room = createSeparatedUndergroundRoom(underground, `${type}-${i}`, type, parent, w, h, i, rand);
+        if (!room) continue;
+        underground.rooms.push(room);
+        underground.tunnels.push(createUndergroundTunnel(parent, room, 90 + rand(160 + i) * 54));
+        if (i > 1 && rand(190 + i) > 0.28) {
+            const branchType = rand(210 + i) > 0.65 ? 'bone' : (rand(220 + i) > 0.5 ? 'coal' : 'stone');
+            const bw = 240 + rand(230 + i) * 120;
+            const bh = 180 + rand(240 + i) * 100;
+            const branch = createSeparatedUndergroundRoom(underground, `${branchType}-branch-${i}`, branchType, room, bw, bh, i + 0.4, rand, true);
+            if (!branch) continue;
+            underground.rooms.push(branch);
+            underground.tunnels.push({ ...createUndergroundTunnel(room, branch, 78 + rand(280 + i) * 34), branch: true });
+        }
+        if (i > 3 && rand(310 + i) > 0.84) {
+            const earlier = underground.rooms[Math.max(1, Math.floor(rand(320 + i) * (underground.rooms.length - 2)))];
+            if (earlier && earlier !== room) underground.tunnels.push({ ...createUndergroundTunnel(earlier, room, 70 + rand(330 + i) * 32), branch: true, loop: true });
+        }
+    }
+    if (!underground.rooms.some(room => room.type === 'boss')) {
+        const parent = underground.rooms[underground.rooms.length - 1] || entry;
+        const bossRoom = createSeparatedUndergroundRoom(underground, `boss-${roomCount}`, 'boss', parent, 440, 320, roomCount, rand);
+        if (bossRoom) {
+            underground.rooms.push(bossRoom);
+            underground.tunnels.push(createUndergroundTunnel(parent, bossRoom, 126));
+        }
+    }
+    const candidates = underground.tunnels
+        .map((tunnel, index) => ({ tunnel, index, score: seededUnit(underground.seed + 600, index) }))
+        .filter(item => item.index > 0 && !item.tunnel.branch)
+        .sort((a, b) => b.score - a.score);
+    const gateIndex = candidates[0]?.index ?? Math.max(1, Math.floor(underground.tunnels.length * 0.52));
+    underground.tunnels[gateIndex].deepGate = true;
+}
+
+function chooseUndergroundRoomParent(underground, index, rand, type) {
+    if (type === 'boss') {
+        const deepRooms = underground.rooms.filter(room => room.depth >= Math.max(1, index - 3));
+        return deepRooms[Math.floor(rand(88 + index) * deepRooms.length) % deepRooms.length] || underground.rooms[underground.rooms.length - 1];
+    }
+    const candidates = underground.rooms.filter(room => !room.branch || rand(70 + index + room.depth) > 0.55);
+    return candidates[Math.floor(rand(90 + index) * candidates.length) % candidates.length] || underground.rooms[0];
+}
+
+function createSeparatedUndergroundRoom(underground, id, type, fromRoom, w, h, depth, rand, branch = false) {
+    for (let attempt = 0; attempt < 18; attempt++) {
+        const angleBias = branch ? rand(250 + depth + attempt) * Math.PI * 2 : (-Math.PI / 2 + (rand(251 + depth + attempt) - 0.5) * Math.PI * 1.45);
+        const distance = branch ? 380 + rand(260 + attempt + depth) * 420 : 430 + rand(100 + attempt + depth) * 560;
+        const drift = branch ? 0 : (rand(130 + attempt + depth) - 0.5) * 220;
+        const x = clamp(fromRoom.x + Math.cos(angleBias) * distance + Math.cos(angleBias + Math.PI / 2) * drift, w / 2 + 90, underground.width - w / 2 - 90);
+        const y = clamp(fromRoom.y + Math.sin(angleBias) * distance + Math.sin(angleBias + Math.PI / 2) * drift, h / 2 + 90, underground.height - h / 2 - 90);
+        const room = { id, type, x, y, w, h, depth, branch };
+        if (!undergroundRoomOverlaps(underground, room, 90)) return room;
+    }
+    return null;
+}
+
+function undergroundRoomOverlaps(underground, room, padding = 72) {
+    return underground.rooms.some(other => Math.abs(room.x - other.x) < (room.w + other.w) / 2 + padding
+        && Math.abs(room.y - other.y) < (room.h + other.h) / 2 + padding);
+}
+
+function createUndergroundCollapse(tunnel) {
+    return {
+        kind: 'collapse',
+        label: '深层塌方',
+        x: (tunnel.x1 + tunnel.x2) / 2,
+        y: (tunnel.y1 + tunnel.y2) / 2,
+        radius: 54,
+        w: Math.max(116, tunnel.width + 22),
+        h: 58,
+        angle: 0,
+        hp: 30,
+        maxHp: 30,
+        blocksDeep: true,
+    };
+}
+
+function createUndergroundTunnel(a, b, width = 112) {
+    return {
+        x1: a.x,
+        y1: a.y,
+        x2: b.x,
+        y2: b.y,
+        width,
+    };
+}
+
+function createUndergroundResources(underground) {
+    const add = (kind, label, x, y, gives, amount, hp, radius = 26, deep = false) => {
+        underground.resources.push({ kind, label, x, y, gives, amount, hp, maxHp: hp, radius, undergroundResource: true, deep });
+    };
+    underground.rooms.forEach((room, roomIndex) => {
+        const count = room.type === 'boss' ? 2 : (room.branch ? 1 + Math.floor(seededUnit(underground.seed + roomIndex, 71) * 2) : 2 + Math.floor(seededUnit(underground.seed + roomIndex, 72) * 3));
+        for (let i = 0; i < count; i++) {
+            const spec = undergroundResourceSpecForRoom(room, underground.seed + roomIndex * 17 + i);
+            const point = randomNonOverlappingUndergroundPoint(underground, room.id, roomIndex * 7 + i, spec.radius, spec.radius + 34);
+            if (point) add(spec.kind, spec.label, point.x, point.y, spec.gives, spec.amount, spec.hp, spec.radius, room.depth > underground.rooms.length * 0.55 || room.type === 'crystal' || room.type === 'boss');
+        }
+    });
+}
+
+function undergroundResourceSpecForRoom(room, seed) {
+    const roll = seededUnit(seed, 3);
+    if (room.type === 'coal') return roll > 0.32 ? { kind: 'coalSeam', label: '煤块', gives: 'coal', amount: 4, hp: 6, radius: 24 } : { kind: 'stoneCluster', label: '碎石堆', gives: 'stone', amount: 4, hp: 5, radius: 24 };
+    if (room.type === 'iron') return roll > 0.25 ? { kind: 'ironVein', label: '铁矿石', gives: 'ore', amount: 4, hp: 7, radius: 26 } : { kind: 'coalSeam', label: '煤块', gives: 'coal', amount: 4, hp: 6, radius: 24 };
+    if (room.type === 'crystal') return roll > 0.72 ? { kind: 'fangGeode', label: '晶牙晶洞', gives: 'crystalFang', amount: 1, hp: 10, radius: 28 } : (roll > 0.22 ? { kind: 'crystalVein', label: '晶矿石', gives: 'crystal', amount: 2, hp: 9, radius: 27 } : { kind: 'ironVein', label: '铁矿石', gives: 'ore', amount: 5, hp: 7, radius: 26 });
+    if (room.type === 'boss') return roll > 0.72 ? { kind: 'mireCoreCluster', label: '泥核矿簇', gives: 'mireCore', amount: 1, hp: 13, radius: 30 } : (roll > 0.45 ? { kind: 'coreCluster', label: '石核簇', gives: 'stoneCore', amount: 1, hp: 12, radius: 30 } : { kind: 'crystalVein', label: '晶矿石', gives: 'crystal', amount: 3, hp: 10, radius: 28 });
+    if (room.type === 'bone') return roll > 0.55 ? { kind: 'shadowOreVein', label: '暗影矿痕', gives: 'shadowShard', amount: 1, hp: 9, radius: 26 } : { kind: 'boneDeposit', label: '骨矿堆', gives: 'boneShard', amount: 3, hp: 8, radius: 25 };
+    return roll > 0.55 ? { kind: 'ironVein', label: '铁矿石', gives: 'ore', amount: 3, hp: 7, radius: 25 } : { kind: 'stoneCluster', label: '碎石堆', gives: 'stone', amount: 5, hp: 5, radius: 24 };
+}
+
+function createUndergroundEnemies(underground) {
+    underground.rooms
+        .filter(room => room.type !== 'entry' && room.type !== 'boss')
+        .forEach((room, index) => {
+            if (seededUnit(underground.seed + index, 91) < 0.28) return;
+            const kind = room.type === 'crystal' ? 'crystalBug' : (room.type === 'stone' || room.type === 'bone' ? 'stoneCrawler' : (seededUnit(underground.seed + index, 92) > 0.55 ? 'mineBat' : 'crystalBug'));
+            const label = kind === 'mineBat' ? '矿蝠' : (kind === 'crystalBug' ? '晶壳虫' : '石核虫');
+            const point = randomPointInUndergroundRoom(underground, room.id, index, 52);
+            underground.enemies.push(mineCaveMonster(kind, label, point.x, point.y));
+    });
+    const bossRoom = underground.rooms.find(room => room.type === 'boss') || underground.rooms[underground.rooms.length - 1];
+    const bossPoint = randomPointInUndergroundRoom(underground, bossRoom.id, 99, 60);
+    const boss = mineCaveMonster('stoneCrawler', '晶核守卫', bossPoint.x, bossPoint.y);
+    boss.boss = true;
+    boss.hp = 120;
+    boss.maxHp = 120;
+    boss.attack = 7;
+    boss.radius = 30;
+    underground.enemies.push(boss);
+}
+
+function randomPointInUndergroundRoom(underground, roomId, index, inset = 40) {
+    const room = underground.rooms.find(item => item.id === roomId) || underground.rooms[0];
+    const r = salt => seededUnit(underground.seed + index * 17.19, salt);
+    return {
+        x: room.x + (r(1) - 0.5) * Math.max(20, room.w - inset * 2),
+        y: room.y + (r(2) - 0.5) * Math.max(20, room.h - inset * 2),
+    };
+}
+
+function randomNonOverlappingUndergroundPoint(underground, roomId, index, radius, inset = 40) {
+    const previous = state.underground;
+    state.underground = underground;
+    for (let attempt = 0; attempt < 24; attempt++) {
+        const point = randomPointInUndergroundRoom(underground, roomId, index + attempt * 97, inset);
+        const probe = { x: point.x, y: point.y, radius };
+        if (!undergroundWalkableCircle({ ...probe, radius: radius + 4 })) continue;
+        if (undergroundPlacementOverlaps(underground, probe)) continue;
+        state.underground = previous;
+        return point;
+    }
+    state.underground = previous;
+    return null;
+}
+
+function undergroundPlacementOverlaps(underground, probe) {
+    for (const resource of underground.resources || []) {
+        if (resource.hp <= 0) continue;
+        if (undergroundResourceCollidesEntity(resource, probe)) return true;
+    }
+    for (const object of underground.objects || []) {
+        if (object.kind === 'exit') continue;
+        if (distance(probe, object) < probe.radius + (object.radius || 28) + 26) return true;
+    }
+    for (const enemy of underground.enemies || []) {
+        if (enemy === probe.source) continue;
+        if (distance(probe, enemy) < probe.radius + (enemy.radius || 18) + 24) return true;
+    }
+    return false;
+}
+
+function normalizeUndergroundPlacements(underground) {
+    const previous = state.underground;
+    state.underground = underground;
+    for (const resource of underground.resources || []) {
+        const point = nearestUndergroundWalkablePoint(resource, resource.radius + 6, 520, probe => !undergroundPlacementOverlaps(underground, probe) || distance(probe, resource) < 1);
+        resource.x = point.x;
+        resource.y = point.y;
+    }
+    for (const enemy of underground.enemies || []) {
+        const point = nearestUndergroundWalkablePoint(enemy, enemy.radius + 6, 620, probe => !undergroundPlacementOverlaps(underground, { ...probe, source: enemy }));
+        enemy.x = point.x;
+        enemy.y = point.y;
+        enemy.homeX = point.x;
+        enemy.homeY = point.y;
+        enemy.targetX = point.x;
+        enemy.targetY = point.y;
+    }
+    for (const object of underground.objects || []) {
+        if (!['mineChest', 'collapse'].includes(object.kind)) continue;
+        const point = nearestUndergroundWalkablePoint(object, (object.radius || 28) + 8, 520, probe => !undergroundPlacementOverlaps(underground, probe) || distance(probe, object) < 1);
+        object.x = point.x;
+        object.y = point.y;
+    }
+    state.underground = previous;
+}
+
+function nearestUndergroundWalkablePoint(preferred, radius = 18, searchRadius = 520, accepts = null) {
+    const initial = { x: preferred.x, y: preferred.y, radius };
+    if (undergroundWalkableCircle(initial) && (!accepts || accepts(initial))) return { x: preferred.x, y: preferred.y };
+    let best = null;
+    let bestScore = Infinity;
+    for (let r = 24; r <= searchRadius; r += 24) {
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 10) {
+            const candidate = { x: preferred.x + Math.cos(a) * r, y: preferred.y + Math.sin(a) * r, radius };
+            if (!undergroundWalkableCircle(candidate)) continue;
+            if (accepts && !accepts(candidate)) continue;
+            const score = distance(candidate, preferred);
+            if (score < bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        if (best) return { x: best.x, y: best.y };
+    }
+    const room = state.underground?.rooms?.[0] || { x: 220, y: 1570 };
+    return { x: room.x, y: room.y };
+}
+
+function nearestUndergroundInteractable() {
+    const ug = state.underground;
+    if (!ug) return null;
+    const p = state.player;
+    const options = [];
+    if (distance(p, { x: ug.exitX, y: ug.exitY }) <= 72) options.push({ type: 'exit', d: distance(p, { x: ug.exitX, y: ug.exitY }) });
+    for (const object of ug.objects || []) {
+        if (object.kind === 'mineChest' && distance(p, object) <= object.radius + p.radius + 20) options.push({ type: 'chest', item: object, d: distance(p, object) });
+        if (object.kind === 'collapse' && object.hp > 0 && distance(p, object) <= object.radius + p.radius + 20) options.push({ type: 'collapse', item: object, d: distance(p, object) });
+        if (['abandonedCamp', 'batNest', 'crystalEggs'].includes(object.kind) && distance(p, object) <= object.radius + p.radius + 18) options.push({ type: 'feature', item: object, d: distance(p, object) });
+    }
+    for (const resource of ug.resources || []) {
+        if (resource.hp > 0 && distance(p, resource) <= resource.radius + p.radius + 24) options.push({ type: 'resource', item: resource, d: distance(p, resource) });
+    }
+    return options.sort((a, b) => a.d - b.d)[0] || null;
+}
+
+function summonMineBatsFromNest(nest, count = 2) {
+    if (!state.underground) return;
+    for (let i = 0; i < count; i++) {
+        const angle = (i / Math.max(1, count)) * Math.PI * 2 + seededUnit(nest.x + i, nest.y) * 0.7;
+        const point = nearestUndergroundWalkablePoint({
+            x: nest.x + Math.cos(angle) * (42 + i * 12),
+            y: nest.y + Math.sin(angle) * (42 + i * 12),
+        }, 20, 180, probe => !undergroundPlacementOverlaps(state.underground, probe));
+        const bat = mineCaveMonster('mineBat', '矿蝠', point.x, point.y);
+        bat.targetX = state.player.x;
+        bat.targetY = state.player.y;
+        state.underground.enemies.push(bat);
+    }
+}
+
+function clearUndergroundCollapse(collapse) {
+    const pickaxe = selectedHotbarItem();
+    if (!isMiningPickaxe(pickaxe)) {
+        showToast('塌方需要手持镐清理。');
+        addFloatText('需要镐', collapse.x, collapse.y - 42, '#ffb3b3');
+        return;
+    }
+    collapse.hp = Math.max(0, collapse.hp - (pickaxe === 'ironPickaxe' ? 8 : 5));
+    damageItemDurability(pickaxe, pickaxe === 'ironPickaxe' ? 1 : 2);
+    spawnBurst(collapse.x, collapse.y, '#8c98a4', 12, 120, 34);
+    if (collapse.hp <= 0) {
+        addInventoryItem('stone', 4);
+        showToast('塌方被清开，深层矿道露出来了。');
+    } else {
+        showToast(`清理塌方，还剩 ${Math.ceil(collapse.hp)}/${collapse.maxHp}。`);
+    }
+    renderHud();
+}
+
+function openUndergroundChest(chest) {
+    if (chest.lockedByBoss && state.underground?.enemies?.some(enemy => enemy.boss && enemy.hp > 0)) {
+        showToast('晶核守卫还在守着深层矿箱。');
+        return;
+    }
+    state.openChest = null;
+    state.openIndoorContainer = {
+        storage: chest.storage,
+        villageOwned: false,
+        ruinOwned: true,
+        ownerObject: chest,
+        label: chest.label,
+    };
+    toggleInventory(true);
+    showToast(`打开${chest.label}。`);
+}
+
 function createJungleRuinInteriorBuilding(ruin) {
     return {
         kind: 'jungleRuinInterior',
@@ -7307,6 +10536,10 @@ function createJungleRuinInteriorBuilding(ruin) {
 }
 
 function enterVillageHouse(building) {
+    if (building.destroyed) {
+        showToast(`${building.label}已经变成废墟，无法进入。`);
+        return;
+    }
     if (isVillageHouseLocked(building)) {
         showToast(`${building.label} 夜里上锁了，等天亮村民出门后再来。`);
         return;
@@ -7347,8 +10580,9 @@ function sanitizeBuildingInteriorObjects(building) {
         if (!object.playerAggro) return false;
         object.outside = true;
         object.returningHome = true;
-        object.x = object.homeBuilding.doorX;
-        object.y = object.homeBuilding.doorY + 46;
+        const exitPoint = villageHouseExitPoint(object.homeBuilding);
+        object.x = exitPoint.x;
+        object.y = exitPoint.y;
         if (!state.outdoorVillagers.includes(object)) state.outdoorVillagers.push(object);
         return false;
     });
@@ -7386,10 +10620,50 @@ function nearestSafeHouseExitPoint(base, building, away) {
         { x: base.x + away.y * 54, y: base.y - away.x * 54 },
     ];
     for (const candidate of candidates) {
-        const point = { x: snapToGroundGrid(candidate.x), y: snapToGroundGrid(candidate.y), radius: state.player?.radius || 17 };
-        if (!collides(point)) return point;
+        const safe = safeOutdoorPointNear(candidate, { x: building.doorX, y: building.doorY }, 180);
+        if (safe) return safe;
     }
-    return { x: snapToGroundGrid(building.doorX + away.x * 150), y: snapToGroundGrid(building.doorY + away.y * 150) };
+    return safeOutdoorPointNear({ x: building.doorX + away.x * 150, y: building.doorY + away.y * 150 }, { x: building.doorX, y: building.doorY }, 240);
+}
+
+function safeOutdoorPointNear(preferred, origin = preferred, searchRadius = 220) {
+    const radius = state?.player?.radius || 17;
+    const candidates = [{ x: preferred.x, y: preferred.y }];
+    for (let r = 28; r <= searchRadius; r += 28) {
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+            candidates.push({ x: origin.x + Math.cos(a) * r, y: origin.y + Math.sin(a) * r });
+        }
+    }
+    let best = null;
+    let bestScore = Infinity;
+    for (const candidate of candidates) {
+        const point = {
+            x: snapToGroundGrid(clamp(candidate.x, radius + 8, WORLD.width - radius - 8)),
+            y: snapToGroundGrid(clamp(candidate.y, radius + 8, WORLD.height - radius - 8)),
+            radius,
+        };
+        if (!isSafeOutdoorPoint(point)) continue;
+        const score = distance(point, preferred) + distance(point, origin) * 0.18;
+        if (score < bestScore) {
+            best = point;
+            bestScore = score;
+        }
+    }
+    return best || { x: snapToGroundGrid(clamp(preferred.x, radius + 8, WORLD.width - radius - 8)), y: snapToGroundGrid(clamp(preferred.y, radius + 8, WORLD.height - radius - 8)), radius };
+}
+
+function isSafeOutdoorPoint(point) {
+    const terrain = terrainInfoAt(point.x, point.y).kind;
+    if (terrain === 'water') return false;
+    return !collides(point);
+}
+
+function ensurePlayerSafeOutdoorPosition(searchRadius = 260) {
+    if (!state || state.indoor) return;
+    const preferred = { x: state.player.x, y: state.player.y };
+    const safe = safeOutdoorPointNear(preferred, preferred, searchRadius);
+    state.player.x = safe.x;
+    state.player.y = safe.y;
 }
 
 function leaveVillageHouse() {
@@ -7397,17 +10671,19 @@ function leaveVillageHouse() {
     if (!indoor) return;
     state.openIndoorContainer = null;
     state.indoorProjectiles = [];
-    if (indoor.building.kind !== 'jungleRuinInterior') sendIndoorPursuersOutside(indoor);
-    const exitPoint = indoor.building.kind === 'jungleRuinInterior'
+    if (!['jungleRuinInterior', 'mineCaveInterior'].includes(indoor.building.kind)) sendIndoorPursuersOutside(indoor);
+    const exitPoint = indoor.building.kind === 'jungleRuinInterior' || indoor.building.kind === 'mineCaveInterior'
         ? { x: indoor.outsideX, y: indoor.outsideY }
         : villageHouseExitPoint(indoor.building);
-    state.player.x = exitPoint.x;
-    state.player.y = exitPoint.y;
+    const safeExit = safeOutdoorPointNear(exitPoint, exitPoint, 260);
+    state.player.x = safeExit.x;
+    state.player.y = safeExit.y;
     state.indoor = null;
-    showToast('离开房屋。');
+    showToast(indoor.building.kind === 'mineCaveInterior' ? '离开矿洞。' : (indoor.building.kind === 'jungleRuinInterior' ? '离开遗迹。' : '离开房屋。'));
 }
 
 function bringOutdoorPursuersIntoHouse(building) {
+    if (building.destroyed) return;
     for (const npc of state.outdoorVillagers.filter(item => item.homeBuilding === building && item.hp > 0 && item.playerAggro)) {
         const doorDistance = distance(npc, { x: building.doorX, y: building.doorY });
         if (doorDistance <= 74) {
@@ -7425,7 +10701,7 @@ function bringOutdoorPursuersIntoHouse(building) {
 function updatePendingVillagerEntries(now) {
     if (!state.indoor || !state.pendingVillagerEntries?.length) return;
     for (const entry of state.pendingVillagerEntries) {
-        if (entry.building !== state.indoor.building || entry.npc.hp <= 0 || !entry.npc.outside || !entry.npc.playerAggro) {
+        if (entry.building.destroyed || entry.building !== state.indoor.building || entry.npc.hp <= 0 || !entry.npc.outside || !entry.npc.playerAggro) {
             entry.done = true;
             continue;
         }
@@ -7438,6 +10714,7 @@ function updatePendingVillagerEntries(now) {
 
 function enterPursuingVillager(npc, building) {
     if (!state.indoor || state.indoor.building !== building) return false;
+    if (building.destroyed) return false;
     if (!npc.playerAggro) return false;
     removeFromOutdoorVillagers(npc);
     npc.outside = false;
@@ -7463,8 +10740,9 @@ function sendIndoorPursuersOutside(indoor) {
             npc.outside = true;
             npc.returnedHome = false;
             npc.homeBuilding = building;
-            npc.x = building.doorX;
-            npc.y = building.doorY + 46;
+            const exitPoint = villageHouseExitPoint(building);
+            npc.x = exitPoint.x;
+            npc.y = exitPoint.y;
             setOutdoorVillagerDoorExitTarget(npc, building);
             npc.returningHome = false;
             if (!state.outdoorVillagers.includes(npc)) state.outdoorVillagers.push(npc);
@@ -7512,6 +10790,19 @@ function createIndoorObjects(kind, building = null) {
             moduleAt(622, 108, { kind: 'ruinRelicBox', label: '守卫遗物箱', solid: true, action: 'steal', loot: randomContainerLoot('jungleRuinGear', building), stolen: false, ruinOwned: true, mark: 'guard' }),
             { kind: 'ruinStatue', label: '根缠石像', x: 448, y: 332, w: 86, h: 72, solid: true, action: 'jungleRuinClue' },
         ],
+        mineCaveInterior: [
+            { kind: 'door', label: '矿洞出口', x: VIEW.width / 2, y: VIEW.height - 42, w: 118, h: 30, solid: true, action: 'leave' },
+            { kind: 'mineCart', label: '废弃矿车', x: 196, y: 220, w: 84, h: 54, solid: true, action: 'steal', loot: randomContainerLoot('mineCave', building), stolen: false, ruinOwned: true, mark: 'ore' },
+            { kind: 'mineSupport', label: '旧木支架', x: 322, y: 168, w: 108, h: 92, solid: true, action: 'takeTrinket', storage: { wood: 3, fiber: 2, torch: 1 }, taken: false },
+            { kind: 'mineSupport', label: '断裂支架', x: 702, y: 520, w: 116, h: 86, solid: true, action: 'takeTrinket', storage: { wood: 2, fiber: 1 }, taken: false },
+            { kind: 'mineCollapse', label: '塌方碎石', x: 456, y: 390, w: 148, h: 60, solid: true, action: 'mineCollapse', hp: 22, maxHp: 22 },
+            createMineCaveResource('mineVein', '铁矿脉', 760, 226, { ore: 5, coal: 3 }),
+            createMineCaveResource('mineVein', '煤矿脉', 206, 498, { coal: 6, stone: 4 }),
+            createMineCaveResource('mineCrystalVein', '晶矿脉', 812, 438, { crystal: 2, stoneCore: 1 }),
+            { kind: 'totem', label: '晶核守卫', x: VIEW.width / 2 + 92, y: 238, w: 70, h: 84, radius: 30, hp: 95, maxHp: 95, solid: true, action: 'totem', mineBoss: true },
+            { kind: 'mineRelicBox', label: '深处矿箱', x: VIEW.width / 2 + 228, y: 164, w: 76, h: 52, solid: true, action: 'steal', loot: randomContainerLoot('mineCaveDeep', building), stolen: false, ruinOwned: true, mark: 'ore' },
+            ...createMineCaveDynamicObjects(),
+        ],
         blacksmith: [
             moduleAt(224, 104, { kind: 'forge', label: '熔炉', solid: true, action: 'forge' }),
             moduleAt(328, 160, { kind: 'rack', label: '武器架', solid: true, action: 'weaponRack', storage: { simpleArrow: 6 }, taken: false }),
@@ -7551,6 +10842,42 @@ function createIndoorObjects(kind, building = null) {
             moduleAt(476, 104, { kind: 'shopShelf', label: '钱币架', solid: true, action: 'takeTrinket', storage: { copperCoin: 6 }, taken: false }),
             { kind: 'npc', role: 'merchant', label: '商人', x: 352, y: 294, homeX: 352, homeY: 294, w: 34, h: 46, radius: 17, hp: 70, maxHp: 70, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
             { kind: 'crate', label: '钱箱', x: 704, y: 350, w: 58, h: 40, solid: true, action: 'steal', loot: randomContainerLoot('shop', building), stolen: false, mark: 'shop' },
+        ],
+        carpenter: [
+            moduleAt(220, 132, { kind: 'workbenchModule', label: '木工台', solid: true, action: 'workbench' }),
+            moduleAt(350, 132, { kind: 'woodRack', label: '木料架', solid: true, action: 'takeTrinket', storage: { wood: 5, fiber: 3, resin: 1, repairKit: 1 }, taken: false }),
+            { kind: 'npc', role: 'carpenter', label: '木匠', x: 330, y: 280, homeX: 330, homeY: 280, w: 34, h: 46, radius: 17, hp: 78, maxHp: 78, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'crate', label: '木匠箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('carpenter', building), stolen: false, mark: 'wood' },
+        ],
+        hunter: [
+            moduleAt(196, 118, { kind: 'hunterTrophy', label: '鹿角战利品', solid: true, action: 'takeTrinket', storage: { antler: 1, hide: 1 }, taken: false }),
+            moduleAt(318, 132, { kind: 'rack', label: '猎弓架', solid: true, action: 'takeTrinket', storage: { simpleArrow: 10, beeDart: 1 }, taken: false }),
+            moduleAt(458, 120, { kind: 'hideRack', label: '兽皮架', solid: true, action: 'takeTrinket', storage: { hide: 2, meat: 2, sinew: 1, jerky: 1 }, taken: false }),
+            { kind: 'targetDummy', label: '练箭靶', x: 220, y: 374, w: 48, h: 58, solid: true },
+            { kind: 'trapBasket', label: '陷阱篮', x: 470, y: 362, w: 58, h: 38, solid: true, action: 'takeTrinket', storage: { snare: 1, fiber: 3 }, taken: false },
+            { kind: 'npc', role: 'hunter', label: '猎户', x: 330, y: 280, homeX: 330, homeY: 280, w: 34, h: 46, radius: 17, hp: 76, maxHp: 76, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'crate', label: '猎户箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('hunter', building), stolen: false, mark: 'guard' },
+        ],
+        outerHunter: [
+            moduleAt(190, 130, { kind: 'trapRack', label: '外巡陷阱架', solid: true, action: 'takeTrinket', storage: { snare: 2, fiber: 4, beeDart: 1 }, taken: false }),
+            moduleAt(330, 126, { kind: 'rack', label: '外巡弓架', solid: true, action: 'takeTrinket', storage: { simpleArrow: 16, snare: 1, beeDart: 2 }, taken: false }),
+            moduleAt(466, 112, { kind: 'hideRack', label: '野兽皮架', solid: true, action: 'takeTrinket', storage: { hide: 3, jerky: 2, meat: 1, sinew: 1 }, taken: false }),
+            { kind: 'targetDummy', label: '远射箭靶', x: 210, y: 384, w: 50, h: 62, solid: true },
+            { kind: 'trapBasket', label: '伪装陷阱篮', x: 492, y: 370, w: 62, h: 40, solid: true, action: 'takeTrinket', storage: { snare: 1, simpleArrow: 6 }, taken: false },
+            { kind: 'npc', role: 'hunter', label: '外巡猎户', x: 330, y: 280, homeX: 330, homeY: 280, w: 34, h: 46, radius: 17, hp: 82, maxHp: 82, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'crate', label: '外巡猎箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('outerHunter', building), stolen: false, mark: 'guard' },
+        ],
+        miner: [
+            moduleAt(220, 132, { kind: 'oreCrate', label: '矿样架', solid: true, action: 'takeTrinket', storage: { coal: 4, ore: 2, stone: 3 }, taken: false }),
+            moduleAt(350, 132, { kind: 'toolRack', label: '矿工工具架', solid: true, action: 'takeTrinket', storage: { torch: 2, stonePickaxe: 1, minerRation: 1 }, taken: false }),
+            { kind: 'npc', role: 'miner', label: '矿工', x: 330, y: 280, homeX: 330, homeY: 280, w: 34, h: 46, radius: 17, hp: 86, maxHp: 86, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'crate', label: '矿工箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('miner', building), stolen: false, mark: 'ore' },
+        ],
+        farmer: [
+            moduleAt(220, 132, { kind: 'basket', label: '菜篮', solid: true, action: 'takeTrinket', storage: { berry: 4, carrot: 3, tomato: 3, vegetableSoup: 1, herb: 2 }, taken: false }),
+            moduleAt(350, 132, { kind: 'grainRack', label: '晾粮架', solid: true, action: 'takeTrinket', storage: { corn: 4, fiber: 4, flower: 2, honey: 1 }, taken: false }),
+            { kind: 'npc', role: 'farmer', label: '农夫', x: 330, y: 286, homeX: 330, homeY: 286, w: 34, h: 46, radius: 17, hp: 66, maxHp: 66, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'foodCrate', label: '农夫箱', x: 720, y: 316, w: 64, h: 46, solid: true, action: 'steal', loot: randomContainerLoot('farmer', building), stolen: false, mark: 'food' },
         ],
         basicVillager: [
             moduleAt(246, 108, { kind: 'basket', label: '破篮子', solid: true, action: 'takeTrinket', storage: { berry: 2, fiber: 2 }, taken: false }),
@@ -7609,8 +10936,41 @@ function createIndoorObjects(kind, building = null) {
             { kind: 'npc', role: 'cultVillager', label: '献祭教徒', x: 330, y: 286, homeX: 330, homeY: 286, w: 34, h: 46, radius: 17, hp: 64, maxHp: 64, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
         ],
     };
-    const base = kind === 'jungleRuinInterior' ? [] : (['basicVillager', 'basicElder'].includes(kind) ? basicCommon : common);
-    return [...base, ...(byKind[kind] || [])];
+    const mineByKind = {
+        elder: [
+            moduleAt(214, 138, { kind: 'map', label: '矿脉图桌', solid: true, action: 'map' }),
+            moduleAt(360, 120, { kind: 'oreCrate', label: '矿权样本架', solid: true, action: 'takeTrinket', storage: { ore: 4, coal: 3, copperCoin: 6 }, taken: false }),
+            { kind: 'npc', role: 'elder', label: '矿头', x: 330, y: 276, homeX: 330, homeY: 276, w: 34, h: 46, radius: 17, hp: 118, maxHp: 118, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            moduleAt(488, 76, { kind: 'mineBellStand', label: '矿钟架', solid: true, action: 'elder' }),
+            { kind: 'chest', label: '矿头锁箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('elder', building), stolen: false, mark: 'elder' },
+        ],
+        miner: [
+            moduleAt(208, 128, { kind: 'oreCrate', label: '矿样架', solid: true, action: 'takeTrinket', storage: { coal: 5, ore: 4, stone: 4 }, taken: false }),
+            moduleAt(348, 132, { kind: 'toolRack', label: '矿镐灯架', solid: true, action: 'takeTrinket', storage: { torch: 2, stonePickaxe: 1, minerRation: 2 }, taken: false }),
+            { kind: 'npc', role: 'miner', label: '矿工', x: 330, y: 280, homeX: 330, homeY: 280, w: 34, h: 46, radius: 17, hp: 88, maxHp: 88, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'mineCart', label: '小矿车', x: 704, y: 340, w: 70, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('miner', building), stolen: false, mark: 'ore' },
+        ],
+        guard: [
+            moduleAt(212, 136, { kind: 'toolRack', label: '矿卫镐锤架', solid: true, action: 'takeTrinket', storage: { stonePickaxe: 1, coalBomb: 1, bandage: 2 }, taken: false }),
+            moduleAt(356, 126, { kind: 'guardSupplies', label: '煤弹补给', solid: true, action: 'takeTrinket', storage: { coalBomb: 2, simpleArrow: 6, ironSkinPotion: 1 }, taken: false }),
+            { kind: 'npc', role: 'guard', label: '矿卫', x: 330, y: 276, homeX: 330, homeY: 276, w: 34, h: 46, radius: 17, hp: 108, maxHp: 108, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'crate', label: '矿卫铁箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('guard', building), stolen: false, mark: 'guard' },
+        ],
+        blacksmith: [
+            moduleAt(204, 122, { kind: 'forge', label: '矿炉', solid: true, action: 'forge' }),
+            moduleAt(334, 130, { kind: 'oreCrate', label: '铁矿料架', solid: true, action: 'takeTrinket', storage: { ore: 5, coal: 4, ironwood: 1 }, taken: false }),
+            { kind: 'npc', role: 'blacksmith', label: '矿炉铁匠', x: 330, y: 276, homeX: 330, homeY: 276, w: 34, h: 46, radius: 17, hp: 90, maxHp: 90, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'crate', label: '锻造矿箱', x: 720, y: 316, w: 62, h: 44, solid: true, action: 'steal', loot: randomContainerLoot('ore', building), stolen: false, mark: 'ore' },
+        ],
+        kitchen: [
+            moduleAt(220, 112, { kind: 'hearth', label: '矿工火塘', solid: true, action: 'campfire' }),
+            moduleAt(350, 120, { kind: 'basket', label: '干粮架', solid: true, action: 'takeTrinket', storage: { minerRation: 3, mushroom: 2, roastMeat: 1 }, taken: false }),
+            { kind: 'npc', role: 'kitchen', label: '火塘厨子', x: 330, y: 276, homeX: 330, homeY: 276, w: 34, h: 46, radius: 17, hp: 76, maxHp: 76, solid: false, action: 'npc', mood: 'calm', nextWanderAt: 0 },
+            { kind: 'foodCrate', label: '矿工食箱', x: 720, y: 316, w: 64, h: 46, solid: true, action: 'steal', loot: randomContainerLoot('food', building), stolen: false },
+        ],
+    };
+    const base = ['jungleRuinInterior', 'mineCaveInterior'].includes(kind) ? [] : (['basicVillager', 'basicElder'].includes(kind) ? basicCommon : common);
+    return [...base, ...((isMineVillage(building?.village) && mineByKind[kind]) ? mineByKind[kind] : (byKind[kind] || []))];
 }
 
 function randomTrinketStorage(seedKey) {
@@ -7635,17 +10995,25 @@ function randomContainerLoot(profile, building = null) {
         food: [['meat', 1, 4], ['mushroom', 1, 4], ['berry', 2, 6], ['roastMeat', 1, 4], ['stew', 0, 2], ['mapleSnack', 0, 2], ['honeyRoastMeat', 0, 1]],
         guard: [['simpleArrow', 10, 22], ['poisonArrow', 0, 8], ['beeDart', 0, 4], ['bandage', 1, 4], ['stoneSpear', 0, 2], ['bambooSpear', 0, 1], ['sinewBow', 0, 1], ['antlerSpear', 0, 1], ['woodShield', 0, 1], ['ironSkinPotion', 0, 1], ['coalBomb', 0, 1]],
         shop: [['copperCoin', 4, 12], ['bandage', 1, 4], ['potion', 0, 2], ['simpleArrow', 4, 12], ['torch', 0, 2], ['slingshot', 0, 1], ['mapleSnack', 0, 2], ['antlerHorn', 0, 1]],
+        carpenter: [['wood', 6, 12], ['fiber', 3, 8], ['resin', 0, 3], ['repairKit', 1, 2], ['bambooFence', 0, 3], ['workbench', 0, 1], ['chest', 0, 1]],
+        hunter: [['simpleArrow', 8, 18], ['poisonArrow', 0, 5], ['beeDart', 0, 3], ['hide', 1, 3], ['meat', 1, 3], ['jerky', 1, 3], ['sinewBow', 0, 1]],
+        outerHunter: [['simpleArrow', 12, 24], ['beeDart', 1, 5], ['snare', 0, 2], ['hide', 2, 5], ['jerky', 2, 4], ['sinewBow', 0, 1], ['antlerHorn', 0, 1]],
+        miner: [['coal', 4, 9], ['ore', 3, 8], ['stone', 4, 10], ['torch', 1, 3], ['minerRation', 1, 3], ['stonePickaxe', 0, 1], ['ironPickaxe', 0, 1]],
+        farmer: [['berry', 3, 8], ['carrot', 2, 6], ['corn', 2, 6], ['tomato', 2, 6], ['mushroom', 2, 6], ['herb', 1, 4], ['flower', 1, 5], ['honey', 0, 2], ['vegetableSoup', 1, 2], ['stew', 0, 1]],
         basic: [['copperCoin', 0, 3], ['stone', 0, 5], ['fiber', 2, 7], ['wood', 1, 5], ['pebble', 0, 6], ['clothArmor', 0, 1], ['stoneSpear', 0, 1]],
         elder: [['copperCoin', 3, 8], ['crystal', 0, 2], ['antlerCharm', 0, 1], ['campCharm', 0, 1], ['speedPotion', 0, 1], ['nightVisionPotion', 0, 1], ['shadowLantern', 0, 1], ['bandage', 1, 3]],
         jungleRuin: [['vine', 6, 12], ['jungleLeaf', 6, 12], ['jungleFruit', 2, 6], ['toxicMushroom', 2, 5], ['herb', 2, 5], ['jungleSalve', 1, 3], ['poisonLeafWrap', 1, 2], ['vineStaminaDrink', 0, 2], ['vineRope', 1, 3], ['toxicVineGlue', 0, 2], ['jungleTotem', 0, 1], ['recipeNoteWorkbench', 0, 1], ['recipeNoteApothecary', 0, 1]],
         jungleRuinGear: [['buttressWood', 2, 5], ['buttressPlate', 0, 2], ['crystal', 1, 3], ['venom', 2, 5], ['beeDart', 2, 8], ['poisonArrow', 4, 12], ['vineNetTrap', 0, 2], ['poisonBambooTrap', 0, 2], ['poisonVineBlowpipe', 0, 1], ['vineBambooCrossbow', 0, 1], ['vineRoundShield', 0, 1], ['buttressShield', 0, 1], ['jungleLeafCloak', 0, 1], ['toxicMask', 0, 1], ['greenMotherRootStaff', 0, 1], ['recipeNoteGuard', 0, 1], ['recipeNoteElder', 0, 1]],
+        mineCave: [['stone', 6, 14], ['ore', 4, 9], ['coal', 4, 10], ['crystal', 0, 2], ['pebble', 4, 10], ['torch', 1, 3], ['waxTorch', 0, 1], ['simpleArrow', 4, 12], ['bandage', 1, 3], ['strongBandage', 0, 1], ['stonePickaxe', 0, 1], ['ironPickaxe', 0, 1], ['ironAxe', 0, 1], ['ironSickle', 0, 1], ['minerLampHelmet', 0, 1], ['ironSkinPotion', 0, 1], ['recipeNoteBlacksmith', 0, 1]],
+        mineCaveDeep: [['ore', 8, 16], ['coal', 6, 14], ['crystal', 3, 7], ['stoneCore', 1, 3], ['crystalFang', 1, 3], ['boneShard', 3, 7], ['mireCore', 0, 2], ['shadowShard', 0, 2], ['ironSkinPotion', 1, 2], ['nightVisionPotion', 0, 1], ['minerLampHelmet', 0, 1], ['crystalLampHelmet', 0, 1], ['ironPickaxe', 0, 1], ['ironAxe', 0, 1], ['ironSickle', 0, 1], ['ironShield', 0, 1], ['ironArmor', 0, 1], ['stoneCoreHammer', 0, 1], ['recipeNoteBlacksmith', 0, 1], ['recipeNoteElder', 0, 1]],
     };
     const source = recipeNoteSourceForKind(building?.kind || '', profile);
     const noteEntry = source && RECIPE_NOTE_KEYS[source] ? [[RECIPE_NOTE_KEYS[source], 0, 1]] : [];
     const table = [...local.table, ...products, ...(otherTables[profile] || otherTables.villager), ...noteEntry];
     const loot = {};
-    const localPicks = profile === 'jungleRuin' || profile === 'jungleRuinGear' ? 5 : (profile === 'villager' || profile === 'small' || profile === 'basic' ? 5 : 4);
-    const otherPicks = profile === 'jungleRuin' || profile === 'jungleRuinGear' ? 7 : (profile === 'villager' || profile === 'small' ? 3 : 4);
+    const mineLoot = profile === 'mineCave' || profile === 'mineCaveDeep';
+    const localPicks = profile === 'jungleRuin' || profile === 'jungleRuinGear' ? 5 : (mineLoot ? 5 : (profile === 'villager' || profile === 'small' || profile === 'basic' ? 5 : 4));
+    const otherPicks = profile === 'jungleRuin' || profile === 'jungleRuinGear' ? 7 : (profile === 'mineCaveDeep' ? 7 : (profile === 'mineCave' ? 6 : (profile === 'villager' || profile === 'small' ? 3 : 4)));
     const localPool = [...local.table, ...products].sort(() => Math.random() - 0.5);
     const otherPool = [...(otherTables[profile] || otherTables.villager), ...noteEntry].sort(() => Math.random() - 0.5);
     for (const [key, min, max] of [...localPool.slice(0, localPicks), ...otherPool.slice(0, otherPicks)]) {
@@ -7655,6 +11023,22 @@ function randomContainerLoot(profile, building = null) {
     if (profile === 'jungleRuin') {
         loot.jungleSalve = Math.max(1, loot.jungleSalve || 0);
         loot.vineRope = Math.max(1, loot.vineRope || 0);
+    }
+    if (profile === 'mineCave') {
+        loot.ore = Math.max(4, loot.ore || 0);
+        loot.coal = Math.max(4, loot.coal || 0);
+        loot.torch = Math.max(1, loot.torch || 0);
+        if (!['ironSkinPotion', 'strongBandage', 'waxTorch'].some(key => (loot[key] || 0) > 0)) loot.strongBandage = 1;
+    }
+    if (profile === 'mineCaveDeep') {
+        loot.crystal = Math.max(3, loot.crystal || 0);
+        loot.ore = Math.max(8, loot.ore || 0);
+        loot.coal = Math.max(6, loot.coal || 0);
+        loot.stoneCore = Math.max(1, loot.stoneCore || 0);
+        if (!['minerLampHelmet', 'crystalLampHelmet', 'ironPickaxe', 'ironAxe', 'ironSickle', 'ironArmor', 'ironShield', 'stoneCoreHammer'].some(key => (loot[key] || 0) > 0)) {
+            const guaranteed = ['minerLampHelmet', 'ironPickaxe', 'ironAxe', 'ironSickle', 'crystalLampHelmet', 'ironArmor', 'ironShield', 'stoneCoreHammer'][Math.floor(Math.random() * 8)];
+            loot[guaranteed] = 1;
+        }
     }
     if (profile === 'jungleRuinGear') {
         loot.beeDart = Math.max(3, loot.beeDart || 0);
@@ -7785,6 +11169,12 @@ function interactIndoor() {
         case 'jungleRuinClue':
             readJungleRuinClue(object);
             break;
+        case 'mineCollapse':
+            clearMineCollapse(object);
+            break;
+        case 'mineVein':
+            beginHarvest(object);
+            break;
         case 'weaponRack':
             takeIndoorResource(object, 'simpleArrow', 1, '从武器架取下 1 支备用箭。');
             break;
@@ -7803,11 +11193,58 @@ function interactIndoor() {
             showToast(`本村声誉：${villageReputation(state.indoor?.building?.village).toFixed(1)}。任务状态：${villageTaskSummary()}。`);
             break;
         case 'totem':
-            showToast('村庄图腾正在保护村长。');
+            showToast(object.mineBoss ? '晶核守卫挡住矿洞深处。攻击它可以击碎晶核。' : '村庄图腾正在保护村长。');
             break;
         default:
             showToast(`${object.label} 可以交互，功能后续扩展。`);
     }
+}
+
+function clearMineCollapse(object) {
+    const held = selectedHotbarItem();
+    if (!isMiningPickaxe(held)) {
+        showToast('塌方碎石需要手持镐清理。');
+        addFloatText('需要镐', object.x, object.y - 42, '#ffb3b3');
+        return;
+    }
+    object.hp = Math.max(0, (object.hp || object.maxHp || 18) - (held === 'ironPickaxe' ? 7 : 4));
+    damageItemDurability(held, held === 'ironPickaxe' ? 1 : 2);
+    spawnBurst(object.x, object.y, '#8c98a4', 12, 120, 32);
+    if (object.hp <= 0) {
+        object.solid = false;
+        object.action = '';
+        object.label = '已清理塌方';
+        addInventoryItem('stone', 3);
+        showToast('塌方被清开，获得石头 x3。');
+    } else {
+        showToast(`清理塌方，还剩 ${Math.ceil(object.hp)}/${object.maxHp}。`);
+    }
+    renderHud();
+}
+
+function mineIndoorVein(object) {
+    const pickaxe = selectedHotbarItem();
+    if (!isMiningPickaxe(pickaxe)) {
+        showToast(`${object.label}需要手持镐开采。`);
+        addFloatText('需要镐', object.x, object.y - 42, '#ffb3b3');
+        return;
+    }
+    object.storage ||= {};
+    const entries = Object.entries(object.storage).filter(([, amount]) => amount > 0);
+    if (!entries.length) {
+        showToast(`${object.label}已经被采空。`);
+        return;
+    }
+    const [key, amount] = entries[0];
+    if (!addInventoryItem(key, 1)) {
+        showToast('背包已满，无法采矿。');
+        return;
+    }
+    object.storage[key] = amount - 1;
+    damageItemDurability(pickaxe, pickaxe === 'ironPickaxe' ? (key === 'crystal' || key === 'stoneCore' ? 2 : 1) : (key === 'crystal' || key === 'stoneCore' ? 3 : 2));
+    spawnBurst(object.x, object.y, key === 'crystal' ? '#b77dff' : '#8c98a4', 10, 120, 24);
+    showToast(`采下 ${RESOURCE_LABELS[key] || key} x1。`);
+    renderHud();
 }
 
 function readJungleRuinClue(object) {
@@ -7947,6 +11384,26 @@ function villagerDialogueLines(role) {
             '如果你有稀有木料，我能换给你更实用的补给。',
             '真正的商人不会骗你第二次，因为第一次后你就不来了。',
         ],
+        carpenter: [
+            '木梁断了可以接，人心断了就难修。',
+            '房子倒了别急，先把能用的梁柱挑出来。',
+            '你要是带木头和石头来，我能让废墟重新站起来。',
+        ],
+        hunter: [
+            '怪物飞得再快，也得先看见你。',
+            '好箭不嫌多，坏弓才嫌路远。',
+            '我不追没威胁的野兽，省箭，也省命。',
+        ],
+        miner: [
+            '矿洞里听见第三声回响，就别再往前走。',
+            '铁镐不是用来炫耀的，是用来少挨几下的。',
+            '深层矿箱里的好东西，通常都有东西守着。',
+        ],
+        farmer: [
+            '村子能不能守住，先看锅里有没有吃的。',
+            '怪物踩坏菜地，比咬人还让我生气。',
+            '蜂蜜和花能换药，也能换一顿像样的饭。',
+        ],
         unemployed: [
             '我今天本来只想散步，结果听见外面又有怪叫。',
             '如果你要进别人屋子，至少别把箱子翻得太响。',
@@ -8015,12 +11472,27 @@ function interactOutdoorVillager(npc) {
         showToast(`${npc.label} 已经倒下，无法交谈。`);
         return;
     }
+    if (npc.follower) {
+        showToast(`${npc.label}正在跟随你。按 K 才能让随从停止跟随。`);
+        return;
+    }
     if (npc.playerAggro || npc.mood === 'angry') {
         showToast(`${npc.label} 正在战斗，暂时无法交谈或交易。`);
         return;
     }
     if (npc.animalAggressor) {
         showToast(`${npc.label} 正在护村，解决威胁后再交谈。`);
+        return;
+    }
+    if (npc.role === 'carpenter' && tryCarpenterRepairVillageHouse(npc)) {
+        return;
+    }
+    if ((npc.hp ?? npc.maxHp) < (npc.maxHp || 80)) {
+        healWoundedVillager(npc);
+        return;
+    }
+    if (npc.homeBuilding?.destroyed || npc.homeDestroyed) {
+        tryRecruitHomelessVillager(npc);
         return;
     }
     if (npc.returningHome) {
@@ -8030,6 +11502,169 @@ function interactOutdoorVillager(npc) {
     const learned = recipeLearningSuffix(learnRecipesFromTeacher(npc.role));
     showToast(`${npc.label}：${advanceVillagerDialogue(npc)}${dialogueSuffixForNpc(npc)}${learned}`);
     prepareVillagerTrade(npc);
+}
+
+function tryCarpenterRepairVillageHouse(npc) {
+    const village = homeVillageFor(npc);
+    const ruin = (village?.buildings || [])
+        .filter(building => building.destroyed)
+        .sort((a, b) => distance(npc, a) - distance(npc, b))[0];
+    if (!ruin) return false;
+    const cost = village?.tier === 'fortress'
+        ? { wood: 12, stone: 8, ore: 2 }
+        : (village?.tier === 'jungleCult' ? { wood: 10, vine: 4, fiber: 4 } : { wood: 10, stone: 4, fiber: 3 });
+    if (!hasItems(cost)) {
+        showToast(`木匠：最近的废墟是${ruin.label}。修复需要 ${itemListText(cost)}。`);
+        return true;
+    }
+    const now = performance.now();
+    const confirmKey = `${ruin.label}:${itemListText(cost)}`;
+    if ((npc.repairConfirmUntil || 0) < now || npc.repairConfirmKey !== confirmKey) {
+        npc.repairConfirmUntil = now + 6500;
+        npc.repairConfirmKey = confirmKey;
+        showToast(`木匠可以修复${ruin.label}，消耗 ${itemListText(cost)}；再按 E 确认。`);
+        return true;
+    }
+    consumeItems(cost);
+    ruin.destroyed = false;
+    ruin.hp = Math.max(1, Math.floor((ruin.maxHp || villageBuildingMaxHp(ruin)) * 0.72));
+    ruin.destroyedBy = '';
+    ruin.lastDamagedAt = now;
+    for (const villager of state.outdoorVillagers) {
+        if (villager.homeBuilding !== ruin) continue;
+        villager.homeDestroyed = false;
+        if (villager.mood === 'sad') villager.mood = 'calm';
+    }
+    spawnBurst(ruin.x, ruin.y, '#d6a06a', 36, 220, Math.max(ruin.w, ruin.h) * 0.45);
+    addFloatText('修复完成', ruin.x, ruin.y - ruin.h * 0.55, '#9cffb7');
+    npc.repairConfirmUntil = 0;
+    npc.repairConfirmKey = '';
+    showToast(`木匠修复了${ruin.label}。`);
+    renderHud();
+    return true;
+}
+
+function healWoundedVillager(npc) {
+    const option = villagerHealingOption();
+    if (!option) {
+        showToast(`${npc.label}受伤了。需要绷带、强效绷带、治疗药水、蜂蜜药膏、黏液药膏或丛林愈合膏。`);
+        return false;
+    }
+    const now = performance.now();
+    const confirmKey = `${option.key}:${option.heal}`;
+    if ((npc.healConfirmUntil || 0) < now || npc.healConfirmKey !== confirmKey) {
+        npc.healConfirmUntil = now + 6500;
+        npc.healConfirmKey = confirmKey;
+        showToast(`${npc.label}受伤了。将消耗 ${RESOURCE_LABELS[option.key]} 恢复 ${option.heal} 生命；再按 E 确认治疗。`);
+        return false;
+    }
+    consumeItemAmount(option.key, 1);
+    npc.healConfirmUntil = 0;
+    npc.healConfirmKey = '';
+    npc.hp = Math.min(npc.maxHp || 80, (npc.hp || 0) + option.heal);
+    npc.returningHome = false;
+    npc.hurtUntil = 0;
+    npc.mood = npc.playerAggro ? npc.mood : (npc.homeBuilding?.destroyed ? 'sad' : 'calm');
+    spawnBurst(npc.x, npc.y - 12, option.color, 16, 140, 20);
+    addFloatText(`+${option.heal}`, npc.x, npc.y - 50, '#9cffb7');
+    showToast(`你给${npc.label}使用${RESOURCE_LABELS[option.key]}，恢复 ${option.heal} 生命。`);
+    renderHud();
+    return true;
+}
+
+function villagerHealingOption() {
+    const options = [
+        { key: 'salve', heal: 42, color: '#5ee089' },
+        { key: 'honeySalve', heal: 34, color: '#ffd166' },
+        { key: 'jungleSalve', heal: 32, color: '#8cff66' },
+        { key: 'potion', heal: 30, color: '#7dcbe8' },
+        { key: 'strongBandage', heal: 26, color: '#f8fbff' },
+        { key: 'bandage', heal: 14, color: '#f8fbff' },
+    ];
+    return options.find(option => (state.inventory[option.key] || 0) > 0) || null;
+}
+
+function tryRecruitHomelessVillager(npc) {
+    const building = npc.homeBuilding;
+    if (building?.destroyedBy === 'player') {
+        showToast(`${npc.label}：我知道是你毁了我的家。我不会跟你走。`);
+        return false;
+    }
+    if ((npc.hp ?? npc.maxHp ?? 80) < (npc.maxHp || 80) * 0.45) {
+        showToast(`${npc.label}伤得太重，需要先恢复。`);
+        return false;
+    }
+    if (activeVillagerFollowers().length >= MAX_VILLAGER_FOLLOWERS) {
+        showToast(`队伍已满，最多只能带 ${MAX_VILLAGER_FOLLOWERS} 名村民随从。`);
+        return false;
+    }
+    const requirement = villagerRecruitRequirement(npc);
+    const village = homeVillageFor(npc);
+    if (villageReputation(village) < requirement.minRep) {
+        showToast(`${npc.label}还不够信任你，需要本村声誉 ${requirement.minRep}+。`);
+        return false;
+    }
+    if ((requirement.destroyedHouses || 0) > 0 && destroyedVillageHouseCount(village) < requirement.destroyedHouses) {
+        showToast(`${npc.label}：我还得照看村子，除非村庄损毁更严重。`);
+        return false;
+    }
+    const cost = chooseAffordableRecruitCost(requirement.costs);
+    if (!cost) {
+        showToast(`${npc.label}需要帮助：${requirement.hint}`);
+        return false;
+    }
+    const now = performance.now();
+    const costText = itemListText(cost);
+    if ((npc.recruitConfirmUntil || 0) < now || npc.recruitConfirmCost !== costText) {
+        npc.recruitConfirmUntil = now + 6500;
+        npc.recruitConfirmCost = costText;
+        showToast(`${npc.label}愿意跟随。将消耗 ${costText}；再按 E 确认招募。`);
+        return false;
+    }
+    consumeItems(cost);
+    npc.recruitConfirmUntil = 0;
+    npc.recruitConfirmCost = '';
+    npc.follower = true;
+    npc.followTarget = 'player';
+    npc.returningHome = false;
+    npc.fleeingToGuard = false;
+    npc.homeDestroyed = true;
+    npc.playerAggro = false;
+    npc.animalAggressor = null;
+    npc.villagerAggressor = null;
+    npc.mood = 'calm';
+    addFloatText('加入队伍', npc.x, npc.y - 58, '#9cffb7');
+    showToast(`${npc.label}接受了帮助，暂时跟随你战斗。`);
+    renderHud();
+    return true;
+}
+
+function villagerRecruitRequirement(npc) {
+    const role = npc.role || 'unemployed';
+    const table = {
+        merchant: { minRep: -1, costs: [{ copperCoin: 15 }], hint: '铜币 x15' },
+        guard: { minRep: 2, costs: [{ bandage: 2 }, { strongBandage: 1 }], hint: '绷带 x2 或强效绷带 x1' },
+        blacksmith: { minRep: 3, costs: [{ ore: 3, coal: 2 }, { copperCoin: 18 }], hint: '铁矿 x3 + 煤块 x2，或铜币 x18' },
+        apothecary: { minRep: 2, costs: [{ honeySalve: 1 }, { herb: 4, lotus: 1 }], hint: '蜂蜜药膏 x1，或草药 x4 + 莲花 x1' },
+        kitchen: { minRep: 1, costs: [{ roastMeat: 2 }, { honeyRoastMeat: 1 }, { stew: 1 }], hint: '烤肉 x2、蜂蜜烤肉 x1 或蘑菇汤 x1' },
+        elder: { minRep: 4, destroyedHouses: 2, costs: [{ honeySalve: 1, bandage: 2 }, { copperCoin: 25 }], hint: '声誉 4+ 且村庄至少 2 栋废墟；蜂蜜药膏+绷带或铜币 x25' },
+        basicElder: { minRep: 3, destroyedHouses: 2, costs: [{ bandage: 3 }, { copperCoin: 18 }], hint: '声誉 3+ 且村庄至少 2 栋废墟；绷带 x3 或铜币 x18' },
+        cultPriest: { minRep: 2, costs: [{ toxicMushroom: 3, crystal: 1 }, { royalJelly: 1 }], hint: '毒蘑菇 x3 + 魔晶 x1，或蜂王浆 x1' },
+        cultHerbalist: { minRep: 1, costs: [{ vine: 4, toxicMushroom: 2 }, { pollenDust: 3 }], hint: '藤蔓 x4 + 毒蘑菇 x2，或花粉尘 x3' },
+        cultHealer: { minRep: 1, costs: [{ jungleSalve: 1 }, { herb: 4, vine: 2 }], hint: '丛林愈合膏 x1，或草药 x4 + 藤蔓 x2' },
+        cultHunter: { minRep: 1, costs: [{ venom: 2, simpleArrow: 6 }, { beeDart: 3 }], hint: '毒刺 x2 + 简易箭 x6，或蜂刺飞镖 x3' },
+        cultGuard: { minRep: 2, costs: [{ vineNetTrap: 1 }, { bandage: 2, vine: 3 }], hint: '藤网陷阱 x1，或绷带 x2 + 藤蔓 x3' },
+        cultVillager: { minRep: 0, costs: [{ jungleFruit: 3 }, { vine: 4 }], hint: '热带果 x3 或藤蔓 x4' },
+    };
+    return table[role] || { minRep: 0, costs: [{ bandage: 1 }, { roastMeat: 1 }], hint: '绷带 x1 或烤肉 x1' };
+}
+
+function chooseAffordableRecruitCost(costs = []) {
+    return costs.find(cost => hasItems(cost)) || null;
+}
+
+function destroyedVillageHouseCount(village) {
+    return (village?.buildings || []).filter(building => building.destroyed).length;
 }
 
 function interactVillageNpc(role) {
@@ -8209,7 +11844,7 @@ function npcRequestText(role, task) {
 }
 
 function npcName(role) {
-    return { blacksmith: '铁匠', apothecary: '药师', kitchen: '厨师', elder: '村长', basicElder: '低级村长', guard: '守卫', merchant: '商人', unemployed: '村民', cultPriest: '绿母祭司', cultHerbalist: '藤语者', cultHealer: '丛林疗士', cultHunter: '蛇纹猎手', cultGuard: '树根守卫', cultVillager: '献祭教徒' }[role] || '村民';
+    return { blacksmith: '铁匠', apothecary: '药师', kitchen: '厨师', elder: '村长', basicElder: '低级村长', guard: '守卫', merchant: '商人', carpenter: '木匠', hunter: '猎户', miner: '矿工', farmer: '农夫', unemployed: '村民', cultPriest: '绿母祭司', cultHerbalist: '藤语者', cultHealer: '丛林疗士', cultHunter: '蛇纹猎手', cultGuard: '树根守卫', cultVillager: '献祭教徒' }[role] || '村民';
 }
 
 function hasItems(cost) {
@@ -8223,12 +11858,17 @@ function consumeItems(cost) {
 }
 
 function availableItemAmount(key) {
+    normalizeDurableInventory();
     if (key === 'wood') return WOOD_EQUIVALENTS.reduce((sum, item) => sum + (state.inventory[item] || 0), 0);
     return state.inventory[key] || 0;
 }
 
 function consumeItemAmount(key, amount) {
     if (key !== 'wood') {
+        if (isDurableItem(key)) {
+            consumeDurableItemCopies(key, amount);
+            return;
+        }
         state.inventory[key] = Math.max(0, (state.inventory[key] || 0) - amount);
         return;
     }
@@ -8239,6 +11879,32 @@ function consumeItemAmount(key, amount) {
         state.inventory[woodKey] = Math.max(0, (state.inventory[woodKey] || 0) - used);
         remaining -= used;
     }
+}
+
+function consumeDurableItemCopies(key, amount = 1) {
+    normalizeDurableInventory();
+    const removeCount = Math.min(amount, state.inventory[key] || 0);
+    if (removeCount <= 0) return;
+    const values = durabilityValues(key).slice(removeCount);
+    state.inventory[key] = Math.max(0, (state.inventory[key] || 0) - removeCount);
+    if (state.inventory[key] <= 0) {
+        delete state.itemDurability?.[key];
+        clearHotbarItem(key);
+        ensureArmorSlots();
+        for (const slot of ['body', 'cloak', 'head']) {
+            if (state.equipment.armors[slot] !== '无' && armorKeyForName(state.equipment.armors[slot]) === key) state.equipment.armors[slot] = '无';
+        }
+        if (state.equipment.shield !== '无' && shieldKeyForName(state.equipment.shield) === key) state.equipment.shield = '无';
+        if (selectedHotbarItem() === key || equippedWeaponKey() === key) {
+            state.equipment.weapon = '徒手';
+            state.equipment.attack = 1;
+            state.equipment.range = 32;
+        }
+        state.equipment.armor = primaryArmorName();
+        state.equipment.defense = armorDefense() + shieldDefense();
+        return;
+    }
+    state.itemDurability[key] = values;
 }
 
 function grantItems(items) {
@@ -8282,7 +11948,7 @@ function updateVillagerTradeButton() {
 }
 
 function canVillagerTrade(role) {
-    return role === 'merchant' && !!VILLAGER_TRADES[role];
+    return !!VILLAGER_TRADES[role];
 }
 
 function availableTradesFor(role, village = state.village) {
@@ -8379,7 +12045,7 @@ function updateHarvestHold(dt) {
         resetHarvestHold();
         return;
     }
-    const target = nearestInteractable();
+    const target = harvestTargetForCurrentArea();
     if (!target || target.type !== 'resource') {
         resetHarvestHold();
         return;
@@ -8397,52 +12063,136 @@ function updateHarvestHold(dt) {
     if (node.hp <= 0) resetHarvestHold();
 }
 
+function harvestTargetForCurrentArea() {
+    if (state.underground) return nearestUndergroundHarvestable();
+    if (state.indoor?.building?.kind === 'mineCaveInterior') return nearestMineCaveHarvestable();
+    if (state.indoor) return null;
+    return nearestInteractable();
+}
+
 function resetHarvestHold() {
     state.player.harvestTarget = null;
 }
 
 function harvest(node, dt = 0) {
+    const now = performance.now();
     const power = harvestPower(node) * (dt || 0.016);
-    node.lastHarvestAt = performance.now();
+    node.lastHarvestAt = now;
     node.hp -= power;
-    node.shakeUntil = performance.now() + 220;
-    spawnBurst(node.x, node.y, harvestParticleColor(node), 8, 110, node.radius * 0.65);
+    node.shakeUntil = now + 220;
+    if (now >= (node.nextDurabilityTickAt || 0)) {
+        damageItemDurability(selectedHotbarItem(), 1);
+        node.nextDurabilityTickAt = now + 520;
+    }
+    if (now >= (node.nextHarvestBurstAt || 0)) {
+        spawnBurst(node.x, node.y, harvestParticleColor(node), 5, 95, node.radius * 0.55);
+        node.nextHarvestBurstAt = now + 170;
+    }
     if (node.hp <= 0) {
+        if (node.caveResource) {
+            finishMineCaveResourceHarvest(node, now);
+            return;
+        }
         const amount = harvestAmount(node);
-        if (!addInventoryItem(node.gives, amount)) {
+        const harvestedKey = node.gives;
+        if (!addInventoryItem(harvestedKey, amount)) {
             node.hp = 1;
             showToast('背包已满，先丢弃物品或整理快捷栏。');
             renderHud();
             return;
         }
         if (node.kind === 'tallGrass') state.tallGrassGrid = buildTallGrassGrid(state.resources);
-        node.deathAt = performance.now();
-        addFloatText(`+${amount} ${RESOURCE_LABELS[node.gives]}`, node.x, node.y - 30, '#fff3b0');
-        showToast(`采集成功：${RESOURCE_LABELS[node.gives]} x${amount}`);
+        if (isCropPatchKind(node.kind)) {
+            node.kind = 'emptyCropPatch';
+            node.gives = '';
+            node.hp = 0;
+            node.deathAt = 0;
+            node.emptySince = now;
+        } else {
+            node.deathAt = now;
+        }
+        addFloatText(`+${amount} ${RESOURCE_LABELS[harvestedKey]}`, node.x, node.y - 30, '#fff3b0');
+        showToast(`采集成功：${RESOURCE_LABELS[harvestedKey]} x${amount}`);
+        renderHud();
     } else {
-        showToast(`${resourceName(node.kind)} 剩余 ${Math.ceil(Math.max(0, node.hp))}/${node.maxHp}`);
+        if (now >= (node.nextHarvestToastAt || 0)) {
+            showToast(`${resourceName(node.kind)} 剩余 ${Math.ceil(Math.max(0, node.hp))}/${node.maxHp}`);
+            node.nextHarvestToastAt = now + 650;
+            renderHud();
+        }
     }
+    if (node.undergroundResource && node.hp <= 0 && state.underground) {
+        state.underground.resources = state.underground.resources.filter(resource => resource.hp > 0);
+    }
+}
+
+function finishMineCaveResourceHarvest(node, now) {
+    const entries = Object.entries(node.storage || {}).filter(([, amount]) => amount > 0);
+    if (!entries.length) {
+        node.hp = 0;
+        node.solid = false;
+        showToast(`${node.label}已经被采空。`);
+        renderHud();
+        return;
+    }
+    const [key, amount] = entries[0];
+    if (!addInventoryItem(key, 1)) {
+        node.hp = 1;
+        showToast('背包已满，无法采矿。');
+        renderHud();
+        return;
+    }
+    node.storage[key] = amount - 1;
+    node.gives = Object.entries(node.storage).find(([, left]) => left > 0)?.[0] || key;
+    const empty = !Object.values(node.storage).some(left => left > 0);
+    node.hp = empty ? 0 : node.maxHp;
+    node.solid = !empty;
+    node.deathAt = empty ? now : 0;
+    addFloatText(`+1 ${RESOURCE_LABELS[key] || key}`, node.x, node.y - 30, '#fff3b0');
+    showToast(empty ? `${node.label}采空了。` : `采下 ${RESOURCE_LABELS[key] || key} x1。`);
     renderHud();
 }
 
 function harvestAmount(node) {
+    if (node.undergroundResource) return node.amount || 1;
+    if (node.caveResource) return 1;
     if (node.kind === 'pebble') return hash2(node.x * 0.13, node.y * 0.13) > 0.5 ? 3 : 2;
-    return ({ wood: 4, oakWood: 4, blossomWood: 3, birchWood: 4, pineWood: 4, mapleWood: 4, deadWood: 3, darkWood: 3, cypressWood: 4, willowWood: 3, ironwood: 3, elderWood: 3, buttressWood: 3, hardwood: 3, jungleLeaf: 3, vine: 3, jungleFruit: 3, bamboo: 4, stone: 4, fiber: 3, berry: 3, herb: 2, mushroom: 2, toxicMushroom: 2, flower: 2, lotus: 2, cactusFruit: 2, resin: 2, sap: 2, honey: 2, mud: 3, ore: 4, coal: 3 }[node.gives] || 1);
+    return ({ wood: 4, oakWood: 4, blossomWood: 3, birchWood: 4, pineWood: 4, mapleWood: 4, deadWood: 3, darkWood: 3, cypressWood: 4, willowWood: 3, ironwood: 3, elderWood: 3, buttressWood: 3, hardwood: 3, jungleLeaf: 3, vine: 3, jungleFruit: 3, bamboo: 4, stone: 4, fiber: 3, berry: 3, herb: 2, mushroom: 2, toxicMushroom: 2, flower: 2, lotus: 2, cactusFruit: 2, carrot: 2, corn: 2, tomato: 2, resin: 2, sap: 2, honey: 2, mud: 3, ore: 4, coal: 3 }[node.gives] || 1);
+}
+
+function isCropPatchKind(kind) {
+    return ['cropCarrot', 'cropCorn', 'cropTomato'].includes(kind);
 }
 
 function harvestBlockReason(node) {
-    if (node.gives === 'ore' && selectedHotbarItem() !== 'stonePickaxe') return '铁矿太硬，需要手持石镐。';
-    if (BIOME_TREE_KINDS.includes(node.kind) && selectedHotbarItem() !== 'stoneAxe') return '整棵树需要手持石斧砍伐。';
+    if (node.undergroundResource && !isMiningPickaxe(selectedHotbarItem())) return `${resourceName(node.kind)}需要手持镐开采。`;
+    if (node.caveResource && !isMiningPickaxe(selectedHotbarItem())) return `${resourceName(node.kind)}需要手持镐开采。`;
+    if (node.gives === 'ore' && !isMiningPickaxe(selectedHotbarItem())) return '铁矿太硬，需要手持镐。';
+    if (BIOME_TREE_KINDS.includes(node.kind) && !isTreeCuttingItem(selectedHotbarItem())) return '整棵树需要手持石斧或砍刀砍伐。';
     return '';
 }
 
+function isTreeCuttingItem(key) {
+    return ['stoneAxe', 'ironAxe', 'ironwoodMachete', 'jungleMachete'].includes(key);
+}
+
+function isMiningPickaxe(key) {
+    return ['stonePickaxe', 'ironPickaxe'].includes(key);
+}
+
+function isSickleTool(key) {
+    return ['stoneSickle', 'ironSickle'].includes(key);
+}
+
 function harvestPower(node) {
+    if (node.undergroundResource) return selectedHotbarItem() === 'ironPickaxe' ? (['crystalVein', 'coreCluster', 'fangGeode', 'mireCoreCluster', 'shadowOreVein', 'wallCrystal'].includes(node.kind) ? 2.45 : 3.25) : (selectedHotbarItem() === 'stonePickaxe' ? (['crystalVein', 'coreCluster', 'fangGeode', 'mireCoreCluster', 'shadowOreVein', 'wallCrystal'].includes(node.kind) ? 1.7 : 2.4) : 0.25);
+    if (node.caveResource) return selectedHotbarItem() === 'ironPickaxe' ? (node.kind === 'mineCrystalVein' ? 2.85 : 3.45) : (selectedHotbarItem() === 'stonePickaxe' ? (node.kind === 'mineCrystalVein' ? 2.0 : 2.6) : 0.25);
     const held = selectedHotbarItem();
-    const woodPower = held === 'stoneAxe' ? 2 : 1;
-    const stonePower = held === 'stonePickaxe' ? 2 : 1;
-    const fiberPower = held === 'stoneSickle' ? 3.2 : 1;
-    if (['grass', 'tallGrass', 'reed', 'meadowFlower', 'flower', 'jungleLeafPlant', 'jungleVine', 'jungleOrchid', 'poisonBloom'].includes(node.kind)) return 2.2 * fiberPower;
-    if (['herb', 'jungleHerb', 'berry', 'jungleFruitBush', 'mushroom', 'toxicMushroom', 'lotus'].includes(node.kind)) return held === 'stoneSickle' ? 3.4 : 2.2;
+    const woodPower = held === 'ironAxe' ? 2.75 : (held === 'ironwoodMachete' ? 2.35 : (held === 'jungleMachete' ? 2.15 : (held === 'stoneAxe' ? 2 : 1)));
+    const stonePower = held === 'ironPickaxe' ? 2.85 : (held === 'stonePickaxe' ? 2 : 1);
+    const fiberPower = held === 'ironSickle' ? 4.35 : (held === 'stoneSickle' ? 3.2 : 1);
+    if (['grass', 'tallGrass', 'reed', 'meadowFlower', 'flower', 'jungleLeafPlant', 'jungleVine', 'jungleOrchid', 'poisonBloom', 'cropCorn'].includes(node.kind)) return 2.2 * fiberPower;
+    if (['herb', 'jungleHerb', 'berry', 'jungleFruitBush', 'mushroom', 'toxicMushroom', 'lotus', 'cropCarrot', 'cropTomato'].includes(node.kind)) return held === 'ironSickle' ? 4.6 : (held === 'stoneSickle' ? 3.4 : 2.2);
     if (node.kind === 'mudClump') return 2.2;
     if (node.kind === 'bamboo') return 1.35 + woodPower * 0.55;
     if (node.kind === 'stump' || STUMP_TREE_KIND[node.kind]) return 0.9 + woodPower * 0.45;
@@ -8500,6 +12250,10 @@ function attack(now = performance.now()) {
         showToast('正在使用物品，稍等一下。');
         return;
     }
+    if (selectedHotbarItem() === 'sacrificialVineHorn') {
+        blowSacrificialVineHorn(now);
+        return;
+    }
     advanceWeaponCombo(selectedHotbarItem(), now);
     const attackProfile = currentAttackProfile();
     p.pendingMeleeCharge = null;
@@ -8516,13 +12270,29 @@ function attack(now = performance.now()) {
     consumeHungerForAction(staminaCost * 0.015);
     p.attackCooldown = attackProfile.cooldown;
     p.attackUntil = now + (attackProfile.name.includes('蓄力') ? 260 : 160);
+    p.attackVisualType = 'melee';
     const attackDir = currentAimDir();
     p.attackDir = attackDir;
     p.facing = attackDir;
+    damageItemDurability(selectedHotbarItem(), weaponDurabilityUseCost(selectedHotbarItem(), attackProfile));
     if (attackProfile.dart) launchBambooKnifeProjectile(p, attackDir, now);
     const strike = { x: p.x + attackDir.x * p.radius, y: p.y + attackDir.y * p.radius };
     const hits = [];
-    if (!state.indoor) {
+    if (state.underground) {
+        for (const e of state.underground.enemies || []) {
+            if (e.hp <= 0) continue;
+            const hit = enemyHitByAttack(e, p, attackDir, attackProfile, strike);
+            if (hit.hit) hits.push({ type: 'mineMonster', target: e, dist: hit.dist });
+        }
+        for (const object of state.underground.objects || []) {
+            if (object.kind !== 'batNest') continue;
+            object.radius ||= 28;
+            object.hp ??= 18;
+            object.maxHp ??= 18;
+            const hit = enemyHitByAttack(object, p, attackDir, attackProfile, strike);
+            if (hit.hit) hits.push({ type: 'batNest', target: object, dist: hit.dist });
+        }
+    } else if (!state.indoor) {
         for (const e of state.enemies) {
             if (e.hp <= 0) continue;
             const hit = enemyHitByAttack(e, p, attackDir, attackProfile, strike);
@@ -8531,17 +12301,31 @@ function attack(now = performance.now()) {
             }
         }
         for (const npc of state.outdoorVillagers.filter(item => item.hp > 0)) {
+            if (npc.follower) continue;
             const hit = enemyHitByAttack(npc, p, attackDir, attackProfile, strike);
             if (hit.hit) hits.push({ type: 'outdoorVillager', target: npc, dist: hit.dist });
         }
+        for (const hive of state.waspHives || []) {
+            if (hive.state === 'ruined') continue;
+            const hit = enemyHitByAttack(hive, p, attackDir, attackProfile, strike);
+            if (hit.hit) hits.push({ type: 'waspHive', target: hive, dist: hit.dist });
+        }
+        for (const village of allVillages()) {
+            for (const building of village.buildings || []) {
+                if (building.destroyed) continue;
+                const target = villageBuildingHitTarget(building);
+                const hit = villageBuildingHitByAttack(target, p, attackDir, attackProfile, strike);
+                if (hit.hit) hits.push({ type: 'villageBuilding', target: building, dist: hit.dist });
+            }
+        }
     }
     if (state.indoor) {
-        for (const npc of state.indoor.objects.filter(object => ['npc', 'totem'].includes(object.kind) && (object.hp ?? 80) > 0)) {
+        for (const npc of state.indoor.objects.filter(object => ['npc', 'totem', 'mineMonster'].includes(object.kind) && (object.hp ?? 80) > 0)) {
             npc.radius ||= 17;
             npc.hp ??= 80;
             npc.maxHp ??= 80;
             const hit = enemyHitByAttack(npc, p, attackDir, attackProfile, strike);
-            if (hit.hit) hits.push({ type: npc.kind === 'totem' ? 'totem' : 'villager', target: npc, dist: hit.dist });
+            if (hit.hit) hits.push({ type: npc.kind === 'mineMonster' ? 'mineMonster' : (npc.kind === 'totem' ? 'totem' : 'villager'), target: npc, dist: hit.dist });
         }
     }
     spawnAttackParticles(p.x, p.y, attackDir, attackProfile);
@@ -8554,8 +12338,12 @@ function attack(now = performance.now()) {
     hits.sort((a, b) => a.dist - b.dist);
     const maxHits = attackProfile.maxHits || (attackProfile.cleave ? 2 : 1);
     for (const hit of hits.slice(0, maxHits)) {
-        if (hit.type === 'villager') damageVillager(hit.target, now, attackProfile);
+        if (hit.type === 'mineMonster') damageMineCaveMonster(hit.target, now, attackProfile);
+        else if (hit.type === 'batNest') damageBatNest(hit.target, now, attackProfile);
+        else if (hit.type === 'villager') damageVillager(hit.target, now, attackProfile);
         else if (hit.type === 'outdoorVillager') damageOutdoorVillager(hit.target, now, attackProfile);
+        else if (hit.type === 'waspHive') damageWaspHive(hit.target, now, attackProfile);
+        else if (hit.type === 'villageBuilding') damageVillageBuilding(hit.target, { kind: 'player', name: '你' }, attackProfile.damage + (attackProfile.style === 'chop' ? 2 : 0), now);
         else if (hit.type === 'totem') damageVillageTotem(hit.target, now, attackProfile);
         else damageEnemy(hit.target, now, attackProfile);
     }
@@ -8568,6 +12356,14 @@ function isThrowableItem(key) {
 
 function isDirectRangedItem(key) {
     return key === 'venom' || key === 'beeDart' || key === 'slingshot' || key === 'sinewBow' || !!simpleWeaponDef(key)?.ranged;
+}
+
+function isStaffWeapon(key) {
+    return ['elderwoodStaff', 'blossomwoodWand', 'greenMotherRootStaff'].includes(key);
+}
+
+function isFineDirectProjectile(kind) {
+    return ['vineDart', 'vineDartPoison', 'elderwoodBolt', 'elderwoodBoltPoison', 'pollenBolt', 'pollenBoltPoison', 'greenRootBolt', 'greenRootBoltPoison'].includes(kind);
 }
 
 function isChargeMeleeItem(key) {
@@ -8652,8 +12448,16 @@ function startDirectRangedAim(now = performance.now()) {
     const key = selectedHotbarItem();
     if (!isDirectRangedItem(key)) return;
     if (state.player.rangedAim?.key === key) return;
-    const ammo = directRangedAmmoFor(key);
+    const ammo = isStaffWeapon(key) ? '' : directRangedAmmoFor(key);
     if (!ammo) {
+        if (isStaffWeapon(key)) {
+            if (state.player.attackCooldown > 0) return;
+            state.player.rangedAim = { key, ammo: '', startedAt: now };
+            state.player.attackDir = currentAimDir();
+            mouse.down = true;
+            resetHarvestHold();
+            return;
+        }
         showToast(key === 'venom' ? '没有毒刺可投掷。' : (key === 'beeDart' ? '没有蜂刺飞镖可投掷。' : (key === 'slingshot' || key === 'sling' ? `${RESOURCE_LABELS[key]}需要小石子作为弹药。` : `${RESOURCE_LABELS[key]}需要箭矢。`)));
         return;
     }
@@ -8670,11 +12474,16 @@ function releaseDirectRanged(now = performance.now()) {
     state.player.rangedAim = null;
     mouse.down = false;
     keys.delete(' ');
-    const ammo = directRangedAmmoFor(aim.key, aim.ammo);
+    const ammo = isStaffWeapon(aim.key) ? '' : directRangedAmmoFor(aim.key, aim.ammo);
     if (!ammo) {
+        if (isStaffWeapon(aim.key)) {
+            // Staffs cast from stamina and cooldown, not ammunition.
+        } else {
         showToast(aim.key === 'venom' ? '没有毒刺。' : (aim.key === 'beeDart' ? '没有蜂刺飞镖。' : (aim.key === 'slingshot' || aim.key === 'sling' ? '没有小石子。' : '没有箭矢。')));
         return true;
+        }
     }
+    const staffCast = isStaffWeapon(aim.key);
     const held = directRangedCharge(aim, now);
     const p = state.player;
     const rangedDef = simpleWeaponDef(aim.key);
@@ -8683,17 +12492,44 @@ function releaseDirectRanged(now = performance.now()) {
         showToast('体力不足，无法稳定发射。');
         return true;
     }
-    const dir = currentAimDirWithSpread(aim, held);
+    const dir = staffCast ? currentAimDir() : currentAimDirWithSpread(aim, held);
     p.stamina = Math.max(0, p.stamina - cost);
     consumeHungerForAction(cost * 0.018);
     p.attackCooldown = rangedDef?.profile?.cooldown || (aim.key === 'slingshot' ? 0.95 : 0.82);
     p.attackUntil = now + 180 + held * 120;
+    p.attackVisualType = 'ranged';
     p.attackDir = dir;
     p.facing = dir;
-    state.inventory[ammo] -= 1;
+    damageItemDurability(aim.key, isStaffWeapon(aim.key) ? 2 : 1);
+    if (ammo) state.inventory[ammo] -= 1;
     const range = rangedDef?.profile?.range
-        ? (rangedDef.profile.range * (0.45 + held * 0.55))
+        ? (rangedDef.profile.range * (staffCast ? (0.82 + held * 0.18) : (0.45 + held * 0.55)))
         : (aim.key === 'slingshot' ? (150 + held * 240) : (230 + held * 390));
+    const projectileDuration = staffCast ? (320 + (1 - held) * 170) : (aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120);
+    if (state.underground) {
+        state.undergroundProjectiles ||= [];
+        state.undergroundProjectiles.push({
+            kind: directProjectileKindFor(aim.key, ammo),
+            weapon: aim.key,
+            ammo,
+            x: p.x,
+            y: p.y - 10,
+            startX: p.x,
+            startY: p.y - 10,
+            targetX: clamp(p.x + dir.x * range, 24, state.underground.width - 24),
+            targetY: clamp(p.y + dir.y * range, 24, state.underground.height - 24),
+            dir,
+            charge: held,
+            startedAt: now,
+            duration: projectileDuration,
+            pierceRemaining: directProjectilePierceForWeapon(aim.key),
+            exploded: false,
+        });
+        spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, staffCast ? staffProjectileColor(aim.key) : (aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a'), staffCast ? 12 : 5, staffCast ? 130 : 70, staffCast ? 14 : 8);
+        syncHotbarItems();
+        renderHud();
+        return true;
+    }
     if (state.indoor) {
         state.indoorProjectiles ||= [];
         state.indoorProjectiles.push({
@@ -8711,12 +12547,12 @@ function releaseDirectRanged(now = performance.now()) {
             dir,
             charge: held,
             startedAt: now,
-            duration: aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120,
-            profile: { color: ammo === 'poisonArrow' ? '#8cff66' : '#d8e5f2' },
+            duration: projectileDuration,
+            profile: { color: staffCast ? staffProjectileColor(aim.key) : (ammo === 'poisonArrow' ? '#8cff66' : '#d8e5f2') },
             splashRadius: 0,
             pierceRemaining: directProjectilePierceForWeapon(aim.key),
         });
-        spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
+        spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, staffCast ? staffProjectileColor(aim.key) : (aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a'), staffCast ? 12 : 5, staffCast ? 130 : 70, staffCast ? 14 : 8);
         syncHotbarItems();
         renderHud();
         return true;
@@ -8734,19 +12570,26 @@ function releaseDirectRanged(now = performance.now()) {
         dir,
         charge: held,
         startedAt: now,
-        duration: aim.key === 'slingshot' ? 300 + (1 - held) * 140 : 240 + (1 - held) * 120,
+        duration: projectileDuration,
         pierceRemaining: directProjectilePierceForWeapon(aim.key),
         exploded: false,
     });
-    spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a', 5, 70, 8);
+    spawnBurst(p.x + dir.x * 14, p.y - 8 + dir.y * 14, staffCast ? staffProjectileColor(aim.key) : (aim.key === 'slingshot' || aim.key === 'sling' ? '#d8e5f2' : '#d6a06a'), staffCast ? 12 : 5, staffCast ? 130 : 70, staffCast ? 14 : 8);
     syncHotbarItems();
     renderHud();
     return true;
 }
 
 function directRangedCharge(aim, now = performance.now()) {
+    if (isStaffWeapon(aim.key)) return clamp((now - aim.startedAt) / 620, 0.62, 1);
     const fullTime = aim.key === 'slingshot' || aim.key === 'sling' ? 850 : (aim.key === 'bambooCrossbow' ? 1250 : 1050);
     return clamp((now - aim.startedAt) / fullTime, 0.18, 1);
+}
+
+function staffProjectileColor(key) {
+    if (key === 'greenMotherRootStaff') return '#8cff66';
+    if (key === 'blossomwoodWand') return '#ffd166';
+    return '#d7bcff';
 }
 
 function directRangedAmmoFor(key, preferred = '') {
@@ -8827,9 +12670,10 @@ function throwableTargetForAim(aim, now = performance.now()) {
     const dir = currentAimDir();
     const held = clamp((now - aim.startedAt) / 750, 0, 1);
     const distanceAhead = 170 + held * 150;
+    const bounds = currentSceneBounds();
     return {
-        x: clamp(state.player.x + dir.x * distanceAhead, 24, WORLD.width - 24),
-        y: clamp(state.player.y + dir.y * distanceAhead, 24, WORLD.height - 24),
+        x: clamp(state.player.x + dir.x * distanceAhead, 24, bounds.width - 24),
+        y: clamp(state.player.y + dir.y * distanceAhead, 24, bounds.height - 24),
         dir,
         held,
     };
@@ -8857,7 +12701,8 @@ function updateProjectiles(dt, now) {
                 continue;
             }
         }
-        if (Math.random() < 0.65) {
+        const fineTrail = isFineDirectProjectile(projectile.kind);
+        if (Math.random() < (fineTrail ? 0.18 : 0.65)) {
         const trailColor = projectile.kind === 'poisonVial'
                 ? (Math.random() < 0.5 ? '#8cff66' : '#d94bff')
                 : (projectile.kind === 'slingStone' ? '#d8e5f2'
@@ -8865,11 +12710,11 @@ function updateProjectiles(dt, now) {
             addParticle({
                 x: projectile.x,
                 y: projectile.y,
-                vx: (Math.random() - 0.5) * 30,
-                vy: 20 + Math.random() * 30,
+                vx: (Math.random() - 0.5) * (fineTrail ? 12 : 30),
+                vy: fineTrail ? (8 + Math.random() * 14) : (20 + Math.random() * 30),
                 color: trailColor,
-                size: 2 + Math.random() * 2,
-                life: 0.18,
+                size: fineTrail ? (1 + Math.random() * 1.1) : (2 + Math.random() * 2),
+                life: fineTrail ? 0.1 : 0.18,
             });
         }
         if (progress >= 1) {
@@ -8886,10 +12731,22 @@ function findDirectProjectileHit(projectile, previous) {
         .map(enemy => ({ type: 'enemy', target: enemy, d: distanceToSegment(enemy, previous, projectile), radius: enemy.radius + 10 }))
         .filter(hit => hit.d <= hit.radius);
     const villagerHit = (state.outdoorVillagers || [])
-        .filter(npc => npc.outside && npc.hp > 0 && !projectile.hitTargets?.has(npc))
+        .filter(npc => npc.outside && npc.hp > 0 && !npc.follower && !projectile.hitTargets?.has(npc))
         .map(npc => ({ type: 'outdoorVillager', target: npc, d: distanceToSegment(npc, previous, projectile), radius: (npc.radius || 17) + 10 }))
         .filter(hit => hit.d <= hit.radius);
-    return [...enemyHit, ...villagerHit].sort((a, b) => a.d - b.d)[0] || null;
+    const hiveHit = (state.waspHives || [])
+        .filter(hive => hive.state !== 'ruined' && !projectile.hitTargets?.has(hive))
+        .map(hive => ({ type: 'waspHive', target: hive, d: distanceToSegment(hive, previous, projectile), radius: hive.radius + 8 }))
+        .filter(hit => hit.d <= hit.radius);
+    const buildingHit = allVillages()
+        .flatMap(village => village.buildings || [])
+        .filter(building => !building.destroyed && !projectile.hitTargets?.has(building))
+        .map(building => {
+            const target = villageBuildingHitTarget(building);
+            return { type: 'villageBuilding', target: building, d: distanceSegmentToRect(previous, projectile, target.rect), radius: 8 };
+        })
+        .filter(hit => hit.d <= hit.radius);
+    return [...enemyHit, ...villagerHit, ...hiveHit, ...buildingHit].sort((a, b) => a.d - b.d)[0] || null;
 }
 
 function projectileCanPierce(projectile) {
@@ -8937,12 +12794,13 @@ function fireSlingshot(now = performance.now()) {
 function explodeSlingStoneAt(x, y, projectile) {
     const now = performance.now();
     const radius = 54;
-    const damage = directProjectileDamage(projectile);
-    let hitCount = 0;
-    for (const enemy of state.enemies) {
-        if (enemy.hp <= 0 || distance(enemy, { x, y }) > radius + enemy.radius) continue;
-        enemy.hp -= damage;
-        enemy.hurtUntil = now + 160;
+        const damage = directProjectileDamage(projectile);
+        let hitCount = 0;
+        for (const enemy of state.enemies) {
+            if (enemy.hp <= 0 || distance(enemy, { x, y }) > radius + enemy.radius) continue;
+            enemy.hp -= damage;
+            enemy.hurtUntil = now + 160;
+            markEnemyAttackedByPlayer(enemy, now);
         const away = normalize(enemy.x - x, enemy.y - y);
         enemy.knockX += away.x * 260;
         enemy.knockY += away.y * 260;
@@ -8955,6 +12813,7 @@ function explodeSlingStoneAt(x, y, projectile) {
         hitCount++;
     }
     for (const npc of state.outdoorVillagers || []) {
+        if (npc.follower) continue;
         if (!npc.outside || npc.hp <= 0 || distance(npc, { x, y }) > radius + (npc.radius || 17)) continue;
         damageOutdoorVillager(npc, now, { name: '投石带落石', damage, dir: normalize(npc.x - x, npc.y - y) });
         hitCount++;
@@ -9032,9 +12891,22 @@ function enemyHitByAttack(e, p, attackDir, attackProfile, strike) {
     };
 }
 
+function villageBuildingHitByAttack(target, attacker, attackDir, attackProfile, strike) {
+    const centerDir = normalize(target.x - attacker.x, target.y - attacker.y);
+    const facingDot = centerDir.x * attackDir.x + centerDir.y * attackDir.y;
+    const dist = distanceToRect(strike, target.rect);
+    return {
+        hit: dist <= attackProfile.range * 0.18 + 12 && facingDot > attackProfile.arc,
+        dist,
+    };
+}
+
 function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
-    hit.hp -= attackProfile.damage;
+    damageWeaponDurabilityForTarget(selectedHotbarItem(), hit, attackProfile);
+    const damage = weaponDamageForTarget(hit, attackProfile);
+    hit.hp -= damage;
     hit.hurtUntil = now + 160;
+    markEnemyAttackedByPlayer(hit, now);
     hit.attackCooldown = Math.max(hit.attackCooldown, 0.24);
     hit.windupUntil = 0;
     hit.strikeAt = 0;
@@ -9044,8 +12916,8 @@ function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
     hit.knockY += dir.y * (hit.boss ? 130 : 240) * knockScale;
     state.cameraShake = Math.max(state.cameraShake, hit.boss ? 12 : 7);
     spawnBurst(hit.x, hit.y, hit.boss ? '#b77dff' : '#ffd166', 14, 220, hit.radius * 0.75);
-    addFloatText(`-${attackProfile.damage}`, hit.x, hit.y - 36, '#fff3b0');
-    if (attackProfile.poison && hit.kind !== 'golem') {
+    addFloatText(`-${damage}`, hit.x, hit.y - 36, '#fff3b0');
+    if (attackProfile.poison && !isStoneCreature(hit)) {
         hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + 4200);
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 900, now + 900);
         spawnBurst(hit.x, hit.y - 8, '#8cff66', 6, 90, hit.radius * 0.45);
@@ -9063,16 +12935,36 @@ function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
     }
 }
 
+function weaponDamageForTarget(target, attackProfile) {
+    let damage = attackProfile.damage;
+    if (attackProfile.dagger) {
+        const close = distance(state.player, target) <= (state.player.radius || 17) + (target.radius || 17) + 20;
+        if (close) {
+            damage = Math.ceil(damage * 1.25);
+            addFloatText('贴身', target.x, target.y - 66, '#ffd166');
+        }
+    }
+    return damage;
+}
+
 function applyPlayerWeaponEffects(target, now, attackProfile, targetType) {
     const dir = state.player.attackDir || state.player.facing;
-    if (attackProfile.bleed && target.kind !== 'golem') {
-        target.poisonUntil = Math.max(target.poisonUntil || 0, now + 3000);
-        target.poisonTickAt = Math.min(target.poisonTickAt || now + 700, now + 700);
+    if (isStoneCreature(target)) {
+        if (attackProfile.poison || attackProfile.bleed || attackProfile.burn) addFloatText('免疫', target.x, target.y - 54, '#c5d6df');
+        target.poisonUntil = 0;
+        target.bleedUntil = 0;
+        target.burnUntil = 0;
+    }
+    if (attackProfile.bleed && !isStoneCreature(target)) {
+        target.bleedUntil = Math.max(target.bleedUntil || 0, now + (attackProfile.dagger ? 4200 : 3200));
+        target.bleedTickAt = Math.min(target.bleedTickAt || now + 650, now + 650);
+        target.bleedPower = Math.max(target.bleedPower || 1, attackProfile.dagger && attackProfile.combo === 3 ? 2 : 1);
         addFloatText('流血', target.x, target.y - 50, '#ff6b6b');
     }
-    if (attackProfile.burn && target.kind !== 'golem') {
-        target.poisonUntil = Math.max(target.poisonUntil || 0, now + 3600);
-        target.poisonTickAt = Math.min(target.poisonTickAt || now + 650, now + 650);
+    if (attackProfile.burn && !isStoneCreature(target)) {
+        target.burnUntil = Math.max(target.burnUntil || 0, now + (nightAmount() > 0.2 ? 6200 : 4400));
+        target.burnTickAt = Math.min(target.burnTickAt || now + 650, now + 650);
+        target.burnPower = Math.max(target.burnPower || 1, nightAmount() > 0.2 ? 2 : 1);
         spawnBurst(target.x, target.y - 8, '#ff9f1c', 8, 90, (target.radius || 17) * 0.55);
         addFloatText('点燃', target.x, target.y - 52, '#ffd166');
     }
@@ -9098,6 +12990,12 @@ function applyPlayerWeaponEffects(target, now, attackProfile, targetType) {
         target.knockY = (target.knockY || 0) + -dir.y * 360;
         addFloatText('拉拽', target.x, target.y - 54, '#d6a06a');
     }
+    if (attackProfile.whip) {
+        const side = hash2(target.x + now * 0.01, target.y) > 0.5 ? 1 : -1;
+        target.knockX = (target.knockX || 0) + -dir.y * 220 * side + dir.x * 60;
+        target.knockY = (target.knockY || 0) + dir.x * 220 * side + dir.y * 60;
+        addFloatText('甩开', target.x, target.y - 46, '#d7f28a');
+    }
     if (attackProfile.guard) {
         state.player.blocking = true;
         state.player.blockUntil = Math.max(state.player.blockUntil || 0, now + 360);
@@ -9106,6 +13004,17 @@ function applyPlayerWeaponEffects(target, now, attackProfile, targetType) {
     if (attackProfile.dart) {
         spawnBurst(target.x - dir.x * 18, target.y - dir.y * 18, '#d8e5f2', 4, 120, 8);
     }
+}
+
+function isStoneCreature(target) {
+    if (!target) return false;
+    return target.kind === 'golem'
+        || target.kind === 'jungleRuinGuardian'
+        || target.ruinGuardian
+        || target.mineKind === 'stoneCrawler'
+        || target.mineKind === 'crystalBug'
+        || target.boss && /晶核|石|像|守卫/.test(target.name || target.label || '')
+        || /石像|石核|晶核|晶壳|石像守卫|根缠/.test(target.name || target.label || '');
 }
 
 function damageVillager(npc, now, attackProfile = currentAttackProfile()) {
@@ -9129,12 +13038,16 @@ function damageVillager(npc, now, attackProfile = currentAttackProfile()) {
         }
         return;
     }
-    npc.hp -= attackProfile.damage;
+    const damage = villagerIncomingDamageAfterBuff(npc, weaponDamageForTarget(npc, attackProfile), now);
+    npc.hp -= damage;
     npc.hurtUntil = now + 180;
     applyPlayerWeaponEffects(npc, now, attackProfile, 'villager');
     markCultHerbalistAttacked(npc);
     setVillagerPlayerAggro(npc);
-    if (['elder', 'apothecary'].includes(npc.role)) {
+    if (npc.role === 'elder' && isForestVillage(homeVillageFor(npc))) {
+        forestElderExitAndCommandAttack(npc, now);
+    }
+    if (['elder', 'apothecary'].includes(npc.role) && !(npc.role === 'elder' && isForestVillage(homeVillageFor(npc)))) {
         npc.moveTargetUntil = 0;
         npc.nextKiteAt = 0;
         setRangedVillagerWaypoint(npc, now);
@@ -9145,12 +13058,15 @@ function damageVillager(npc, now, attackProfile = currentAttackProfile()) {
     if (npc.role === 'blacksmith') npc.blockUntil = now + 520 + Math.min(attackProfile.damage, 9) * 80;
     npc.nextAttackAt = Math.min(npc.nextAttackAt || now + 520, now + 520);
     const dir = state.player.attackDir || state.player.facing;
-    npc.x = clamp(npc.x + dir.x * 12, 230, VIEW.width - 230);
-    npc.y = clamp(npc.y + dir.y * 12, 182, VIEW.height - 170);
+    const force = villagerPlayerHitKnockForce(npc, attackProfile);
+    moveIndoorNpcSafely(npc, dir.x * 22, dir.y * 22);
+    npc.knockX = (npc.knockX || 0) + dir.x * force * 0.45;
+    npc.knockY = (npc.knockY || 0) + dir.y * force * 0.45;
+    npc.staggerUntil = now + 260;
     const reputation = changeVillageReputation(state.indoor?.building?.village || homeVillageFor(npc), -1);
     state.cameraShake = Math.max(state.cameraShake, 6);
     spawnBurst(npc.x, npc.y, '#ff6b6b', 12, 190, npc.radius * 0.75);
-    addFloatText(`-${attackProfile.damage}`, npc.x, npc.y - 40, '#ffb3b3');
+    addFloatText(`-${damage}`, npc.x, npc.y - 40, '#ffb3b3');
     if (npc.hp <= 0) {
         npc.hp = 0;
         npc.mood = 'down';
@@ -9163,20 +13079,155 @@ function damageVillager(npc, now, attackProfile = currentAttackProfile()) {
     }
 }
 
+function villagerPlayerHitKnockForce(npc, attackProfile) {
+    const base = attackProfile.style === 'chop' ? 250
+        : (attackProfile.style === 'club' || attackProfile.style === 'pick' ? 225
+            : (attackProfile.style === 'thrust' ? 175 : 200));
+    const roleResist = ['blacksmith', 'guard', 'cultGuard'].includes(npc.role) ? 0.72
+        : (['elder', 'hunter', 'apothecary'].includes(npc.role) ? 0.9 : 1);
+    return base * (attackProfile.knock ?? 1) * roleResist;
+}
+
+function forestElderExitAndCommandAttack(npc, now = performance.now()) {
+    const building = npc.homeBuilding || state.indoor?.building;
+    const village = homeVillageFor(npc) || building?.village;
+    if (!building || !isForestVillage(village)) return;
+    npc.nextForestHornAt = 0;
+    npc.workState = '出屋号令';
+    npc.workStateUntil = now + 2200;
+    if (!npc.outside) {
+        scheduleVillagerExit(npc, building, now, 0, `${npc.label}冲出长屋，吹响鹿角号令！`);
+    }
+    commandForestVillageAllies(npc, state.player, now, { maxCount: 4, includeUnloaded: true, label: '响应村长号令' });
+    spawnBurst(npc.x, npc.y - 42, '#d6a06a', 16, 150, 24);
+    addFloatText('鹿角号令', npc.x, npc.y - 62, '#ffd166');
+}
+
+function commandForestVillageAllies(npc, target, now, options = {}) {
+    const village = homeVillageFor(npc);
+    if (!village) return 0;
+    const maxCount = options.maxCount || 4;
+    const candidates = [];
+    for (const ally of state.outdoorVillagers || []) {
+        if (ally !== npc && ally.hp > 0 && homeVillageFor(ally) === village && ['hunter', 'guard', 'carpenter'].includes(ally.role)) {
+            candidates.push(ally);
+        }
+    }
+    if (options.includeUnloaded) {
+        for (const house of village.buildings || []) {
+            if (!['hunter', 'outerHunter', 'carpenter'].includes(house.kind)) continue;
+            if (house.interiorObjects) {
+                for (const ally of house.interiorObjects) {
+                    if (ally.kind === 'npc' && ally !== npc && ally.hp > 0 && ['hunter', 'carpenter'].includes(ally.role)) candidates.push(ally);
+                }
+            } else if (candidates.length < maxCount) {
+                house.interiorObjects = createIndoorObjects(house.kind, house);
+                const ally = house.interiorObjects.find(item => item.kind === 'npc' && item.hp > 0 && ['hunter', 'carpenter'].includes(item.role));
+                if (ally) candidates.push(ally);
+            }
+            if (candidates.length >= maxCount) break;
+        }
+    }
+    let count = 0;
+    for (const ally of [...new Set(candidates)].sort((a, b) => distance(npc, a) - distance(npc, b))) {
+        if (count >= maxCount || ally === npc || ally.hp <= 0) continue;
+        if (ally.outside && distance(ally, npc) > 520) continue;
+        ally.workState = options.label || '响应号令';
+        ally.workStateUntil = now + 2200;
+        ally.returningHome = false;
+        ally.fleeingToGuard = false;
+        if (target === state.player) setVillagerPlayerAggro(ally);
+        else if (target?.hp > 0) {
+            if (target.kind === 'npc') ally.villagerAggressor = target;
+            else setVillagerAnimalAggro(ally, target);
+        }
+        if (!ally.outside && ally.homeBuilding) {
+            scheduleVillagerExit(ally, ally.homeBuilding, now, 220 + count * 130, `${ally.label}响应鹿角号令，冲出屋子！`);
+        }
+        count++;
+    }
+    return count;
+}
+
+function damageMineCaveMonster(monster, now, attackProfile = currentAttackProfile()) {
+    damageWeaponDurabilityForTarget(selectedHotbarItem(), monster, attackProfile);
+    const damage = weaponDamageForTarget(monster, attackProfile);
+    monster.hp -= damage;
+    monster.hurtUntil = now + 180;
+    monster.attackCooldown = Math.max(monster.attackCooldown || 0, 0.22);
+    const dir = state.player.attackDir || state.player.facing;
+    monster.knockX = (monster.knockX || 0) + dir.x * (monster.mineKind === 'stoneCrawler' ? 80 : 150);
+    monster.knockY = (monster.knockY || 0) + dir.y * (monster.mineKind === 'stoneCrawler' ? 80 : 150);
+    applyPlayerWeaponEffects(monster, now, attackProfile, 'enemy');
+    spawnBurst(monster.x, monster.y, monster.mineKind === 'crystalBug' ? '#b77dff' : '#d8e5f2', 10, 130, monster.radius * 0.6);
+    addFloatText(`-${damage}`, monster.x, monster.y - 34, '#fff3b0');
+    if (monster.hp <= 0) {
+        monster.hp = 0;
+        monster.deathAt = now;
+        monster.solid = false;
+        const drops = grantMineMonsterDrops(monster);
+        addFloatText(drops, monster.x, monster.y - 52, '#9cffb7');
+        showToast(`${monster.label} 被击败，获得 ${drops}`);
+    } else {
+        showToast(`${monster.label} 受伤，剩余 ${Math.ceil(monster.hp)}/${monster.maxHp}`);
+    }
+}
+
+function damageBatNest(nest, now, attackProfile = currentAttackProfile()) {
+    const damage = Math.max(1, attackProfile.damage || 1);
+    nest.maxHp ||= 18;
+    const beforeRatio = (nest.hp ?? nest.maxHp) / nest.maxHp;
+    nest.hp = Math.max(0, (nest.hp ?? 18) - damage);
+    const afterRatio = nest.hp / nest.maxHp;
+    nest.hurtUntil = now + 220;
+    nest.disturbed = true;
+    let spawnCount = 0;
+    if (beforeRatio > 0.66 && afterRatio <= 0.66) spawnCount += 1;
+    if (beforeRatio > 0.33 && afterRatio <= 0.33) spawnCount += 2;
+    if (nest.hp <= 0 && !nest.deathSpawned) {
+        spawnCount += 3;
+        nest.deathSpawned = true;
+    }
+    if (spawnCount > 0) summonMineBatsFromNest(nest, spawnCount);
+    spawnBurst(nest.x, nest.y, '#66737f', 14, 160, 30);
+    addFloatText(`-${damage}`, nest.x, nest.y - 36, '#fff3b0');
+    showToast(nest.hp <= 0 ? '矿蝠巢被打碎，剩下的矿蝠惊飞出来！' : (spawnCount ? `矿蝠巢受创，${spawnCount} 只矿蝠冲了出来！` : '矿蝠巢受损，但暂时没有矿蝠出来。'));
+    if (nest.hp <= 0) {
+        nest.kind = 'brokenBatNest';
+        nest.label = '破碎矿蝠巢';
+        nest.radius = 18;
+    }
+}
+
+function grantMineMonsterDrops(monster) {
+    const entries = Object.entries(monster.drop || {});
+    const gained = [];
+    for (const [key, amount] of entries) {
+        const count = typeof amount === 'number' ? amount : 1;
+        if (count > 0 && addInventoryItem(key, count)) gained.push(`${RESOURCE_LABELS[key] || key} x${count}`);
+    }
+    return gained.join('、') || '无';
+}
+
 function damageOutdoorVillager(npc, now, attackProfile = currentAttackProfile()) {
     npc.hp ??= 80;
     npc.maxHp ??= 80;
-    npc.hp -= attackProfile.damage;
+    const damage = villagerIncomingDamageAfterBuff(npc, weaponDamageForTarget(npc, attackProfile), now);
+    npc.hp -= damage;
     npc.hurtUntil = now + 180;
     applyPlayerWeaponEffects(npc, now, attackProfile, 'villager');
     markCultHerbalistAttacked(npc);
     setVillagerPlayerAggro(npc);
-    npc.returningHome = npc.hp < npc.maxHp * 0.3;
+    npc.returningHome = !npc.homeBuilding?.destroyed && npc.hp < npc.maxHp * 0.3;
     const dir = attackProfile.dir || state.player.attackDir || state.player.facing;
-    moveCircle(npc, dir.x * 12, dir.y * 12);
+    const force = villagerPlayerHitKnockForce(npc, attackProfile);
+    moveOutdoorVillager(npc, dir.x * 22, dir.y * 22);
+    npc.knockX = (npc.knockX || 0) + dir.x * force;
+    npc.knockY = (npc.knockY || 0) + dir.y * force;
+    npc.staggerUntil = now + 260;
     const reputation = changeVillageReputation(homeVillageFor(npc), -1);
     spawnBurst(npc.x, npc.y, '#ff6b6b', 12, 190, npc.radius * 0.75);
-    addFloatText(`-${attackProfile.damage}`, npc.x, npc.y - 40, '#ffb3b3');
+    addFloatText(`-${damage}`, npc.x, npc.y - 40, '#ffb3b3');
     showToast(npc.returningHome ? `${npc.label}重伤后往家里撤退。本村声誉 -1` : `${npc.label}被激怒，开始反击。本村声誉 -1`);
     if (npc.hp <= 0) {
         npc.hp = 0;
@@ -9235,6 +13286,9 @@ function shouldBlacksmithBlock(npc, now, attackProfile) {
 }
 
 function damageVillageTotem(totem, now, attackProfile = currentAttackProfile()) {
+    if (!attackProfile.name?.includes('箭') && !attackProfile.name?.includes('弹')) {
+        damageWeaponDurabilityForTarget(selectedHotbarItem(), totem, attackProfile);
+    }
     totem.hp -= attackProfile.damage;
     state.cameraShake = Math.max(state.cameraShake, 5);
     spawnBurst(totem.x, totem.y - 18, '#ffd166', 12, 160, 18);
@@ -9243,7 +13297,14 @@ function damageVillageTotem(totem, now, attackProfile = currentAttackProfile()) 
         totem.hp = 0;
         totem.solid = false;
         spawnBurst(totem.x, totem.y - 20, '#ffffff', 20, 220, 24);
-        showToast('村庄图腾被击碎了。');
+        if (totem.mineBoss) {
+            addInventoryItem('crystal', 3);
+            addInventoryItem('stoneCore', 1);
+            addInventoryItem('crystalFang', 1);
+            showToast('晶核守卫碎裂，获得魔晶 x3、石核 x1、晶牙 x1。');
+        } else {
+            showToast('村庄图腾被击碎了。');
+        }
     } else {
         showToast(`村庄图腾受损：${Math.ceil(totem.hp)}/${totem.maxHp}`);
     }
@@ -9278,6 +13339,8 @@ function simpleWeaponProfile(key) {
     const weapon = simpleWeaponDef(key);
     if (!weapon) return null;
     const profile = { ...weapon.profile, name: weapon.name };
+    const visualRange = weaponVisualRangeOverride(key);
+    if (visualRange) profile.range = visualRange;
     const combo = state.player.weaponCombo?.key === key ? state.player.weaponCombo.count : 1;
     if (profile.comboRange && combo === 3) {
         profile.range += profile.comboRange;
@@ -9291,6 +13354,20 @@ function simpleWeaponProfile(key) {
     if (profile.multiStrike) {
         profile.damage *= profile.multiStrike;
         profile.name = `${weapon.name}双击`;
+    }
+    if (profile.dagger) {
+        profile.combo = combo;
+        profile.stamina = Math.max(4, Math.floor((profile.stamina || 7) * (combo === 3 ? 1.15 : 0.85)));
+        profile.cooldown = Math.max(0.14, (profile.cooldown || 0.22) - 0.03);
+        if (combo === 3) {
+            profile.damage = Math.ceil(profile.damage * 1.55);
+            profile.range += 10;
+            profile.interrupt = true;
+            if (!profile.poison) profile.bleed = true;
+            profile.name = `${weapon.name}终结刺`;
+        } else {
+            profile.name = `${weapon.name}${combo}连`;
+        }
     }
     const pendingCharge = state.player.pendingMeleeCharge;
     if (pendingCharge?.key === key) {
@@ -9306,23 +13383,62 @@ function simpleWeaponProfile(key) {
     return profile;
 }
 
+function weaponVisualRangeOverride(key) {
+    return {
+        woodFork: 74,
+        stoneBladeSpear: 76,
+        bambooPike: 116,
+        boneSpikedClub: 52,
+        vineStoneHammer: 54,
+        shieldClub: 44,
+        twinStoneDagger: 34,
+        bambooThrowingKnife: 42,
+        torchClub: 48,
+        toxicKnife: 32,
+        beeNeedleSpear: 82,
+        antlerFork: 78,
+        bambooCrossbow: 520,
+        ropeSickle: 104,
+        nailClub: 48,
+        resinHammer: 52,
+        frogWhip: 112,
+        scorpionHook: 84,
+        shadowWoodBlade: 54,
+        clawHookBlade: 64,
+        pollenDartFan: 58,
+        crystalFangSpear: 112,
+        boneShardMace: 54,
+        ironwoodMachete: 62,
+        darkwoodScimitar: 58,
+        buttressRootMaul: 58,
+        cypressMudSaber: 56,
+        vineWrappedSpear: 88,
+        poisonVineWhip: 126,
+        jungleMachete: 62,
+        sacrificialVineHorn: 66,
+    }[key] || 0;
+}
+
 function currentAttackProfile() {
     const item = selectedHotbarItem();
     const simpleProfile = simpleWeaponProfile(item);
     if (simpleProfile) return simpleProfile;
     const profiles = {
-        stoneAxe: { name: '石斧', damage: 3, range: 46, stamina: 14, cooldown: 0.54, arc: 0.1, style: 'chop' },
-        stonePickaxe: { name: '石镐', damage: 3, range: 44, stamina: 15, cooldown: 0.58, arc: 0.16, style: 'pick' },
-        stoneSickle: { name: '石镰', damage: 2, range: 48, stamina: 11, cooldown: 0.36, arc: 0.12, style: 'slash' },
-        stoneSpear: { name: '石矛', damage: 4, range: 90, stamina: 14, cooldown: 0.5, arc: 0.3, style: 'thrust' },
+        stoneAxe: { name: '石斧', damage: 3, range: 52, stamina: 14, cooldown: 0.54, arc: 0.1, style: 'chop' },
+        stonePickaxe: { name: '石镐', damage: 3, range: 50, stamina: 15, cooldown: 0.58, arc: 0.16, style: 'pick' },
+        stoneSickle: { name: '石镰', damage: 2, range: 42, stamina: 11, cooldown: 0.36, arc: 0.12, style: 'slash' },
+        ironAxe: { name: '铁斧', damage: 5, range: 58, stamina: 15, cooldown: 0.48, arc: 0.12, style: 'chop', cleave: true },
+        ironPickaxe: { name: '铁镐', damage: 5, range: 54, stamina: 16, cooldown: 0.5, arc: 0.18, style: 'pick' },
+        ironSickle: { name: '铁镰', damage: 4, range: 50, stamina: 11, cooldown: 0.3, arc: 0.16, style: 'slash', cleave: true },
+        stoneSpear: { name: '石矛', damage: 4, range: 92, stamina: 14, cooldown: 0.5, arc: 0.3, style: 'thrust' },
         slingshot: { name: '弹弓', damage: 1, range: 360, stamina: 12, cooldown: 0.95, arc: 0.18, style: 'thrust' },
-        bambooSpear: { name: '竹矛', damage: 3, range: 102, stamina: 13, cooldown: 0.54, arc: 0.34, style: 'thrust' },
-        antlerSpear: { name: '鹿角矛', damage: 5, range: 108, stamina: 15, cooldown: 0.52, arc: 0.32, style: 'thrust' },
-        venomDagger: { name: '毒牙匕首', damage: 3, range: 34, stamina: 9, cooldown: 0.28, arc: 0.06, style: 'stab', poison: true },
-        ironSword: { name: '铁剑', damage: 6, range: 62, stamina: 18, cooldown: 0.42, arc: 0.08, style: 'slash', cleave: true },
-        crystalBlade: { name: '魔晶剑', damage: 9, range: 72, stamina: 20, cooldown: 0.46, arc: 0.08, style: 'slash', cleave: true },
+        bambooSpear: { name: '竹矛', damage: 3, range: 106, stamina: 13, cooldown: 0.54, arc: 0.34, style: 'thrust' },
+        antlerSpear: { name: '鹿角矛', damage: 5, range: 104, stamina: 15, cooldown: 0.52, arc: 0.32, style: 'thrust' },
+        venomDagger: { name: '毒牙匕首', damage: 3, range: 34, stamina: 7, cooldown: 0.2, arc: 0.06, style: 'stab', poison: true, dagger: true },
+        ironSword: { name: '铁剑', damage: 6, range: 70, stamina: 18, cooldown: 0.42, arc: 0.08, style: 'slash', cleave: true },
+        crystalBlade: { name: '魔晶剑', damage: 9, range: 82, stamina: 20, cooldown: 0.46, arc: 0.08, style: 'slash', cleave: true },
         sinewBow: { name: '鹿筋弓', damage: 3, range: 86, stamina: 12, cooldown: 0.5, arc: 0.18, style: 'thrust' },
-        stoneCoreHammer: { name: '石核锤', damage: 8, range: 50, stamina: 24, cooldown: 0.8, arc: 0.05, style: 'chop' },
+        stoneCoreHammer: { name: '石核锤', damage: 8, range: 56, stamina: 24, cooldown: 0.8, arc: 0.05, style: 'chop' },
         wood: { name: '木头', damage: 1, range: 38, stamina: 10, cooldown: 0.38, arc: 0.16, style: 'club' },
         bamboo: { name: '竹材', damage: 1, range: 50, stamina: 10, cooldown: 0.4, arc: 0.22, style: 'thrust' },
         stone: { name: '石头', damage: 2, range: 30, stamina: 11, cooldown: 0.44, arc: 0.14, style: 'club' },
@@ -9368,7 +13484,178 @@ function backpackItemKeys() {
 }
 
 function isEquippedItemKey(key) {
-    return key === equippedItemKey('armor') || key === equippedItemKey('offhand');
+    const equipped = key === equippedItemKey('armorBody') || key === equippedItemKey('armorCloak') || key === equippedItemKey('armorHead') || key === equippedItemKey('offhand');
+    return equipped && (state.inventory[key] || 0) <= 1;
+}
+
+function isDurableItem(key) {
+    return isEquipmentItem(key);
+}
+
+function durableMaxForItem(key) {
+    if (key.includes('crystal') || key.includes('mireCore')) return 180;
+    if (key.includes('ironwood') || ['ironArmor', 'ironShield', 'ironSword', 'ironAxe', 'ironPickaxe', 'ironSickle', 'minerLampHelmet'].includes(key)) return 155;
+    if (key.includes('buttress') || key.includes('stoneCore')) return 145;
+    if (key.includes('reedShell') || key.includes('scorpion') || key.includes('bone') || key.includes('antler')) return 125;
+    if (key.includes('thickFur') || key.includes('rabbit') || key.includes('leather')) return 105;
+    if (key.includes('stone')) return 95;
+    if (key.includes('jungle') || key.includes('vine') || key.includes('wood')) return 85;
+    if (key.includes('bamboo') || key === 'sinewBow' || key === 'clothArmor') return 75;
+    return 100;
+}
+
+function normalizeDurableInventory() {
+    state.itemDurability ||= {};
+    for (const key of Object.keys(state.inventory || {})) {
+        if (!isDurableItem(key)) continue;
+        const count = Math.max(0, Math.floor(state.inventory[key] || 0));
+        if (count <= 0) {
+            delete state.itemDurability[key];
+            continue;
+        }
+        state.inventory[key] = count;
+        const max = durableMaxForItem(key);
+        const current = state.itemDurability[key];
+        let values = Array.isArray(current)
+            ? current
+            : (Number.isFinite(current) && current > 0 ? [current] : []);
+        values = values.map(value => Number.isFinite(value) && value > 0 ? Math.min(value, max) : max);
+        while (values.length < count) values.push(max);
+        if (values.length > count) values = values.slice(0, count);
+        state.itemDurability[key] = values;
+    }
+}
+
+function durabilityValues(key) {
+    normalizeDurableInventory();
+    return Array.isArray(state.itemDurability?.[key]) ? state.itemDurability[key] : [];
+}
+
+function currentDurability(key) {
+    const values = durabilityValues(key);
+    return Math.ceil(values[0] || durableMaxForItem(key));
+}
+
+function repairDurableItem(key, amount = 45) {
+    if (!isDurableItem(key) || (state.inventory[key] || 0) <= 0) return false;
+    const values = durabilityValues(key);
+    const max = durableMaxForItem(key);
+    values[0] = Math.min(max, (values[0] || max) + amount);
+    state.itemDurability[key] = values;
+    return true;
+}
+
+function durabilityText(key) {
+    if (!isDurableItem(key) || (state.inventory[key] || 0) <= 0) return '';
+    const count = state.inventory[key] || 0;
+    const text = `${currentDurability(key)}/${durableMaxForItem(key)}`;
+    return count > 1 ? `${text} x${count}` : text;
+}
+
+function damageItemDurability(key, amount = 1) {
+    if (!isDurableItem(key) || (state.inventory[key] || 0) <= 0) return false;
+    const values = durabilityValues(key);
+    values[0] = Math.max(0, (values[0] || durableMaxForItem(key)) - amount);
+    if (values[0] > 0) return false;
+    values.shift();
+    state.inventory[key] = Math.max(0, (state.inventory[key] || 0) - 1);
+    if (state.inventory[key] <= 0) {
+        breakDurableItem(key);
+    } else {
+        state.itemDurability[key] = values;
+        showToast(`${RESOURCE_LABELS[key] || key} 损坏了一件，还剩 ${state.inventory[key]} 件。`);
+    }
+    return true;
+}
+
+function weaponDurabilityUseCost(key, attackProfile = currentAttackProfile()) {
+    if (!isDurableItem(key)) return 0;
+    if (attackProfile.style === 'chop' || attackProfile.cleave) return 2;
+    if (attackProfile.multiStrike) return 1.5;
+    return 1;
+}
+
+function damageWeaponDurabilityForTarget(key, target, attackProfile = currentAttackProfile()) {
+    const extra = weaponDurabilityExtraForTarget(key, target, attackProfile);
+    if (extra > 0) damageItemDurability(key, extra);
+}
+
+function weaponDurabilityExtraForTarget(key, target, attackProfile = currentAttackProfile()) {
+    if (!isDurableItem(key) || !target) return 0;
+    let extra = 0;
+    if (isHardDurabilityTarget(target)) {
+        extra += 1;
+        if (isWoodenOrLightWeapon(key)) extra += 2;
+        if (attackProfile.style === 'stab' || attackProfile.style === 'thrust') extra += 1;
+        if (key === 'woodFork') extra += 2;
+        if (key === 'bambooPike' || key === 'bambooSpear') extra += 1;
+        if (attackProfile.dagger) extra += 2;
+    }
+    if (target.kind === 'golem' && (attackProfile.poison || attackProfile.bleed)) extra += 1;
+    return extra;
+}
+
+function isHardDurabilityTarget(target) {
+    return ['golem', 'jungleRuinGuardian'].includes(target.kind)
+        || target.kind === 'totem'
+        || target.ruinGuardian
+        || /石像|石|图腾|守卫/.test(target.name || target.label || '');
+}
+
+function isWoodenOrLightWeapon(key) {
+    const lower = key || '';
+    return lower.includes('wood')
+        || lower.includes('bamboo')
+        || lower.includes('vine')
+        || ['woodFork', 'shieldClub', 'torchClub', 'sling', 'slingshot', 'sinewBow', 'frogWhip', 'pollenDartFan'].includes(key);
+}
+
+function damageEquippedArmorDurability(amount = 1) {
+    ensureArmorSlots();
+    const equipped = ['body', 'cloak', 'head']
+        .map(slot => ({ slot, name: state.equipment.armors[slot] }))
+        .filter(item => item.name && item.name !== '无');
+    if (!equipped.length) return;
+    for (const item of equipped) {
+        const slotAmount = item.slot === 'body' ? amount : Math.max(1, Math.ceil(amount * 0.55));
+        damageItemDurability(armorKeyForName(item.name), slotAmount);
+    }
+}
+
+function breakDurableItem(key) {
+    state.inventory[key] = 0;
+    delete state.itemDurability?.[key];
+    clearHotbarItem(key);
+    ensureArmorSlots();
+    for (const slot of ['body', 'cloak', 'head']) {
+        if (state.equipment.armors[slot] !== '无' && armorKeyForName(state.equipment.armors[slot]) === key) state.equipment.armors[slot] = '无';
+    }
+    state.equipment.armor = primaryArmorName();
+    if (state.equipment.shield !== '无' && shieldKeyForName(state.equipment.shield) === key) state.equipment.shield = '无';
+    if (selectedHotbarItem() === key || equippedWeaponKey() === key) {
+        state.equipment.weapon = '徒手';
+        state.equipment.attack = 1;
+        state.equipment.range = 32;
+    }
+    state.equipment.defense = armorDefense() + shieldDefense();
+    showToast(`${RESOURCE_LABELS[key] || key} 耐久耗尽，损坏了。`);
+}
+
+function equippedWeaponKey() {
+    const weaponName = state.equipment.weapon;
+    const simple = SIMPLE_WEAPON_DEFS.find(item => item.name === weaponName);
+    if (simple) return simple.id;
+    return {
+        石矛: 'stoneSpear',
+        弹弓: 'slingshot',
+        竹矛: 'bambooSpear',
+        毒牙匕首: 'venomDagger',
+        铁剑: 'ironSword',
+        魔晶剑: 'crystalBlade',
+        鹿筋弓: 'sinewBow',
+        鹿角矛: 'antlerSpear',
+        石核锤: 'stoneCoreHammer',
+    }[weaponName] || '';
 }
 
 function hasBackpackSpaceFor(key) {
@@ -9378,6 +13665,15 @@ function hasBackpackSpaceFor(key) {
 function addInventoryItem(key, amount = 1) {
     if (amount <= 0) return true;
     if (!hasBackpackSpaceFor(key)) return false;
+    if (isDurableItem(key)) {
+        state.inventory[key] = (state.inventory[key] || 0) + 1;
+        state.itemDurability ||= {};
+        const values = durabilityValues(key);
+        values[state.inventory[key] - 1] = durableMaxForItem(key);
+        state.itemDurability[key] = values;
+        rememberItemDiscovery(key);
+        return true;
+    }
     state.inventory[key] = (state.inventory[key] || 0) + amount;
     rememberItemDiscovery(key);
     return true;
@@ -9447,6 +13743,14 @@ function recipeLearningSuffix(names) {
 
 function discardInventoryItem(key, amount = 1) {
     if ((state.inventory[key] || 0) <= 0) return;
+    if (isDurableItem(key)) {
+        const removed = Math.min(amount, state.inventory[key]);
+        consumeDurableItemCopies(key, removed);
+        syncHotbarItems();
+        showToast(`丢弃 ${RESOURCE_LABELS[key] || key} x${removed}`);
+        renderHud();
+        return;
+    }
     const removed = Math.min(amount, state.inventory[key]);
     state.inventory[key] -= removed;
     if (state.inventory[key] <= 0) state.inventory[key] = 0;
@@ -9471,6 +13775,7 @@ function chestItemKeys(chest) {
 }
 
 function chestHasSpaceFor(chest, key) {
+    if (isDurableItem(key)) return (chest.storage?.[key] || 0) <= 0 && chestItemKeys(chest).length < CHEST_SLOT_LIMIT;
     return (chest.storage?.[key] || 0) > 0 || chestItemKeys(chest).length < CHEST_SLOT_LIMIT;
 }
 
@@ -9484,8 +13789,18 @@ function storeItemInChest(chest, key, amount = 1) {
         showToast('木箱已满。');
         return;
     }
-    const moved = Math.min(amount, state.inventory[key]);
-    state.inventory[key] -= moved;
+    const moved = isDurableItem(key) ? 1 : Math.min(amount, state.inventory[key]);
+    if (isDurableItem(key)) {
+        const values = durabilityValues(key);
+        const storedDurability = values.shift() || durableMaxForItem(key);
+        state.inventory[key] -= moved;
+        chest.itemDurability ||= {};
+        chest.itemDurability[key] = storedDurability;
+        if (state.inventory[key] > 0) state.itemDurability[key] = values;
+        else delete state.itemDurability?.[key];
+    } else {
+        state.inventory[key] -= moved;
+    }
     chest.storage[key] = (chest.storage[key] || 0) + moved;
     syncHotbarItems();
     showToast(`存入木箱：${RESOURCE_LABELS[key] || key} x${moved}`);
@@ -9494,12 +13809,24 @@ function storeItemInChest(chest, key, amount = 1) {
 
 function takeItemFromChest(chest, key, amount = 1) {
     if ((chest.storage?.[key] || 0) <= 0) return;
-    const moved = Math.min(amount, chest.storage[key]);
+    const moved = isDurableItem(key) ? 1 : Math.min(amount, chest.storage[key]);
     if (isRecipeNoteKey(key)) {
         takeRecipeNoteFromChest(chest, key, moved);
         return;
     }
-    if (!addInventoryItem(key, moved)) {
+    if (isDurableItem(key)) {
+        if (!hasBackpackSpaceFor(key)) {
+            showToast('背包已满，无法取出。');
+            return;
+        }
+        state.inventory[key] = (state.inventory[key] || 0) + 1;
+        state.itemDurability ||= {};
+        const values = durabilityValues(key);
+        values[state.inventory[key] - 1] = Math.min(chest.itemDurability?.[key] || durableMaxForItem(key), durableMaxForItem(key));
+        state.itemDurability[key] = values;
+        delete chest.itemDurability[key];
+        rememberItemDiscovery(key);
+    } else if (!addInventoryItem(key, moved)) {
         showToast('背包已满，无法取出。');
         return;
     }
@@ -9631,10 +13958,11 @@ function spawnAttackParticles(x, y, dir, attackProfile) {
 }
 
 function addFloatText(text, x, y, color) {
-    state.floatTexts.push({ text, x, y, color, life: 0.85, indoor: !!state.indoor && !state.updatingOutdoorWhileIndoor });
+    state.floatTexts.push({ text, x, y, color, life: 0.85, scene: currentSceneKey(), indoor: !!state.indoor && !state.updatingOutdoorWhileIndoor });
 }
 
 function addParticle(particle) {
+    particle.scene ||= currentSceneKey();
     state.particles.push(particle);
     if (state.particles.length > MAX_PARTICLES) {
         state.particles.splice(0, state.particles.length - MAX_PARTICLES);
@@ -9663,6 +13991,13 @@ function consumableUseConfig(key) {
         mushroom: 850,
         lotus: 750,
         cactusFruit: 900,
+        carrot: 700,
+        corn: 900,
+        tomato: 700,
+        repairKit: 1200,
+        jerky: 1100,
+        minerRation: 1200,
+        vegetableSoup: 1500,
         honey: 650,
         sap: 700,
         meat: 1300,
@@ -9678,6 +14013,7 @@ function consumableUseConfig(key) {
         stew: 1700,
         roastMeat: 1600,
         honeySalve: 1200,
+        royalJellyPotion: 1500,
         nightVisionPotion: 1300,
         jumpPotion: 1300,
         poisonResistPotion: 1300,
@@ -9734,6 +14070,45 @@ function applyConsumableEffect(key) {
             state.inventory.cactusFruit -= 1;
             showToast('吃下仙人掌果，补充水分和饥饿。');
             break;
+        case 'carrot':
+            feedPlayer(10);
+            p.stamina = Math.min(100, p.stamina + 4);
+            state.inventory.carrot -= 1;
+            showToast('吃下胡萝卜，补充一点饥饿和体力。');
+            break;
+        case 'corn':
+            feedPlayer(14);
+            state.inventory.corn -= 1;
+            showToast('啃下玉米，缓解饥饿。');
+            break;
+        case 'tomato':
+            feedPlayer(9);
+            p.hp = Math.min(p.maxHp, p.hp + 3);
+            state.inventory.tomato -= 1;
+            showToast('吃下番茄，稍微恢复生命并缓解饥饿。');
+            break;
+        case 'repairKit':
+            useRepairKit();
+            break;
+        case 'jerky':
+            feedPlayer(18);
+            p.stamina = Math.min(100, p.stamina + 10);
+            state.inventory.jerky -= 1;
+            showToast('吃下猎户肉干，恢复饥饿和少量体力。');
+            break;
+        case 'minerRation':
+            feedPlayer(16);
+            p.stamina = Math.min(100, p.stamina + 18);
+            state.inventory.minerRation -= 1;
+            showToast('吃下矿工干粮，补充饥饿和体力。');
+            break;
+        case 'vegetableSoup':
+            feedPlayer(24);
+            p.hp = Math.min(p.maxHp, p.hp + 12);
+            p.stamina = Math.min(100, p.stamina + 10);
+            state.inventory.vegetableSoup -= 1;
+            showToast('喝下蔬菜汤，恢复生命、饥饿和体力。');
+            break;
         case 'honey':
             feedPlayer(10);
             p.stamina = Math.min(100, p.stamina + 6);
@@ -9774,6 +14149,15 @@ function applyConsumableEffect(key) {
             p.regenTickAt = performance.now() + 800;
             state.inventory.honeySalve -= 1;
             showToast('使用蜂蜜药膏，恢复 30 生命，并再生 8 秒。');
+            break;
+        case 'royalJellyPotion':
+            p.hp = Math.min(p.maxHp, p.hp + 55);
+            p.stamina = Math.min(100, p.stamina + 55);
+            p.royalJellyUntil = Math.max(p.royalJellyUntil || 0, performance.now() + 90000);
+            p.royalJellyTickAt = Math.min(p.royalJellyTickAt || performance.now() + 900, performance.now() + 900);
+            state.inventory.royalJellyPotion -= 1;
+            spawnBurst(p.x, p.y - 12, '#fff0a8', 26, 170, 28);
+            showToast('饮下蜂王浆药剂，立刻大幅恢复，并长时间缓慢恢复生命和体力。');
             break;
         case 'bandage':
             p.hp = Math.min(p.maxHp, p.hp + 12);
@@ -9989,7 +14373,7 @@ function stationRequirement(item) {
     if (item.station) return item.station;
     if (['stew', 'roastMeat', 'honeyRoastMeat'].includes(item.id)) return 'campfire';
     if (['potion', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion'].includes(item.id)) return 'potionTable';
-    if (['honeySalve', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion'].includes(item.id)) return 'potionTable';
+    if (['honeySalve', 'royalJellyPotion', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion'].includes(item.id)) return 'potionTable';
     if (['potionTable', 'forge', 'bedroll', 'snare', 'bambooFence', 'bambooTrap', 'coalBomb', 'slingshot', 'campFlag', 'simpleArrow', 'poisonArrow', 'beeDart', 'beehiveBox', 'antlerHorn', 'shadowLantern', 'stoneCoreTotem', 'reedMat', 'resinGlue', 'mapleSnack', 'honeyRoastMeat'].includes(item.id)) return 'workbench';
     if (['sword', 'ironArmor', 'ironShield', 'crystalBlade', 'crystalArmor', 'venomDagger', 'key', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'waxTorch'].includes(item.id)) return 'forge';
     return '';
@@ -10045,6 +14429,7 @@ function craft(id) {
     if (!canCraft(item)) return;
     Object.entries(item.cost).forEach(([key, amount]) => consumeItemAmount(key, amount));
     item.apply(state);
+    normalizeDurableInventory();
     state.knownRecipes ||= {};
     state.knownRecipes[item.id] = true;
     rememberItemDiscovery(recipeOutputKey(item));
@@ -10073,6 +14458,18 @@ function useInventoryItem(key) {
         case 'stoneSickle':
             state.equipment.tool = '石镰';
             showToast('已装备石镰。');
+            break;
+        case 'ironAxe':
+            state.equipment.tool = '铁斧';
+            showToast('已装备铁斧。');
+            break;
+        case 'ironPickaxe':
+            state.equipment.tool = '铁镐';
+            showToast('已装备铁镐。');
+            break;
+        case 'ironSickle':
+            state.equipment.tool = '铁镰';
+            showToast('已装备铁镰。');
             break;
         case 'stoneSpear':
             equipWeapon('石矛', 4, 88, '已装备石矛。');
@@ -10105,13 +14502,19 @@ function useInventoryItem(key) {
             equipArmor('皮甲', 1, '已装备皮甲。');
             break;
         case 'clothArmor':
-            equipArmor('布衣', 0, '已装备布衣。');
+            equipArmor('布衣', 1, '已装备布衣。');
             break;
         case 'ironArmor':
             equipArmor('铁甲', 2, '已装备铁甲。');
             break;
         case 'crystalArmor':
             equipArmor('魔晶甲', 3, '已装备魔晶甲。');
+            break;
+        case 'minerLampHelmet':
+            equipArmor('矿灯头盔', 1, '已装备矿灯头盔，照亮附近。');
+            break;
+        case 'crystalLampHelmet':
+            equipArmor('晶灯头盔', 1, '已装备晶灯头盔，周围变得明亮。');
             break;
         case 'rabbitCloak':
             equipArmor('兔毛披肩', 0, '已装备兔毛披肩。');
@@ -10205,18 +14608,16 @@ function useInventoryItem(key) {
             useAntlerHorn();
             break;
         case 'snare':
-            deploySnare();
+            placeGroundTrap(key);
             break;
         case 'bambooFence':
             placeBambooFence();
             break;
         case 'bambooTrap':
-            placeBambooTrap();
-            break;
         case 'vineNetTrap':
         case 'toxicVineSnare':
         case 'poisonBambooTrap':
-            deployJungleTrap(key);
+            placeGroundTrap(key);
             break;
         case 'potionTable':
         case 'workbench':
@@ -10229,8 +14630,11 @@ function useInventoryItem(key) {
             placeStation(key);
             break;
         case 'campFlag':
-            state.player.x = state.camp.x + 85;
-            state.player.y = state.camp.y + 42;
+            {
+                const point = safeOutdoorPointNear({ x: state.camp.x + 85, y: state.camp.y + 42 }, state.camp, 220);
+                state.player.x = point.x;
+                state.player.y = point.y;
+            }
             showToast('营地旗帜指引你回到营地。');
             break;
         case 'potion':
@@ -10238,6 +14642,13 @@ function useInventoryItem(key) {
         case 'mushroom':
         case 'lotus':
         case 'cactusFruit':
+        case 'carrot':
+        case 'corn':
+        case 'tomato':
+        case 'repairKit':
+        case 'jerky':
+        case 'minerRation':
+        case 'vegetableSoup':
         case 'honey':
         case 'sap':
         case 'meat':
@@ -10251,6 +14662,7 @@ function useInventoryItem(key) {
         case 'regenPotion':
         case 'ironSkinPotion':
         case 'honeySalve':
+        case 'royalJellyPotion':
         case 'nightVisionPotion':
         case 'jumpPotion':
         case 'poisonResistPotion':
@@ -10278,8 +14690,11 @@ function equipWeapon(name, attack, range, message) {
 }
 
 function equipArmor(name, defense, message) {
-    state.equipment.armor = name;
-    state.equipment.defense = defense + shieldDefense();
+    const slot = armorSlotForName(name);
+    state.equipment.armors ||= { body: '无', cloak: '无', head: '无' };
+    state.equipment.armors[slot] = name;
+    state.equipment.armor = primaryArmorName();
+    state.equipment.defense = armorDefense() + shieldDefense();
     clearHotbarItem(armorKeyForName(name));
     if (message) showToast(message);
 }
@@ -10292,23 +14707,78 @@ function equipShield(name, defense, message) {
 }
 
 function armorKeyForName(name) {
-    return { 布衣: 'clothArmor', 皮甲: 'leatherArmor', 铁甲: 'ironArmor', 魔晶甲: 'crystalArmor', 兔毛披肩: 'rabbitCloak', 蝎壳甲: 'scorpionArmor', 厚毛皮衣: 'thickFurCoat', 湿地甲壳甲: 'reedShellArmor', 泥沼护甲: 'mireCoreArmor' }[name] || '';
+    return {
+        布衣: 'clothArmor',
+        皮甲: 'leatherArmor',
+        铁甲: 'ironArmor',
+        魔晶甲: 'crystalArmor',
+        矿灯头盔: 'minerLampHelmet',
+        晶灯头盔: 'crystalLampHelmet',
+        兔毛披肩: 'rabbitCloak',
+        蝎壳甲: 'scorpionArmor',
+        厚毛皮衣: 'thickFurCoat',
+        湿地甲壳甲: 'reedShellArmor',
+        泥沼护甲: 'mireCoreArmor',
+        丛林叶披肩: 'jungleLeafCloak',
+        板根木甲: 'buttressArmor',
+        毒菇面罩: 'toxicMask',
+        绿母寄生甲: 'parasiticVineArmor',
+    }[name] || '';
+}
+
+function armorSlotForName(name) {
+    if (['兔毛披肩', '厚毛皮衣', '丛林叶披肩'].includes(name)) return 'cloak';
+    if (['毒菇面罩', '矿灯头盔', '晶灯头盔'].includes(name)) return 'head';
+    return 'body';
+}
+
+function ensureArmorSlots() {
+    state.equipment.armors ||= { body: '无', cloak: '无', head: '无' };
+    if (state.equipment.armor && state.equipment.armor !== '无') {
+        const slot = armorSlotForName(state.equipment.armor);
+        if (!state.equipment.armors[slot] || state.equipment.armors[slot] === '无') state.equipment.armors[slot] = state.equipment.armor;
+    }
+    for (const slot of ['body', 'cloak', 'head']) state.equipment.armors[slot] ||= '无';
+}
+
+function equippedArmorNames() {
+    ensureArmorSlots();
+    return ['body', 'cloak', 'head'].map(slot => state.equipment.armors[slot]).filter(name => name && name !== '无');
+}
+
+function hasEquippedArmor(name) {
+    return equippedArmorNames().includes(name);
+}
+
+function primaryArmorName() {
+    ensureArmorSlots();
+    return state.equipment.armors.body !== '无' ? state.equipment.armors.body
+        : (state.equipment.armors.cloak !== '无' ? state.equipment.armors.cloak
+            : (state.equipment.armors.head !== '无' ? state.equipment.armors.head : '无'));
 }
 
 function shieldKeyForName(name) {
-    return { 木盾: 'woodShield', 铁盾: 'ironShield' }[name] || '';
+    return {
+        木盾: 'woodShield',
+        铁盾: 'ironShield',
+        藤编圆盾: 'vineRoundShield',
+        板根盾: 'buttressShield',
+    }[name] || '';
 }
 
 function armorDefense() {
-    if (state.equipment.armor === '魔晶甲') return 3;
-    if (state.equipment.armor === '铁甲') return 2;
-    if (state.equipment.armor === '皮甲') return 1;
-    return 0;
+    return equippedArmorNames().reduce((sum, name) => {
+        if (name === '魔晶甲') return sum + 3;
+        if (['铁甲', '蝎壳甲', '湿地甲壳甲', '泥沼护甲', '板根木甲', '绿母寄生甲'].includes(name)) return sum + 2;
+        if (['皮甲', '布衣', '厚毛皮衣', '丛林叶披肩', '毒菇面罩', '矿灯头盔', '晶灯头盔'].includes(name)) return sum + 1;
+        return sum;
+    }, 0);
 }
 
 function shieldDefense() {
     if (state.equipment.shield === '铁盾') return 2;
-    if (state.equipment.shield === '木盾') return 1;
+    if (state.equipment.shield === '板根盾') return 2;
+    if (['木盾', '藤编圆盾'].includes(state.equipment.shield)) return 1;
     return 0;
 }
 
@@ -10328,6 +14798,7 @@ function explodeCoalBombAt(x, y) {
         const damage = Math.max(2, Math.round(maxDamage * (1 - d / radius) + 2));
         enemy.hp -= damage;
         enemy.hurtUntil = performance.now() + 220;
+        markEnemyAttackedByPlayer(enemy, performance.now());
         const knock = normalize(enemy.x - x, enemy.y - y);
         enemy.knockX += knock.x * (wet ? 150 : 280);
         enemy.knockY += knock.y * (wet ? 150 : 280);
@@ -10339,11 +14810,19 @@ function explodeCoalBombAt(x, y) {
         }
         hitCount++;
     }
-    for (const npc of state.outdoorVillagers.filter(item => item.hp > 0)) {
+    for (const npc of state.outdoorVillagers.filter(item => item.hp > 0 && !item.follower)) {
         const d = distance(npc, { x, y });
         if (d > radius) continue;
         const damage = Math.max(1, Math.round(maxDamage * 0.45 * (1 - d / radius) + 1));
         damageOutdoorVillager(npc, performance.now(), { name: wet ? '水中煤火弹' : '煤火弹爆炸', damage, dir: normalize(npc.x - x, npc.y - y) });
+        hitCount++;
+    }
+    for (const hive of state.waspHives || []) {
+        if (hive.state === 'ruined') continue;
+        const d = distance(hive, { x, y });
+        if (d > radius) continue;
+        const damage = Math.max(4, Math.round(maxDamage * 1.25 * (1 - d / radius) + 4));
+        damageWaspHive(hive, performance.now(), { name: wet ? '水中煤火弹' : '煤火弹爆炸', damage, style: 'blast' });
         hitCount++;
     }
     const playerDist = distance(state.player, { x, y });
@@ -10376,10 +14855,11 @@ function explodePoisonVialAt(x, y) {
         enemy.poisonUntil = Math.max(enemy.poisonUntil || 0, now + 7000);
         enemy.poisonTickAt = Math.min(enemy.poisonTickAt || now + 500, now + 500);
         enemy.hurtUntil = now + 180;
+        markEnemyAttackedByPlayer(enemy, now);
         addFloatText('中毒', enemy.x, enemy.y - 40, '#9cff7a');
         hitCount++;
     }
-    for (const npc of state.outdoorVillagers.filter(item => item.hp > 0)) {
+    for (const npc of state.outdoorVillagers.filter(item => item.hp > 0 && !item.follower)) {
         const d = distance(npc, { x, y });
         if (d > radius) continue;
         npc.poisonUntil = Math.max(npc.poisonUntil || 0, now + 7000);
@@ -10403,11 +14883,22 @@ function hitDirectProjectileTarget(projectile, hitInfo = findDirectProjectileHit
         hitOutdoorVillagerWithDirectProjectile(projectile, hitInfo.target);
         return;
     }
+    if (hitInfo.type === 'waspHive') {
+        damageWaspHive(hitInfo.target, performance.now(), { name: directProjectileName(projectile), damage: directProjectileDamage(projectile), style: 'thrust' });
+        projectile.hitTargets?.add(hitInfo.target);
+        return;
+    }
+    if (hitInfo.type === 'villageBuilding') {
+        damageVillageBuilding(hitInfo.target, { kind: 'playerProjectile', name: directProjectileName(projectile) }, directProjectileDamage(projectile), performance.now());
+        projectile.hitTargets?.add(hitInfo.target);
+        return;
+    }
     const hit = hitInfo.target;
     const now = performance.now();
     const damage = directProjectileDamage(projectile);
     hit.hp -= damage;
     hit.hurtUntil = now + 160;
+    markEnemyAttackedByPlayer(hit, now);
     hit.attackCooldown = Math.max(hit.attackCooldown, 0.22);
     if (projectile.kind !== 'slingshotPebble') {
         const knock = projectile.dir || normalize(hit.x - state.player.x, hit.y - state.player.y);
@@ -10417,12 +14908,12 @@ function hitDirectProjectileTarget(projectile, hitInfo = findDirectProjectileHit
         hit.knockX += knock.x * force;
         hit.knockY += knock.y * force;
     }
-    if (isPoisonDirectProjectile(projectile.kind) && hit.kind !== 'golem') {
+    if (isPoisonDirectProjectile(projectile.kind) && !isStoneCreature(hit)) {
         hit.poisonUntil = Math.max(hit.poisonUntil || 0, now + (projectile.kind === 'beeDart' ? 9000 : 5200));
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 800, now + 800);
         addFloatText('中毒', hit.x, hit.y - 48, '#9cff7a');
     }
-    if (projectile.kind === 'beeDart') {
+    if (projectile.kind === 'beeDart' && !isStoneCreature(hit)) {
         hit.poisonPower = Math.max(hit.poisonPower || 1, 2);
         hit.poisonTickAt = Math.min(hit.poisonTickAt || now + 500, now + 500);
         hit.rootedUntil = Math.max(hit.rootedUntil || 0, now + 1250);
@@ -10514,58 +15005,17 @@ function directProjectileName(projectile) {
     return '箭矢';
 }
 
-function deploySnare() {
-    const p = state.player;
-    const target = state.enemies
-        .filter(enemy => enemy.hp > 0 && distance(enemy, p) < 130)
-        .sort((a, b) => distance(a, p) - distance(b, p))[0];
-    if (!target) {
-        showToast('附近没有可困住的野兽。');
+function placeGroundTrap(kind) {
+    const preview = placementPreviewForItem(kind);
+    if (!preview.valid) {
+        showToast(preview.reason || '这里不能布置陷阱。');
         return;
     }
-    state.inventory.snare -= 1;
-    target.rootedUntil = performance.now() + 2600;
-    target.windupUntil = 0;
-    target.strikeAt = 0;
-    target.chargeUntil = 0;
-    target.leapUntil = 0;
-    spawnBurst(target.x, target.y, '#ffd166', 18, 120, target.radius);
-    addFloatText('束缚', target.x, target.y - 42, '#fff3b0');
-    showToast(`${target.name} 被捕兽夹困住了。`);
-}
-
-function deployJungleTrap(key) {
-    const p = state.player;
-    const radius = key === 'vineNetTrap' ? 178 : 145;
-    const targets = state.enemies.filter(enemy => enemy.hp > 0 && distance(enemy, p) < radius);
-    if (!targets.length) {
-        showToast('附近没有可触发丛林陷阱的敌人。');
-        return;
-    }
-    state.inventory[key] -= 1;
-    const now = performance.now();
-    const maxTargets = key === 'vineNetTrap' ? 4 : 2;
-    targets
-        .sort((a, b) => distance(a, p) - distance(b, p))
-        .slice(0, maxTargets)
-        .forEach(enemy => {
-            enemy.rootedUntil = Math.max(enemy.rootedUntil || 0, now + (key === 'vineNetTrap' ? 2200 : 1300));
-            enemy.windupUntil = 0;
-            enemy.strikeAt = 0;
-            if (key !== 'vineNetTrap' && enemy.kind !== 'golem') {
-                enemy.poisonUntil = Math.max(enemy.poisonUntil || 0, now + 4800);
-                enemy.poisonTickAt = Math.min(enemy.poisonTickAt || now + 800, now + 800);
-                addFloatText('中毒', enemy.x, enemy.y - 52, '#9cff7a');
-            }
-            if (key === 'poisonBambooTrap') {
-                enemy.hp -= 4;
-                enemy.hurtUntil = now + 180;
-                addFloatText('-4', enemy.x, enemy.y - 38, '#fff3b0');
-            }
-            spawnBurst(enemy.x, enemy.y, key === 'vineNetTrap' ? '#cde77b' : '#8cff66', 14, 120, enemy.radius);
-            addFloatText('缠绕', enemy.x, enemy.y - 42, '#d7f28a');
-        });
-    showToast(`${RESOURCE_LABELS[key]}困住了 ${Math.min(maxTargets, targets.length)} 个敌人。`);
+    state.inventory[kind] -= 1;
+    state.bambooTraps.push({ kind, x: preview.x, y: preview.y, radius: preview.radius, used: false });
+    const color = kind === 'snare' ? '#ffd166' : (kind === 'bambooTrap' || kind === 'poisonBambooTrap' ? '#d7f28a' : '#8cff66');
+    spawnBurst(preview.x, preview.y, color, 10, 90, 16);
+    showToast(`已在地上布置${RESOURCE_LABELS[kind]}，怪物踩中后触发。`);
     renderHud();
 }
 
@@ -10575,7 +15025,7 @@ function placeTorch() {
         showToast(preview.reason || '这里不能放置火把。');
         return;
     }
-    state.placedTorches.push({ x: preview.x, y: preview.y });
+    placeLightSource({ x: preview.x, y: preview.y, kind: 'torch' });
     state.inventory.torch -= 1;
     spawnBurst(preview.x, preview.y, '#ff9f1c', 8, 70, 12);
     showToast('已放置火把。');
@@ -10588,11 +15038,23 @@ function placeTorchLike(kind) {
         showToast(preview.reason || '这里不能放置照明物。');
         return;
     }
-    state.placedTorches.push({ x: preview.x, y: preview.y, kind });
+    placeLightSource({ x: preview.x, y: preview.y, kind });
     state.inventory[kind] -= 1;
     spawnBurst(preview.x, preview.y, kind === 'shadowLantern' ? '#8f6bd8' : '#ff9f1c', 10, 80, 12);
     showToast(`已放置${RESOURCE_LABELS[kind]}。`);
     renderHud();
+}
+
+function placeLightSource(light) {
+    if (state.underground) {
+        state.underground.torches ||= [];
+        state.underground.torches.push(light);
+    } else if (state.indoor) {
+        state.indoor.building.placedTorches ||= [];
+        state.indoor.building.placedTorches.push(light);
+    } else {
+        state.placedTorches.push(light);
+    }
 }
 
 function useAntlerHorn() {
@@ -10611,6 +15073,54 @@ function useAntlerHorn() {
     renderHud();
 }
 
+function blowSacrificialVineHorn(now = performance.now()) {
+    const p = state.player;
+    const profile = simpleWeaponProfile('sacrificialVineHorn') || { stamina: 14, cooldown: 0.62 };
+    if (p.attackCooldown > 0) {
+        p.attackQueuedUntil = now + 220;
+        return;
+    }
+    if (p.stamina < profile.stamina) {
+        showToast('体力不足，吹不响祭藤号角。');
+        return;
+    }
+    const dir = currentAimDir();
+    p.stamina = Math.max(0, p.stamina - profile.stamina);
+    consumeHungerForAction(profile.stamina * 0.016);
+    p.attackCooldown = profile.cooldown;
+    p.attackUntil = now + 320;
+    p.attackVisualType = 'ranged';
+    p.attackDir = dir;
+    p.facing = dir;
+
+    let affected = 0;
+    const radius = 285;
+    const center = { x: p.x + dir.x * 38, y: p.y + dir.y * 38 };
+    for (const enemy of state.enemies) {
+        if (enemy.hp <= 0 || enemy.boss) continue;
+        const d = distance(enemy, center);
+        if (d > radius) continue;
+        const away = normalize(enemy.x - p.x, enemy.y - p.y);
+        const strength = enemy.controlledByCult ? 260 : 170;
+        enemy.knockX += away.x * strength;
+        enemy.knockY += away.y * strength;
+        enemy.retreatUntil = Math.max(enemy.retreatUntil || 0, now + (enemy.controlledByCult ? 1900 : 1050));
+        if (enemy.controlledByCult) {
+            enemy.rootedUntil = Math.max(enemy.rootedUntil || 0, now + 700);
+            enemy.controlledWarTargetVillage = null;
+            enemy.attackTarget = null;
+        }
+        enemy.hurtUntil = now + 120;
+        affected++;
+    }
+    for (let i = 0; i < 3; i++) {
+        spawnBurst(p.x + dir.x * (26 + i * 28), p.y - 14 + dir.y * (26 + i * 28), i === 1 ? '#8cff66' : '#d8c08a', 18 - i * 3, 170 + i * 35, 28 + i * 18);
+    }
+    addFloatText('呜——', p.x + dir.x * 42, p.y - 58 + dir.y * 20, '#d8c08a');
+    showToast(affected ? `祭藤号角震退了 ${affected} 个怪物。` : '祭藤号角吹响，藤哨声在附近回荡。');
+    renderHud();
+}
+
 function placeBambooFence() {
     const preview = placementPreviewForItem('bambooFence');
     if (!preview.valid) {
@@ -10621,19 +15131,6 @@ function placeBambooFence() {
     state.placedFences.push({ x: preview.x, y: preview.y, radius: preview.radius });
     spawnBurst(preview.x, preview.y, '#d7f28a', 10, 80, 14);
     showToast('已放置竹栅栏，可阻挡小怪。');
-    renderHud();
-}
-
-function placeBambooTrap() {
-    const preview = placementPreviewForItem('bambooTrap');
-    if (!preview.valid) {
-        showToast(preview.reason || '竹刺陷阱不能放在这里。');
-        return;
-    }
-    state.inventory.bambooTrap -= 1;
-    state.bambooTraps.push({ x: preview.x, y: preview.y, radius: preview.radius, used: false });
-    spawnBurst(preview.x, preview.y, '#d7f28a', 10, 90, 16);
-    showToast('已布置竹刺陷阱，怪物踩中会受伤并被定住。');
     renderHud();
 }
 
@@ -10681,26 +15178,46 @@ function stationPlacementPosition(kind) {
 
 function placementPreviewForItem(kind) {
     if (!isPlaceableItem(kind)) return null;
+    if (['torch', 'waxTorch', 'shadowLantern'].includes(kind) && (state.indoor || state.underground)) {
+        const pos = placementPosition(34);
+        const probe = { x: pos.x, y: pos.y, radius: 10 };
+        if (state.underground && undergroundCollides(probe)) return { kind, valid: false, reason: '这里被洞壁或物体挡住了。', ...probe };
+        if (state.indoor && indoorCollides(probe)) return { kind, valid: false, reason: '这里被挡住了。', ...probe };
+        return { kind, valid: true, ...probe };
+    }
     if (kind === 'potionTable' || kind === 'workbench' || kind === 'forge' || kind === 'beehiveBox' || kind === 'stoneCoreTotem' || kind === 'jungleTotem' || kind === 'reedMat' || kind === 'chest' || kind === 'campfire') {
         const pos = stationPlacementPosition(kind);
         if (!pos) return { kind, valid: false, reason: '附近没有足够空间放置工作设施。', ...placementPosition(52), radius: kind === 'forge' ? 28 : 24 };
         return { kind, valid: true, x: pos.x, y: pos.y, radius: kind === 'forge' ? 28 : 24 };
     }
-    const distanceAhead = ['torch', 'waxTorch', 'shadowLantern'].includes(kind) ? 34 : (kind === 'bambooFence' ? 38 : 42);
-    const radius = ['torch', 'waxTorch', 'shadowLantern'].includes(kind) ? 10 : (kind === 'bambooFence' ? 18 : 24);
+    const trapKinds = ['snare', 'bambooTrap', 'vineNetTrap', 'toxicVineSnare', 'poisonBambooTrap'];
+    const distanceAhead = ['torch', 'waxTorch', 'shadowLantern'].includes(kind) ? 34 : (kind === 'bambooFence' ? 38 : (trapKinds.includes(kind) ? 46 : 42));
+    const radius = ['torch', 'waxTorch', 'shadowLantern'].includes(kind) ? 10 : (kind === 'bambooFence' ? 18 : (kind === 'vineNetTrap' ? 30 : 24));
     const pos = placementPosition(distanceAhead);
     const probe = { x: pos.x, y: pos.y, radius };
     if (terrainInfoAt(pos.x, pos.y).kind === 'water') return { kind, valid: false, reason: '不能放在深水里。', ...probe };
-    if (kind !== 'bambooTrap' && collides(probe)) return { kind, valid: false, reason: '这里被挡住了。', ...probe };
+    if (!trapKinds.includes(kind) && collides(probe)) return { kind, valid: false, reason: '这里被挡住了。', ...probe };
     return { kind, valid: true, ...probe };
 }
 
 function isPlaceableItem(kind) {
-    return ['torch', 'waxTorch', 'shadowLantern', 'bambooFence', 'bambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'campfire'].includes(kind);
+    return ['torch', 'waxTorch', 'shadowLantern', 'bambooFence', 'snare', 'bambooTrap', 'vineNetTrap', 'toxicVineSnare', 'poisonBambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'campfire'].includes(kind);
 }
 
 function placementPosition(distanceAhead) {
     const p = state.player;
+    if (state.underground) {
+        return {
+            x: clamp(p.x + p.facing.x * distanceAhead, 24, state.underground.width - 24),
+            y: clamp(p.y + p.facing.y * distanceAhead, 24, state.underground.height - 24),
+        };
+    }
+    if (state.indoor) {
+        return {
+            x: clamp(p.x + p.facing.x * distanceAhead, 24, VIEW.width - 24),
+            y: clamp(p.y + p.facing.y * distanceAhead, 24, VIEW.height - 24),
+        };
+    }
     return {
         x: clamp(p.x + p.facing.x * distanceAhead, 24, WORLD.width - 24),
         y: clamp(p.y + p.facing.y * distanceAhead, 24, WORLD.height - 24),
@@ -10760,18 +15277,30 @@ function renderHud() {
         row.classList.toggle('selected-for-hotbar', state.selectedBackpackItem === key);
         row.classList.add('draggable');
         row.dataset.itemKey = key;
-        row.title = `${label} x${state.inventory[key] || 0}。点击选择后，再点击快捷栏放入。`;
+        row.title = isDurableItem(key) ? `${label} 耐久 ${durabilityText(key)}。点击选择后，再点击快捷栏放入。` : `${label} x${state.inventory[key] || 0}。点击选择后，再点击快捷栏放入。`;
         row.appendChild(createPixelIconElement(key, 'inventory-icon'));
         const name = document.createElement('span');
         name.className = 'inventory-name';
         name.textContent = label;
         row.appendChild(name);
         const count = document.createElement('strong');
-        count.textContent = state.inventory[key] || 0;
+        count.textContent = isDurableItem(key) ? durabilityText(key) : (state.inventory[key] || 0);
         row.appendChild(count);
         const actions = document.createElement('div');
         actions.className = 'slot-actions';
         const chest = activeChest();
+        if (isEquipmentItem(key)) {
+            const equip = document.createElement('button');
+            equip.type = 'button';
+            equip.className = 'store-btn';
+            equip.textContent = '装备';
+            equip.title = '直接装备/手持';
+            equip.addEventListener('click', event => {
+                event.stopPropagation();
+                useInventoryItem(key);
+            });
+            actions.appendChild(equip);
+        }
         if (chest && !chest.villageOwned) {
             const store = document.createElement('button');
             store.type = 'button';
@@ -10862,8 +15391,11 @@ function renderEquipmentPanel() {
     const panel = document.getElementById('equipment-panel');
     if (!panel) return;
     panel.innerHTML = '<h3>装备</h3>';
+    ensureArmorSlots();
     [
-        { type: 'armor', label: '护甲', value: state.equipment.armor === '无' ? '空' : state.equipment.armor, accepts: isArmorKey },
+        { type: 'armorBody', label: '身体', value: state.equipment.armors.body === '无' ? '空' : state.equipment.armors.body, accepts: key => isArmorKey(key) && armorSlotForName(RESOURCE_LABELS[key]) === 'body' },
+        { type: 'armorCloak', label: '披肩', value: state.equipment.armors.cloak === '无' ? '空' : state.equipment.armors.cloak, accepts: key => isArmorKey(key) && armorSlotForName(RESOURCE_LABELS[key]) === 'cloak' },
+        { type: 'armorHead', label: '头部', value: state.equipment.armors.head === '无' ? '空' : state.equipment.armors.head, accepts: key => isArmorKey(key) && armorSlotForName(RESOURCE_LABELS[key]) === 'head' },
         { type: 'offhand', label: '副手', value: state.equipment.shield === '无' ? '空' : state.equipment.shield, accepts: isShieldKey },
     ].forEach(slotInfo => {
         const slot = document.createElement('div');
@@ -10888,12 +15420,49 @@ function renderEquipmentPanel() {
         title.textContent = slotInfo.label;
         slot.appendChild(title);
         const equippedKey = equippedItemKey(slotInfo.type);
+        if (equippedKey) {
+            slot.classList.add('equipped');
+            slot.addEventListener('click', () => unequipEquipmentSlot(slotInfo.type));
+        }
         if (equippedKey) slot.appendChild(createPixelIconElement(equippedKey, 'equipment-icon'));
         const value = document.createElement('span');
         value.textContent = slotInfo.value;
         slot.appendChild(value);
+        if (equippedKey && isDurableItem(equippedKey)) {
+            const durability = document.createElement('small');
+            const max = durableMaxForItem(equippedKey);
+            const current = currentDurability(equippedKey);
+            durability.className = `equipment-durability${current / max <= 0.28 ? ' low' : ''}`;
+            const count = state.inventory[equippedKey] || 0;
+            durability.textContent = `耐久 ${current}/${max}${count > 1 ? ` x${count}` : ''}`;
+            slot.title = `${slotInfo.label}：${slotInfo.value}，耐久 ${current}/${max}${count > 1 ? `，共有 ${count} 件` : ''}。点击卸下。`;
+            slot.appendChild(durability);
+        } else if (equippedKey) {
+            slot.title = `${slotInfo.label}：${slotInfo.value}。点击卸下。`;
+        }
         panel.appendChild(slot);
     });
+}
+
+function unequipEquipmentSlot(type) {
+    ensureArmorSlots();
+    if (type === 'offhand') {
+        if (state.equipment.shield === '无') return;
+        const name = state.equipment.shield;
+        state.equipment.shield = '无';
+        state.equipment.defense = armorDefense();
+        showToast(`已卸下${name}。`);
+        renderHud();
+        return;
+    }
+    const slot = type === 'armorCloak' ? 'cloak' : (type === 'armorHead' ? 'head' : 'body');
+    const name = state.equipment.armors[slot];
+    if (!name || name === '无') return;
+    state.equipment.armors[slot] = '无';
+    state.equipment.armor = primaryArmorName();
+    state.equipment.defense = armorDefense() + shieldDefense();
+    showToast(`已卸下${name}。`);
+    renderHud();
 }
 
 function renderChestStorage() {
@@ -11091,18 +15660,91 @@ function handleVillagerTaskAction(npc) {
 
 function equippedItemKey(type) {
     if (type === 'offhand') return { 木盾: 'woodShield', 铁盾: 'ironShield', 藤编圆盾: 'vineRoundShield', 板根盾: 'buttressShield' }[state.equipment.shield] || '';
-    return { 布衣: 'clothArmor', 皮甲: 'leatherArmor', 铁甲: 'ironArmor', 魔晶甲: 'crystalArmor', 兔毛披肩: 'rabbitCloak', 蝎壳甲: 'scorpionArmor', 厚毛皮衣: 'thickFurCoat', 湿地甲壳甲: 'reedShellArmor', 泥沼护甲: 'mireCoreArmor', 丛林叶披肩: 'jungleLeafCloak', 板根木甲: 'buttressArmor', 毒菇面罩: 'toxicMask', 绿母寄生甲: 'parasiticVineArmor' }[state.equipment.armor] || '';
+    ensureArmorSlots();
+    const slot = type === 'armorCloak' ? 'cloak' : (type === 'armorHead' ? 'head' : 'body');
+    return armorKeyForName(state.equipment.armors[slot]);
+}
+
+function equippedRepairCandidateKeys() {
+    const toolKey = {
+        石斧: 'stoneAxe',
+        石镐: 'stonePickaxe',
+        石镰: 'stoneSickle',
+        铁斧: 'ironAxe',
+        铁镐: 'ironPickaxe',
+        铁镰: 'ironSickle',
+    }[state.equipment.tool] || '';
+    return [
+        equippedItemKey('armorBody'),
+        equippedItemKey('armorCloak'),
+        equippedItemKey('armorHead'),
+        equippedItemKey('offhand'),
+        equippedWeaponKey(),
+        toolKey,
+    ].filter(Boolean);
+}
+
+function useRepairKit() {
+    const building = nearestRepairableVillageBuilding();
+    if (building) {
+        repairVillageBuildingWithKit(building);
+        return;
+    }
+    const candidates = equippedRepairCandidateKeys()
+        .filter(key => (state.inventory[key] || 0) > 0 && isDurableItem(key))
+        .map(key => ({ key, missing: durableMaxForItem(key) - currentDurability(key) }))
+        .filter(item => item.missing > 0)
+        .sort((a, b) => b.missing - a.missing);
+    if (!candidates.length) {
+        showToast('当前装备没有需要修理的耐久损耗。');
+        return;
+    }
+    const key = candidates[0].key;
+    repairDurableItem(key, 55);
+    state.inventory.repairKit -= 1;
+    showToast(`使用木匠修理包，修复了${RESOURCE_LABELS[key] || key}。`);
+}
+
+function nearestRepairableVillageBuilding() {
+    if (state.indoor) return null;
+    return allVillages()
+        .flatMap(village => village.buildings || [])
+        .filter(building => building.maxHp && (building.destroyed || (building.hp ?? building.maxHp) < building.maxHp))
+        .map(building => ({ building, d: distanceToRect(state.player, building) }))
+        .filter(item => item.d <= 180)
+        .sort((a, b) => a.d - b.d)[0]?.building || null;
+}
+
+function repairVillageBuildingWithKit(building) {
+    const maxHp = building.maxHp || villageBuildingMaxHp(building);
+    const wasDestroyed = !!building.destroyed;
+    building.maxHp = maxHp;
+    building.destroyed = false;
+    building.hp = wasDestroyed
+        ? Math.max(1, Math.floor(maxHp * 0.45))
+        : Math.min(maxHp, (building.hp ?? maxHp) + Math.ceil(maxHp * 0.35));
+    building.destroyedBy = '';
+    building.lastDamagedAt = performance.now();
+    for (const villager of state.outdoorVillagers || []) {
+        if (villager.homeBuilding !== building) continue;
+        villager.homeDestroyed = false;
+        if (villager.mood === 'sad') villager.mood = 'calm';
+    }
+    state.inventory.repairKit -= 1;
+    spawnBurst(building.x, building.y, '#d6a06a', wasDestroyed ? 26 : 18, 180, Math.max(building.w, building.h) * 0.35);
+    addFloatText(wasDestroyed ? '废墟修复' : '房屋修补', building.x, building.y - building.h * 0.55, '#9cffb7');
+    showToast(`木匠修理包修复了${building.label}。`);
 }
 
 function equipmentSummaryText() {
-    const armor = state.equipment.armor === '无' ? '' : state.equipment.armor;
+    const armor = equippedArmorNames().join('+');
     const shield = state.equipment.shield === '无' ? '' : state.equipment.shield;
     if (armor && shield) return `${armor}+${shield}`;
     return armor || shield || '无';
 }
 
 function isArmorKey(key) {
-    return ['clothArmor', 'leatherArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor'].includes(key);
+    return ['clothArmor', 'leatherArmor', 'ironArmor', 'crystalArmor', 'minerLampHelmet', 'crystalLampHelmet', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor'].includes(key);
 }
 
 function isShieldKey(key) {
@@ -11179,7 +15821,7 @@ function renderHotbarDropZone() {
             label.textContent = RESOURCE_LABELS[key] || key;
             slot.appendChild(label);
             const count = document.createElement('strong');
-            count.textContent = state.inventory[key] || 0;
+            count.textContent = isDurableItem(key) ? durabilityText(key) : (state.inventory[key] || 0);
             slot.appendChild(count);
         }
         zone.appendChild(slot);
@@ -11260,6 +15902,7 @@ function isHotbarItem(key) {
 }
 
 function syncHotbarItems() {
+    normalizeDurableInventory();
     state.hotbarItems = (state.hotbarItems || Array(9).fill(null)).map(key => key && (state.inventory[key] || 0) > 0 ? key : null);
     while (state.hotbarItems.length < 9) state.hotbarItems.push(null);
     if (state.hotbarItems.length > 9) state.hotbarItems.length = 9;
@@ -11298,6 +15941,18 @@ function autoEquipSelectedItem(key, notify = true) {
             state.equipment.tool = '石镰';
             if (!silent) showToast('手持石镰，收割纤维更快。');
             break;
+        case 'ironAxe':
+            state.equipment.tool = '铁斧';
+            if (!silent) showToast('手持铁斧，砍伐更快。');
+            break;
+        case 'ironPickaxe':
+            state.equipment.tool = '铁镐';
+            if (!silent) showToast('手持铁镐，采矿更快。');
+            break;
+        case 'ironSickle':
+            state.equipment.tool = '铁镰';
+            if (!silent) showToast('手持铁镰，收割更快。');
+            break;
         case 'stoneSpear':
             equipWeapon('石矛', 4, 88, silent ? '' : '手持石矛。');
             break;
@@ -11329,13 +15984,19 @@ function autoEquipSelectedItem(key, notify = true) {
             equipArmor('皮甲', 1, silent ? '' : '已装备皮甲。');
             break;
         case 'clothArmor':
-            equipArmor('布衣', 0, silent ? '' : '已装备布衣。');
+            equipArmor('布衣', 1, silent ? '' : '已装备布衣。');
             break;
         case 'ironArmor':
             equipArmor('铁甲', 2, silent ? '' : '已装备铁甲。');
             break;
         case 'crystalArmor':
             equipArmor('魔晶甲', 3, silent ? '' : '已装备魔晶甲。');
+            break;
+        case 'minerLampHelmet':
+            equipArmor('矿灯头盔', 1, silent ? '' : '已装备矿灯头盔。');
+            break;
+        case 'crystalLampHelmet':
+            equipArmor('晶灯头盔', 1, silent ? '' : '已装备晶灯头盔。');
             break;
         case 'rabbitCloak':
             equipArmor('兔毛披肩', 0, silent ? '' : '已装备兔毛披肩。');
@@ -11429,7 +16090,7 @@ function makePebblesFromHeldStone() {
 }
 
 function isEquipmentItem(key) {
-    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield'].includes(key);
+    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'ironAxe', 'ironPickaxe', 'ironSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'minerLampHelmet', 'crystalLampHelmet', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield'].includes(key);
 }
 
 function createPixelIconElement(key, className = 'pixel-icon') {
@@ -11495,7 +16156,7 @@ function updateMobileInventoryScale() {
 }
 
 function canUseInventoryItem(key) {
-    const usable = ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield', 'venom', 'beeDart', 'shadowEssence', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'vineNetTrap', 'toxicVineSnare', 'poisonBambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat', 'jungleSalve', 'vineStaminaDrink', 'poisonLeafWrap'];
+    const usable = ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'ironAxe', 'ironPickaxe', 'ironSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'minerLampHelmet', 'crystalLampHelmet', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield', 'venom', 'beeDart', 'shadowEssence', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'vineNetTrap', 'toxicVineSnare', 'poisonBambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'carrot', 'corn', 'tomato', 'repairKit', 'jerky', 'minerRation', 'vegetableSoup', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'royalJellyPotion', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat', 'jungleSalve', 'vineStaminaDrink', 'poisonLeafWrap'];
     return (!!simpleWeaponDef(key) || usable.includes(key)) && (state.inventory[key] || 0) > 0;
 }
 
@@ -11554,13 +16215,23 @@ function detailedPixelIconRects(key, type) {
         herb: [[5, 4, 2, 7, 0], [2, 3, 4, 3, 1], [6, 2, 4, 3, 1], [3, 7, 3, 2, 2], [7, 6, 3, 2, 2]],
         flower: [[5, 5, 2, 6, 0], [4, 2, 4, 4, 1], [2, 4, 4, 4, 2], [6, 4, 4, 4, 2], [5, 5, 2, 2, 1]],
         berry: [[4, 5, 2, 6, 0], [7, 4, 2, 6, 0], [3, 3, 3, 3, 1], [6, 2, 3, 3, 1], [7, 6, 3, 3, 2]],
+        carrot: [[5, 2, 2, 8, 1], [4, 4, 4, 5, 1], [5, 9, 2, 2, 2], [4, 1, 2, 2, 0], [6, 0, 2, 3, 0], [7, 2, 2, 2, 0]],
+        corn: [[5, 2, 3, 8, 1], [4, 4, 5, 4, 1], [5, 3, 1, 6, 2], [7, 3, 1, 6, 2], [3, 5, 2, 5, 0], [8, 5, 2, 5, 0]],
+        tomato: [[4, 4, 5, 5, 1], [3, 5, 7, 3, 1], [5, 3, 3, 2, 0], [6, 5, 2, 2, 2], [4, 2, 2, 2, 0], [7, 2, 2, 2, 0]],
+        repairKit: [[2, 5, 8, 5, 0], [3, 3, 6, 2, 1], [4, 7, 4, 1, 2], [5, 1, 2, 3, 2], [8, 6, 1, 4, 2], [2, 9, 8, 1, 1]],
+        jerky: [[3, 3, 6, 7, 1], [2, 5, 8, 4, 1], [4, 2, 2, 2, 2], [7, 7, 2, 2, 2], [5, 5, 2, 4, 0]],
+        minerRation: [[2, 4, 8, 5, 0], [3, 3, 6, 2, 1], [4, 6, 2, 2, 2], [7, 6, 2, 2, 2], [3, 9, 6, 1, 2]],
+        vegetableSoup: [[2, 5, 8, 4, 0], [3, 4, 6, 2, 1], [4, 6, 4, 3, 1], [5, 5, 2, 2, 2], [7, 6, 2, 2, 2], [3, 9, 6, 1, 2]],
         mushroom: [[3, 4, 7, 3, 1], [2, 5, 9, 3, 1], [5, 8, 3, 3, 0], [4, 3, 2, 1, 2], [8, 5, 2, 1, 2]],
         toxicMushroom: [[3, 4, 7, 3, 1], [2, 5, 9, 3, 1], [5, 8, 3, 3, 0], [4, 4, 2, 2, 2], [8, 6, 2, 2, 2], [6, 5, 1, 1, 2]],
+        poisonVial: [[4, 1, 4, 2, 2], [3, 3, 6, 6, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [3, 8, 6, 2, 2], [7, 0, 2, 2, 1]],
+        toxicVineGlue: [[2, 6, 8, 4, 0], [3, 5, 6, 2, 1], [4, 8, 4, 2, 2], [2, 3, 2, 4, 1], [8, 3, 2, 4, 1], [5, 4, 2, 2, 2]],
         resin: [[3, 3, 6, 6, 1], [4, 2, 4, 2, 2], [2, 5, 8, 3, 0], [5, 5, 2, 2, 2]],
         resinGlue: [[2, 4, 8, 5, 1], [3, 3, 6, 2, 2], [4, 8, 4, 2, 0], [5, 5, 2, 3, 2]],
         sap: [[6, 1, 2, 2, 2], [5, 3, 4, 3, 1], [4, 6, 6, 4, 0], [5, 9, 4, 2, 2]],
         honey: [[3, 3, 6, 6, 1], [2, 5, 8, 3, 1], [4, 2, 4, 2, 2], [5, 6, 2, 2, 2]],
-        beeswax: [[3, 3, 6, 6, 0], [2, 5, 8, 3, 1], [4, 4, 2, 2, 2], [7, 6, 2, 2, 2]],
+        beeswax: [[3, 3, 6, 6, 1], [2, 5, 8, 3, 1], [4, 2, 2, 2, 2], [7, 2, 2, 2, 2], [3, 5, 2, 2, 0], [6, 5, 2, 2, 0], [5, 8, 2, 2, 2]],
+        royalJelly: [[5, 0, 2, 2, 2], [3, 2, 2, 2, 1], [7, 2, 2, 2, 1], [4, 4, 4, 1, 2], [3, 5, 6, 4, 1], [4, 9, 4, 2, 2], [5, 6, 2, 2, 2], [2, 7, 2, 2, 0], [8, 7, 2, 2, 0]],
         beastClaw: [[4, 1, 2, 7, 1], [7, 2, 2, 6, 1], [3, 8, 6, 2, 0], [5, 2, 1, 5, 2], [8, 3, 1, 4, 2]],
         pollenDust: [[3, 3, 2, 2, 1], [7, 2, 2, 2, 2], [5, 5, 2, 2, 1], [2, 7, 2, 2, 2], [8, 8, 2, 2, 1], [5, 9, 2, 1, 2]],
         thickFur: [[2, 3, 8, 5, 0], [3, 2, 6, 2, 1], [2, 7, 8, 2, 1], [4, 4, 1, 4, 2], [7, 3, 1, 5, 2]],
@@ -11569,7 +16240,7 @@ function detailedPixelIconRects(key, type) {
         crystalFang: [[5, 0, 2, 2, 2], [4, 2, 4, 6, 1], [5, 8, 2, 3, 0], [6, 3, 1, 4, 2], [3, 5, 6, 1, 2]],
         boneShard: [[5, 1, 2, 9, 1], [4, 2, 4, 2, 2], [3, 5, 6, 2, 0], [4, 9, 3, 1, 2]],
         venom: [[8, 0, 2, 2, 2], [7, 2, 2, 2, 1], [6, 4, 2, 2, 1], [5, 6, 2, 2, 0], [4, 8, 2, 2, 0], [3, 10, 2, 1, 2], [8, 3, 1, 4, 2], [5, 7, 1, 3, 2]],
-        beeStinger: [[8, 0, 2, 2, 2], [7, 2, 2, 3, 1], [6, 5, 2, 3, 1], [5, 8, 2, 2, 0], [4, 10, 2, 1, 2], [8, 4, 2, 1, 2], [6, 7, 2, 1, 2]],
+        beeStinger: [[8, 0, 2, 2, 2], [7, 2, 2, 3, 1], [6, 5, 2, 3, 1], [5, 8, 2, 2, 0], [4, 10, 2, 1, 2], [8, 4, 2, 1, 2], [6, 7, 2, 1, 2], [5, 4, 3, 1, 0], [4, 7, 3, 1, 0]],
         fang: [[5, 0, 2, 2, 2], [4, 2, 4, 5, 1], [5, 7, 2, 4, 0], [6, 3, 1, 5, 2], [3, 5, 2, 1, 2]],
         frogTongue: [[2, 7, 2, 2, 0], [4, 6, 2, 2, 1], [6, 5, 2, 2, 1], [8, 4, 2, 2, 1], [9, 2, 2, 2, 2], [7, 8, 3, 1, 0]],
         frogLeg: [[4, 2, 3, 6, 1], [6, 7, 4, 2, 0], [8, 9, 2, 2, 2], [3, 5, 2, 3, 0], [5, 3, 1, 4, 2]],
@@ -11584,6 +16255,7 @@ function detailedPixelIconRects(key, type) {
         shadowPotion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [5, 4, 2, 5, 2], [3, 7, 6, 2, 0]],
         salve: [[2, 5, 8, 4, 0], [3, 4, 6, 2, 1], [4, 6, 4, 2, 2], [5, 3, 2, 2, 2]],
         honeySalve: [[2, 5, 8, 4, 0], [3, 4, 6, 2, 1], [4, 6, 4, 2, 2], [5, 3, 2, 2, 2], [8, 4, 2, 2, 1]],
+        royalJellyPotion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 1], [4, 4, 4, 4, 2], [5, 0, 2, 2, 2], [3, 7, 2, 2, 0], [7, 7, 2, 2, 0], [5, 5, 2, 2, 0]],
         antidote: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [3, 8, 6, 1, 2], [6, 5, 1, 2, 2]],
         speedPotion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [6, 3, 1, 3, 2], [4, 6, 4, 1, 2]],
         ironSkinPotion: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [4, 5, 4, 2, 2], [5, 7, 2, 2, 2]],
@@ -11597,6 +16269,9 @@ function detailedPixelIconRects(key, type) {
         crystalArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [3, 8, 6, 1, 2]],
         rabbitCloak: [[3, 1, 6, 2, 1], [2, 3, 8, 7, 0], [2, 6, 2, 4, 2], [8, 6, 2, 4, 2], [5, 2, 2, 8, 1]],
         scorpionArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [3, 5, 2, 2, 2], [7, 5, 2, 2, 2], [5, 3, 2, 6, 1]],
+        thickFurCoat: [[3, 1, 6, 2, 1], [2, 3, 8, 7, 0], [3, 4, 6, 2, 1], [2, 7, 8, 2, 1], [4, 5, 1, 5, 2], [7, 5, 1, 5, 2]],
+        reedShellArmor: [[3, 1, 6, 2, 2], [2, 3, 8, 6, 0], [3, 4, 6, 2, 1], [3, 7, 6, 2, 1], [2, 5, 2, 2, 2], [8, 5, 2, 2, 2]],
+        mireCoreArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [3, 8, 6, 1, 2], [2, 6, 2, 2, 2]],
         woodShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 0], [3, 8, 6, 2, 1], [5, 3, 2, 6, 2]],
         ironShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 0], [3, 8, 6, 2, 1], [4, 3, 4, 5, 2], [2, 5, 8, 1, 1]],
         vineRoundShield: [[3, 1, 6, 1, 2], [2, 2, 8, 6, 1], [3, 8, 6, 2, 0], [5, 3, 2, 6, 2], [3, 4, 6, 1, 0], [4, 6, 4, 1, 0]],
@@ -11604,6 +16279,7 @@ function detailedPixelIconRects(key, type) {
         jungleLeafCloak: [[5, 1, 2, 2, 2], [2, 3, 8, 7, 1], [3, 4, 3, 3, 0], [6, 3, 4, 4, 0], [5, 6, 2, 4, 2]],
         buttressArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [4, 4, 1, 5, 2], [7, 4, 1, 5, 2], [3, 8, 6, 1, 1], [5, 5, 2, 2, 2]],
         toxicMask: [[3, 2, 6, 2, 1], [2, 4, 8, 4, 0], [3, 8, 6, 1, 1], [4, 5, 1, 1, 2], [7, 5, 1, 1, 2], [5, 6, 2, 1, 2]],
+        crystalLampHelmet: [[3, 2, 6, 2, 0], [2, 4, 8, 4, 0], [3, 8, 6, 1, 1], [5, 0, 2, 3, 1], [4, 1, 4, 1, 2], [5, 5, 2, 2, 2], [2, 5, 2, 1, 1], [8, 5, 2, 1, 1]],
         parasiticVineArmor: [[3, 1, 6, 2, 1], [2, 3, 8, 6, 0], [5, 3, 2, 6, 2], [3, 5, 6, 1, 2], [2, 8, 8, 1, 1], [7, 2, 2, 8, 2]],
         vineNetTrap: [[1, 2, 10, 1, 1], [1, 5, 10, 1, 1], [1, 8, 10, 1, 1], [2, 1, 1, 9, 0], [5, 1, 1, 9, 0], [8, 1, 1, 9, 0], [3, 3, 2, 2, 2], [7, 6, 2, 2, 2]],
         toxicVineSnare: [[2, 3, 8, 1, 1], [3, 5, 6, 1, 0], [4, 7, 4, 1, 1], [2, 8, 2, 2, 2], [8, 2, 2, 2, 2], [6, 6, 2, 2, 2]],
@@ -11612,11 +16288,35 @@ function detailedPixelIconRects(key, type) {
         vineStaminaDrink: [[4, 1, 4, 2, 2], [3, 3, 6, 7, 0], [4, 4, 4, 4, 1], [5, 5, 2, 2, 2], [3, 7, 6, 1, 2], [7, 2, 2, 2, 1]],
         poisonLeafWrap: [[2, 4, 8, 4, 1], [3, 3, 6, 2, 2], [4, 7, 4, 2, 0], [5, 5, 2, 1, 2], [8, 4, 2, 2, 2]],
         jungleTotem: [[5, 1, 2, 10, 0], [3, 3, 6, 2, 1], [2, 6, 8, 2, 1], [4, 2, 1, 8, 2], [7, 2, 1, 8, 2], [5, 5, 2, 2, 2]],
+        beehiveBox: [[2, 4, 8, 6, 0], [3, 3, 6, 2, 1], [2, 8, 8, 2, 1], [4, 5, 2, 2, 2], [7, 5, 2, 2, 2], [5, 7, 2, 2, 2], [3, 2, 2, 2, 0], [7, 2, 2, 2, 0]],
+        waxTorch: [[5, 5, 2, 6, 0], [4, 2, 4, 3, 1], [5, 0, 2, 2, 2], [3, 3, 2, 2, 2], [7, 3, 2, 2, 2], [4, 7, 4, 1, 1]],
+        campfire: [[2, 8, 8, 2, 0], [3, 7, 6, 1, 0], [4, 4, 2, 4, 1], [6, 3, 2, 5, 1], [5, 1, 2, 5, 2], [3, 5, 6, 2, 2]],
+        chest: [[2, 4, 8, 5, 0], [3, 3, 6, 2, 1], [2, 8, 8, 2, 1], [5, 5, 2, 3, 2], [2, 5, 8, 1, 2]],
+        workbench: [[2, 5, 8, 4, 0], [2, 3, 8, 2, 1], [3, 7, 6, 1, 2], [4, 2, 1, 8, 2], [8, 2, 1, 8, 2]],
+        recipeNoteBlacksmith: [[3, 1, 6, 9, 1], [4, 2, 4, 1, 2], [4, 5, 4, 1, 0], [5, 6, 2, 3, 0], [3, 10, 6, 1, 2]],
+        recipeNoteApothecary: [[3, 1, 6, 9, 1], [4, 2, 4, 1, 2], [5, 4, 2, 4, 0], [4, 6, 4, 2, 2], [3, 10, 6, 1, 2]],
+        recipeNoteGuard: [[3, 1, 6, 9, 1], [4, 2, 4, 1, 2], [4, 6, 4, 1, 0], [7, 4, 1, 4, 0], [3, 10, 6, 1, 2]],
+        recipeNoteElder: [[3, 1, 6, 9, 1], [4, 2, 4, 1, 2], [5, 4, 2, 2, 0], [4, 6, 4, 2, 2], [3, 10, 6, 1, 2]],
+        recipeNoteWorkbench: [[3, 1, 6, 9, 1], [4, 2, 4, 1, 2], [4, 5, 4, 1, 0], [4, 7, 4, 1, 0], [3, 10, 6, 1, 2]],
         sinewBow: [[2, 1, 3, 10, 0], [4, 2, 3, 2, 1], [5, 5, 2, 2, 1], [4, 8, 3, 2, 1], [8, 2, 1, 8, 2]],
         slingshot: [[5, 6, 2, 5, 0], [3, 2, 2, 5, 0], [7, 2, 2, 5, 0], [4, 5, 4, 1, 1], [5, 7, 2, 2, 2]],
         simpleArrow: [[1, 5, 8, 2, 0], [9, 4, 2, 4, 1], [2, 4, 2, 1, 2], [2, 7, 2, 1, 2]],
         poisonArrow: [[1, 5, 8, 2, 0], [9, 4, 2, 4, 1], [2, 4, 2, 1, 2], [2, 7, 2, 1, 2], [8, 3, 2, 2, 2]],
         beeDart: [[2, 5, 7, 2, 0], [9, 4, 2, 4, 1], [4, 3, 2, 1, 2], [4, 8, 2, 1, 2]],
+        stoneAxe: [[4, 2, 2, 9, 0], [5, 1, 1, 10, 0], [6, 1, 4, 2, 1], [7, 3, 3, 2, 1], [9, 5, 1, 1, 2], [3, 8, 2, 2, 0]],
+        stonePickaxe: [[5, 2, 2, 9, 0], [6, 1, 1, 10, 0], [2, 2, 8, 2, 1], [9, 3, 2, 1, 2], [1, 3, 2, 1, 2], [4, 8, 2, 2, 0]],
+        stoneSickle: [[5, 3, 2, 8, 0], [6, 2, 4, 1, 1], [9, 3, 2, 2, 1], [10, 5, 1, 2, 2], [4, 9, 2, 2, 0]],
+        ironAxe: [[4, 2, 2, 9, 0], [5, 1, 1, 10, 0], [6, 0, 5, 3, 1], [7, 3, 4, 2, 1], [9, 5, 2, 1, 2], [6, 1, 3, 1, 2], [3, 8, 2, 2, 0]],
+        ironPickaxe: [[5, 2, 2, 9, 0], [6, 1, 1, 10, 0], [1, 1, 10, 2, 1], [0, 3, 3, 1, 2], [9, 3, 3, 1, 2], [4, 8, 2, 2, 0]],
+        ironSickle: [[5, 3, 2, 8, 0], [6, 1, 5, 2, 1], [9, 3, 2, 3, 1], [10, 6, 1, 2, 2], [7, 2, 3, 1, 2], [4, 9, 2, 2, 0]],
+        minerLampHelmet: [[3, 2, 6, 2, 0], [2, 4, 8, 4, 0], [3, 8, 6, 1, 1], [5, 1, 2, 2, 1], [4, 2, 4, 1, 2], [5, 5, 2, 2, 2], [2, 5, 2, 1, 1], [8, 5, 2, 1, 1]],
+        stoneSpear: [[2, 8, 8, 1, 0], [8, 4, 2, 4, 1], [9, 2, 2, 3, 2]],
+        bambooSpear: [[2, 8, 8, 1, 0], [3, 7, 7, 1, 2], [9, 3, 2, 5, 1], [8, 4, 4, 1, 2]],
+        ironSword: [[5, 1, 2, 8, 1], [4, 8, 4, 2, 0], [6, 2, 1, 6, 2], [5, 0, 2, 1, 2]],
+        crystalBlade: [[5, 1, 2, 8, 1], [4, 8, 4, 2, 0], [6, 2, 2, 5, 2], [3, 3, 2, 2, 2], [5, 0, 2, 1, 2]],
+        venomDagger: [[5, 2, 2, 6, 1], [4, 8, 4, 2, 0], [6, 3, 1, 4, 2], [7, 1, 2, 2, 2]],
+        antlerSpear: [[2, 8, 7, 2, 0], [8, 4, 1, 5, 1], [6, 3, 2, 3, 2], [9, 3, 2, 3, 2], [8, 2, 1, 2, 2]],
+        stoneCoreHammer: [[2, 7, 7, 2, 0], [8, 3, 4, 5, 1], [9, 4, 2, 3, 2], [7, 5, 5, 1, 2], [7, 8, 5, 1, 2]],
         woodFork: [[3, 7, 7, 2, 0], [8, 3, 1, 5, 1], [6, 3, 1, 5, 1], [10, 3, 1, 5, 1]],
         stoneBladeSpear: [[2, 8, 7, 2, 0], [8, 5, 2, 4, 1], [9, 3, 2, 3, 2]],
         bambooPike: [[2, 8, 8, 1, 0], [2, 6, 8, 1, 2], [9, 4, 2, 4, 1]],
@@ -11637,6 +16337,18 @@ function detailedPixelIconRects(key, type) {
         frogWhip: [[2, 7, 2, 2, 0], [4, 5, 2, 2, 1], [6, 6, 2, 2, 1], [8, 4, 2, 2, 1], [10, 3, 1, 2, 2]],
         scorpionHook: [[2, 7, 7, 2, 0], [8, 4, 2, 4, 1], [10, 3, 1, 3, 2]],
         shadowWoodBlade: [[5, 1, 2, 8, 1], [4, 8, 4, 2, 0], [7, 3, 2, 5, 2], [3, 4, 2, 2, 2]],
+        clawHookBlade: [[4, 2, 2, 7, 1], [3, 8, 4, 2, 0], [6, 2, 3, 2, 2], [8, 4, 2, 2, 2], [2, 5, 2, 2, 2]],
+        pollenDartFan: [[4, 6, 4, 4, 0], [3, 4, 2, 3, 1], [6, 3, 2, 4, 1], [8, 5, 2, 3, 1], [5, 5, 2, 2, 2], [8, 2, 2, 2, 2]],
+        crystalFangSpear: [[2, 8, 8, 1, 0], [8, 4, 2, 4, 1], [9, 1, 2, 4, 2], [7, 4, 4, 1, 2], [4, 7, 4, 1, 2]],
+        boneShardMace: [[2, 7, 7, 2, 0], [8, 4, 3, 5, 1], [7, 4, 1, 2, 2], [10, 3, 1, 3, 2], [9, 8, 2, 2, 2]],
+        ironwoodMachete: [[4, 1, 3, 8, 1], [3, 8, 5, 2, 0], [6, 2, 3, 6, 2], [5, 1, 4, 1, 2]],
+        ironwoodArbalest: [[2, 6, 8, 2, 0], [5, 3, 2, 7, 1], [1, 4, 10, 2, 2], [3, 2, 6, 1, 1], [7, 8, 3, 1, 2]],
+        willowRecurveBow: [[3, 1, 2, 10, 0], [5, 2, 3, 2, 1], [6, 5, 2, 2, 1], [5, 8, 3, 2, 1], [9, 2, 1, 8, 2]],
+        elderwoodStaff: [[5, 1, 2, 10, 0], [4, 0, 4, 2, 1], [5, 2, 2, 2, 2], [3, 5, 6, 1, 1], [6, 6, 1, 4, 2]],
+        darkwoodScimitar: [[5, 1, 2, 8, 1], [4, 8, 4, 2, 0], [7, 2, 3, 2, 2], [8, 4, 2, 3, 2], [3, 5, 2, 2, 2]],
+        buttressRootMaul: [[2, 7, 7, 2, 0], [8, 3, 4, 5, 1], [9, 4, 2, 3, 2], [7, 8, 5, 1, 2], [8, 2, 1, 7, 2]],
+        cypressMudSaber: [[5, 1, 2, 8, 1], [4, 8, 4, 2, 0], [6, 2, 3, 5, 2], [3, 6, 3, 2, 2], [7, 7, 2, 1, 1]],
+        blossomwoodWand: [[5, 2, 2, 9, 0], [4, 0, 4, 3, 1], [3, 1, 2, 2, 2], [7, 1, 2, 2, 2], [5, 4, 2, 2, 2]],
         vineWrappedSpear: [[2, 8, 8, 1, 0], [8, 4, 2, 4, 1], [9, 2, 2, 3, 2], [4, 6, 5, 1, 2], [5, 7, 4, 1, 2]],
         poisonVineWhip: [[2, 8, 2, 2, 0], [4, 6, 2, 2, 1], [6, 5, 2, 2, 2], [8, 3, 2, 2, 1], [10, 2, 1, 2, 2], [7, 7, 2, 1, 2]],
         jungleMachete: [[4, 1, 3, 8, 1], [3, 8, 5, 2, 0], [6, 2, 2, 6, 2], [2, 5, 2, 2, 2]],
@@ -11686,10 +16398,19 @@ function drawPixelItemIcon(target, key, x, y, size = 28) {
 
 function render(now) {
     ctx.clearRect(0, 0, VIEW.width, VIEW.height);
+    if (state.underground) {
+        drawUnderground(now);
+        drawParticles();
+        drawFloatTexts();
+        drawEffects(now);
+        drawUiOverlay();
+        return;
+    }
     if (state.indoor) {
         drawIndoor(now);
         drawParticles();
         drawFloatTexts();
+        drawEffects(now);
         drawUiOverlay();
         return;
     }
@@ -11705,8 +16426,27 @@ function render(now) {
 
 function worldX(x) { return Math.round(x - camera.x); }
 function worldY(y) { return Math.round(y - camera.y); }
+function sceneX(x) { return state.indoor ? Math.round(x) : worldX(x); }
+function sceneY(y) { return state.indoor ? Math.round(y) : worldY(y); }
+
+function currentSceneKey() {
+    if (state.updatingOutdoorWhileIndoor) return 'surface';
+    if (state.underground) return 'underground';
+    if (state.indoor) return 'indoor';
+    return 'surface';
+}
+
+function currentSceneBounds() {
+    if (state.underground) return { width: state.underground.width, height: state.underground.height };
+    if (state.indoor) return { width: VIEW.width, height: VIEW.height };
+    return { width: WORLD.width, height: WORLD.height };
+}
 
 function drawIndoor(now) {
+    if (state.indoor?.building?.kind === 'mineCaveInterior') {
+        drawMineCaveInterior(now);
+        return;
+    }
     if (state.indoor?.building?.kind === 'jungleRuinInterior') {
         drawJungleRuinInterior(now);
         return;
@@ -11746,10 +16486,10 @@ function drawIndoor(now) {
         .slice()
         .sort((a, b) => a.y - b.y)
         .forEach(drawIndoorObject);
+    for (const torch of state.indoor.building.placedTorches || []) drawIndoorPlacedTorch(torch);
     drawIndoorPlayer(now);
     drawIndoorProjectiles();
     drawIndoorLighting(now);
-    drawItemUseProgress();
     drawIndoorObjectLabels();
     const target = nearestIndoorObject();
     if (target) {
@@ -11795,10 +16535,10 @@ function drawJungleRuinInterior(now) {
         .slice()
         .sort((a, b) => a.y - b.y)
         .forEach(drawIndoorObject);
+    for (const torch of state.indoor.building.placedTorches || []) drawIndoorPlacedTorch(torch);
     drawIndoorPlayer(now);
     drawIndoorProjectiles();
     drawIndoorLighting(now);
-    drawItemUseProgress();
     drawIndoorObjectLabels();
     const target = nearestIndoorObject();
     if (target) {
@@ -11829,6 +16569,14 @@ function drawIndoorProjectiles() {
             ctx.fillRect(projectile.x - 10, projectile.y + 7, 20, 3);
         } else if (projectile.kind === 'kitchenKnife' || projectile.kind === 'guardArrow' || isDirectProjectile(projectile.kind)) {
             drawShadow(projectile.x, projectile.y + 10, 24, 4);
+            if (projectile.kind === 'guardArrow' && projectile.profile?.weapon?.includes('煤')) {
+                drawCoalBombProjectile(projectile, projectile.x, projectile.y);
+                continue;
+            }
+            if (isDirectProjectile(projectile.kind) && projectile.kind !== 'simpleArrow' && projectile.kind !== 'poisonArrow') {
+                drawDirectProjectileSprite(projectile, projectile.x, projectile.y);
+                continue;
+            }
             ctx.save();
             ctx.translate(projectile.x, projectile.y);
             const angle = (projectile.kind === 'guardArrow' || isDirectProjectile(projectile.kind))
@@ -11863,6 +16611,10 @@ function drawOutdoorVillagerProjectile(projectile) {
     drawIndoorProjectileTarget(screenProjectile, markerColor);
     if (projectile.kind === 'kitchenKnife' || projectile.kind === 'guardArrow') {
         drawShadow(screenProjectile.x, screenProjectile.y + 10, 24, 4);
+        if (projectile.kind === 'guardArrow' && projectile.profile?.weapon?.includes('煤')) {
+            drawCoalBombProjectile(projectile, screenProjectile.x, screenProjectile.y);
+            return;
+        }
         ctx.save();
         ctx.translate(screenProjectile.x, screenProjectile.y);
         const angle = projectile.kind === 'guardArrow'
@@ -11934,6 +16686,7 @@ function drawIndoorLighting(now) {
     lightCtx.globalCompositeOperation = 'destination-out';
     const lights = [
         { x: state.player.x, y: state.player.y, radius: 92, strength: 0.42 },
+        ...(equippedLightProfile() ? [equippedLightProfile()] : []),
         { x: VIEW.width / 2, y: VIEW.height - 90, radius: 150, strength: 0.46 },
         ...state.indoor.objects
             .filter(object => ['forge', 'hearth', 'campfire', 'cookPot', 'potionTable', 'readingDesk', 'bookshelf'].includes(object.kind))
@@ -11943,6 +16696,7 @@ function drawIndoorLighting(now) {
                 radius: ['potionTable', 'readingDesk', 'bookshelf'].includes(object.kind) ? 90 : 120,
                 strength: ['potionTable', 'readingDesk', 'bookshelf'].includes(object.kind) ? 0.26 : 0.52,
             })),
+        ...(state.indoor.building.placedTorches || []).map(torchLightProfile),
     ];
     lights.forEach(light => {
         const pulse = 1 + Math.sin(now / 260 + light.x * 0.03) * 0.035;
@@ -12171,13 +16925,17 @@ function drawMiniShopIcon(key, x, y, scale = 1) {
 }
 
 function drawStoredItemIcons(object, slots, preferredKeys = []) {
+    const left = object.x - object.w / 2;
+    const right = object.x + object.w / 2;
+    const safeSlots = slots.filter(([sx]) => sx >= left + 16 && sx <= right - 16);
+    slots = safeSlots.length ? safeSlots : slots.map(([sx, sy]) => [clamp(sx, left + 16, right - 16), sy]);
     const keys = expandedStorageIconKeys(object, preferredKeys, slots.length);
     if (!keys.length) {
         ctx.fillStyle = 'rgba(0,0,0,0.24)';
         for (const [sx, sy] of slots) ctx.fillRect(sx - 12, sy - 7, 24, 14);
         return;
     }
-    keys.slice(0, slots.length).forEach((key, index) => drawMiniShopIcon(key, slots[index][0], slots[index][1], 0.72));
+    keys.slice(0, slots.length).forEach((key, index) => drawMiniShopIcon(key, slots[index][0], slots[index][1], 0.58));
 }
 
 function drawBookShelfContents(object, left, top, width, height) {
@@ -12367,6 +17125,79 @@ function drawWallModuleObject(object) {
             [left + 70, bottom - 38],
         ];
         keys.slice(0, slots.length).forEach((key, index) => drawMiniShopIcon(key, slots[index][0], slots[index][1], 0.82));
+    } else if (object.kind === 'mineBellStand') {
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(left + 10, top + 12, object.w - 20, object.h - 22);
+        ctx.fillStyle = '#8c98a4';
+        ctx.fillRect(x - 4, top + 20, 8, object.h - 36);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 24, y - 18, 48, 10);
+        ctx.beginPath();
+        ctx.moveTo(x - 16, y - 8);
+        ctx.lineTo(x + 16, y - 8);
+        ctx.lineTo(x + 22, y + 18);
+        ctx.lineTo(x - 22, y + 18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(x - 4, y + 15, 8, 8);
+    } else if (object.kind === 'hunterTrophy') {
+        ctx.fillStyle = '#3a2417';
+        ctx.fillRect(left + 12, top + 18, object.w - 24, object.h - 28);
+        ctx.strokeStyle = '#d8c08a';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 4);
+        ctx.lineTo(x - 28, y - 32);
+        ctx.moveTo(x, y - 4);
+        ctx.lineTo(x + 28, y - 32);
+        ctx.stroke();
+        ctx.fillStyle = '#b98f68';
+        ctx.fillRect(x - 12, y - 8, 24, 18);
+        drawStoredItemIcons(object, [[x - 36, bottom - 38], [x, bottom - 38], [x + 36, bottom - 38]], ['antler', 'hide', 'sinew']);
+    } else if (object.kind === 'trapRack') {
+        ctx.fillStyle = '#3a2a1f';
+        ctx.fillRect(left + 8, top + 12, object.w - 16, object.h - 22);
+        ctx.fillStyle = '#8a5a32';
+        ctx.fillRect(left + 12, top + 22, object.w - 24, 6);
+        ctx.fillRect(left + 12, y + 2, object.w - 24, 6);
+        ctx.strokeStyle = '#cde77b';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.ellipse(left + 28 + i * 28, y - 18 + (i % 2) * 10, 12, 5, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        drawStoredItemIcons(object, [[left + 30, bottom - 38], [left + 68, bottom - 38], [left + 106, bottom - 38]], ['snare', 'fiber', 'beeDart']);
+    } else if (['woodRack', 'hideRack', 'oreCrate', 'toolRack', 'grainRack'].includes(object.kind)) {
+        const palette = {
+            woodRack: ['#4a2b17', '#9a6436', ['wood', 'fiber', 'resin', 'repairKit', 'bambooFence', 'workbench']],
+            hideRack: ['#3a2a1f', '#b98f68', ['hide', 'meat', 'jerky', 'sinew', 'simpleArrow', 'beeDart']],
+            oreCrate: ['#2f3945', '#8c98a4', ['coal', 'ore', 'minerRation', 'stone', 'crystal', 'ironPickaxe']],
+            toolRack: ['#303946', '#d8e5f2', ['torch', 'stonePickaxe', 'minerRation', 'ironPickaxe', 'coal', 'ore']],
+            grainRack: ['#5a3f1d', '#ffd166', ['corn', 'vegetableSoup', 'fiber', 'flower', 'honey', 'carrot', 'tomato']],
+        }[object.kind];
+        const keys = visibleStorageKeys(object, palette[2]);
+        ctx.fillStyle = palette[0];
+        ctx.fillRect(left + 8, top + 12, object.w - 16, object.h - 22);
+        ctx.fillStyle = palette[1];
+        ctx.fillRect(left + 12, top + 22, object.w - 24, 6);
+        ctx.fillRect(left + 12, y + 2, object.w - 24, 6);
+        ctx.fillRect(left + 12, bottom - 20, object.w - 24, 6);
+        const slots = [
+            [left + object.w * 0.2, top + 45],
+            [left + object.w * 0.38, top + 42],
+            [left + object.w * 0.56, top + 45],
+            [left + object.w * 0.74, top + 42],
+            [left + object.w * 0.33, bottom - 38],
+            [left + object.w * 0.66, bottom - 38],
+        ].filter(([sx]) => sx > left + 18 && sx < left + object.w - 18);
+        if (!keys.length) {
+            ctx.fillStyle = 'rgba(0,0,0,0.24)';
+            slots.forEach(([sx, sy]) => ctx.fillRect(sx - 14, sy - 8, 28, 14));
+        } else {
+            keys.slice(0, slots.length).forEach((key, index) => drawMiniShopIcon(key, slots[index][0], slots[index][1], 0.58));
+        }
     } else if (object.kind === 'brokenShelf') {
         ctx.fillStyle = '#5a341d';
         ctx.fillRect(left + 10, top + 24, object.w - 30, 6);
@@ -12498,16 +17329,7 @@ function drawWallModuleObject(object) {
 }
 
 function drawIndoorPlayer(now) {
-    if (state.lose) {
-        drawPlayerDeathAnimation(state.player.x, state.player.y, now, true);
-        return;
-    }
-    drawShadow(state.player.x, state.player.y + 1, 34, 8);
-    drawSpriteGrounded('player', state.player.x, state.player.y, 4);
-    if (state.player.attackUntil > now) {
-        drawAttackSlash(state.player.x, state.player.y, state.player.attackDir || state.player.facing, now);
-    }
-    drawPlayerHandsAndWeapon(state.player.x, state.player.y, state.player, now);
+    drawPlayerAtScreen(state.player.x, state.player.y, now);
 }
 
 function drawPlayerDeathAnimation(x, y, now) {
@@ -12562,6 +17384,10 @@ function villagerClothingColors(object) {
         basicElder: ['#5a4632', '#d8e5f2'],
         elder: ['#3f2a1c', '#b77dff'],
         unemployed: ['#4a3a2a', '#d6a06a'],
+        carpenter: ['#6b3f1d', '#d49a5a'],
+        hunter: ['#31422a', '#d7f28a'],
+        miner: ['#2f3945', '#a8b3bd'],
+        farmer: ['#4d5f2d', '#cde77b'],
         cultPriest: ['#123d2b', '#8cff66'],
         cultHerbalist: ['#1f6b3f', '#8cff66'],
         cultHealer: ['#244d2a', '#9cffb7'],
@@ -12569,10 +17395,21 @@ function villagerClothingColors(object) {
         cultGuard: ['#0f2d22', '#d8e5f2'],
         cultVillager: ['#173b24', '#9cffb7'],
     }[object.role] || ['#5a341d', '#d49a5a'];
+    if (isMineVillage(village)) {
+        const mineRoleColors = {
+            elder: ['#303946', '#ffd166'],
+            guard: ['#26313c', '#d8e5f2'],
+            miner: ['#2f3945', '#ffd166'],
+            blacksmith: ['#252d36', '#ff9f1c'],
+            kitchen: ['#3a4652', '#d68a43'],
+            unemployed: ['#3a3f42', '#c5d6df'],
+        }[object.role];
+        if (mineRoleColors) return mineRoleColors;
+    }
     if (village?.tier === 'jungleCult') return roleColors;
     if (village?.tier === 'fortress') return [object.role === 'merchant' ? '#4b3b28' : villageClothes.body, object.role === 'elder' ? '#ffd166' : villageClothes.trim];
     if (village?.tier === 'basic') return [object.role === 'basicElder' ? '#5a4632' : villageClothes.body, object.role === 'basicElder' ? '#d8e5f2' : villageClothes.trim];
-    return roleColors;
+    return [hexMix(roleColors[0], villageClothes.body, 0.42), hexMix(roleColors[1], villageClothes.trim, 0.36)];
 }
 
 function drawVillageClothingAccent(object, x, y) {
@@ -12619,6 +17456,62 @@ function drawVillageClothingAccent(object, x, y) {
         ctx.fillStyle = accent;
         ctx.fillRect(x - 11, y - 18, 8, 7);
         ctx.fillRect(x + 3, y - 10, 7, 6);
+    } else if (isForestVillage(village)) {
+        ctx.fillStyle = '#244d2a';
+        ctx.fillRect(x - 14, y - 32, 28, 7);
+        ctx.fillStyle = '#b98f68';
+        ctx.fillRect(x - 15, y - 47, 30, 5);
+        if (object.role === 'hunter' || object.role === 'guard') {
+            ctx.fillStyle = '#3a2a1f';
+            ctx.fillRect(x - 16, y - 49, 32, 5);
+            ctx.fillStyle = '#d7f28a';
+            ctx.fillRect(x - 12, y - 15, 7, 13);
+            ctx.fillRect(x + 5, y - 14, 7, 12);
+        } else if (object.role === 'carpenter') {
+            ctx.fillStyle = '#8a5a32';
+            ctx.fillRect(x - 13, y - 18, 26, 5);
+            ctx.fillStyle = '#d6a06a';
+            ctx.fillRect(x - 7, y - 31, 14, 6);
+        } else if (object.role === 'apothecary') {
+            ctx.fillStyle = '#69e08e';
+            ctx.fillRect(x - 15, y - 14, 10, 9);
+            ctx.fillRect(x + 5, y - 13, 10, 9);
+        } else {
+            ctx.fillStyle = '#5a341d';
+            ctx.fillRect(x - 12, y - 17, 24, 5);
+        }
+    } else if (object.role === 'carpenter') {
+        ctx.fillStyle = '#8a5a32';
+        ctx.fillRect(x - 13, y - 31, 26, 5);
+        ctx.fillStyle = '#d6a06a';
+        ctx.fillRect(x - 15, y - 46, 30, 5);
+        ctx.fillRect(x - 10, y - 50, 20, 4);
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - 12, y - 17, 24, 5);
+    } else if (object.role === 'hunter') {
+        ctx.fillStyle = '#3a2a1f';
+        ctx.fillRect(x - 12, y - 49, 24, 5);
+        ctx.fillStyle = '#b98f68';
+        ctx.fillRect(x - 15, y - 31, 30, 6);
+        ctx.fillRect(x - 13, y - 14, 8, 12);
+        ctx.fillRect(x + 5, y - 14, 8, 12);
+    } else if (object.role === 'miner') {
+        ctx.fillStyle = '#1d2630';
+        ctx.fillRect(x - 11, y - 48, 22, 6);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 4, y - 51, 8, 5);
+        ctx.fillStyle = '#8c98a4';
+        ctx.fillRect(x - 13, y - 31, 26, 5);
+        ctx.fillRect(x - 10, y - 14, 20, 4);
+    } else if (object.role === 'farmer') {
+        ctx.fillStyle = '#cde77b';
+        ctx.fillRect(x - 14, y - 47, 28, 4);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 17, y - 50, 34, 3);
+        ctx.fillStyle = '#8a5a32';
+        ctx.fillRect(x - 12, y - 17, 24, 5);
+        ctx.fillStyle = '#9cffb7';
+        ctx.fillRect(x - 5, y - 31, 10, 6);
     } else {
         ctx.fillStyle = accent;
         ctx.fillRect(x - 10, y - 18, 20, 4);
@@ -12719,8 +17612,14 @@ function drawVillagerHeldWeapon(object, x, y, attackProgress = 0) {
     if (object.hp <= 0 || object.kind === 'totem') return;
     const side = object.facing === -1 ? -1 : 1;
     const active = object.attackAnim ? attackProgress : 0;
-    const handX = x + side * (14 + active * 8);
-    const handY = y - 20 - active * 4;
+    const dir = object.attackAnim?.dir || { x: side, y: 0 };
+    const len = Math.hypot(dir.x, dir.y) || 1;
+    const ux = dir.x / len;
+    const uy = dir.y / len;
+    const px = -uy;
+    const py = ux;
+    const handX = x + ux * (12 + active * 5) + px * 3;
+    const handY = y - 24 + uy * 7 + py * 3 - active * 2;
     const line = (x1, y1, x2, y2, color, width = 4) => {
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
@@ -12753,6 +17652,48 @@ function drawVillagerHeldWeapon(object, x, y, attackProgress = 0) {
         ctx.fillRect(handX + side * 4 - 4, handY - 13, 16, 10);
         ctx.fillStyle = '#5a341d';
         ctx.fillRect(handX - 4, handY - 3, 8, 5);
+    } else if (object.role === 'carpenter') {
+        drawCarpenterAxe(handX, handY, ux, uy, px, py, active, line);
+    } else if (object.role === 'hunter') {
+        const bowAngle = object.attackAnim ? Math.atan2(uy, ux) : (side === -1 ? Math.PI : 0);
+        if (object.attackAnim && object.attackAnim.style !== 'guardArrowCharge' && object.attackAnim.style !== 'guardArrowRelease' && object.attackAnim.style !== 'guardArrow') {
+            const knifeX = x + side * 12;
+            const knifeY = y - 24;
+            line(knifeX - side * 4, knifeY + 3, knifeX + side * (22 + active * 16), knifeY - 5 - active * 4, '#d8e5f2', 4);
+            ctx.fillStyle = '#5a341d';
+            ctx.fillRect(knifeX - 4, knifeY, 8, 5);
+            return;
+        }
+        ctx.save();
+        ctx.translate(x + side * 13, y - 28);
+        ctx.rotate(bowAngle);
+        const topY = -13;
+        const bottomY = 13;
+        const gripX = -2 - active * 12;
+        ctx.strokeStyle = '#d6a06a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, topY);
+        ctx.quadraticCurveTo(14, 0, 0, bottomY);
+        ctx.stroke();
+        ctx.strokeStyle = '#d7f28a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, topY);
+        ctx.lineTo(gripX, 0);
+        ctx.lineTo(0, bottomY);
+        ctx.stroke();
+        ctx.strokeStyle = '#f8fbff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(gripX - 2, 0);
+        ctx.lineTo(20 + active * 18, 0);
+        ctx.stroke();
+        ctx.restore();
+    } else if (object.role === 'miner') {
+        drawMinerPickaxe(handX, handY, ux, uy, px, py, active, line);
+    } else if (object.role === 'farmer') {
+        drawFarmerPitchfork(handX, handY, ux, uy, px, py, active, line);
     } else if (object.role === 'merchant') {
         ctx.fillStyle = '#ffd166';
         ctx.fillRect(handX - 5, handY - 8, 10, 10);
@@ -12762,6 +17703,73 @@ function drawVillagerHeldWeapon(object, x, y, attackProgress = 0) {
         ctx.fillStyle = '#8a5a32';
         ctx.fillRect(handX - 3, handY - 10, 6, 22);
     }
+}
+
+function drawCarpenterAxe(handX, handY, ux, uy, px, py, active, line) {
+    const reach = 30 + active * 18;
+    const baseX = handX - ux * 9 + px * 2;
+    const baseY = handY - uy * 9 + py * 2;
+    const headX = handX + ux * reach - py * 5;
+    const headY = handY + uy * reach + px * 5;
+    line(baseX, baseY, headX, headY, '#8a5a32', 5);
+    line(baseX + ux * 8, baseY + uy * 8, headX - ux * 7, headY - uy * 7, '#d49a5a', 2);
+    ctx.fillStyle = '#c5d6df';
+    ctx.beginPath();
+    ctx.moveTo(headX + px * 3, headY + py * 3);
+    ctx.lineTo(headX + px * 15 - ux * 5, headY + py * 15 - uy * 5);
+    ctx.lineTo(headX + px * 12 + ux * 12, headY + py * 12 + uy * 12);
+    ctx.lineTo(headX + ux * 6, headY + uy * 6);
+    ctx.lineTo(headX - px * 9 + ux * 7, headY - py * 9 + uy * 7);
+    ctx.lineTo(headX - px * 10 - ux * 4, headY - py * 10 - uy * 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(headX + px * 7 + ux * 2 - 2, headY + py * 7 + uy * 2 - 2, 5, 5);
+    ctx.fillStyle = '#5a341d';
+    ctx.fillRect(handX - 4, handY - 2, 8, 5);
+}
+
+function drawMinerPickaxe(handX, handY, ux, uy, px, py, active, line) {
+    const reach = 26 + active * 16;
+    const headX = handX + ux * reach - py * 7;
+    const headY = handY + uy * reach + px * 7;
+    line(handX - ux * 9, handY - uy * 9 + 5, headX, headY, '#6d4324', 4);
+    line(handX - ux * 3, handY - uy * 3 + 4, headX - ux * 5, headY - uy * 5, '#b98f68', 2);
+    ctx.strokeStyle = '#c5d6df';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(headX - px * 18 - ux * 4, headY - py * 18 - uy * 4);
+    ctx.quadraticCurveTo(headX, headY - 2, headX + px * 20 + ux * 4, headY + py * 20 + uy * 4);
+    ctx.stroke();
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(headX - px * 20 - ux * 5 - 2, headY - py * 20 - uy * 5 - 2, 5, 5);
+    ctx.fillRect(headX + px * 20 + ux * 4 - 2, headY + py * 20 + uy * 4 - 2, 5, 5);
+    ctx.fillStyle = '#2f3945';
+    ctx.fillRect(headX - 4, headY - 4, 8, 8);
+}
+
+function drawFarmerPitchfork(handX, handY, ux, uy, px, py, active, line) {
+    const reach = 42 + active * 20;
+    const forkX = handX + ux * reach - py * 5;
+    const forkY = handY + uy * reach + px * 5;
+    line(handX - ux * 10, handY - uy * 10 + 7, forkX - ux * 4, forkY - uy * 4, '#8a5a32', 4);
+    line(handX + ux * 2, handY + uy * 2 + 5, forkX - ux * 10, forkY - uy * 10, '#d6a06a', 2);
+    ctx.strokeStyle = '#d8e5f2';
+    ctx.lineWidth = 3;
+    [-8, 0, 8].forEach(offset => {
+        ctx.beginPath();
+        ctx.moveTo(forkX + px * offset, forkY + py * offset);
+        ctx.lineTo(forkX + px * offset + ux * 19, forkY + py * offset + uy * 19);
+        ctx.stroke();
+    });
+    ctx.strokeStyle = '#a8b3bd';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(forkX - px * 11, forkY - py * 11);
+    ctx.lineTo(forkX + px * 11, forkY + py * 11);
+    ctx.stroke();
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(forkX + ux * 18 - 2, forkY + uy * 18 - 2, 4, 4);
 }
 
 function drawIndoorNpc(object) {
@@ -12778,6 +17786,7 @@ function drawIndoorNpc(object) {
         return;
     }
     drawShadow(x, y + 1, 30, 7);
+    const village = villagerVisualVillage(object);
     const colors = villagerClothingColors(object);
     const attackProgress = villagerAttackProgress(object);
     ctx.fillStyle = '#d6a06a';
@@ -12815,6 +17824,14 @@ function drawIndoorNpc(object) {
         }
         if (object.attackAnim) drawBlacksmithSwordArt(x, y, object, attackProgress);
     } else if (object.role === 'elder') {
+        if (isForestVillage(village)) {
+            drawForestElderOutfit(object, x, y, attackProgress);
+            return;
+        }
+        if (isMineVillage(village)) {
+            drawMineElderOutfit(object, x, y, attackProgress);
+            return;
+        }
         ctx.fillStyle = '#ffd166';
         ctx.fillRect(x - 9, y - 48, 18, 4);
         if (object.mood === 'angry' || object.attackAnim) {
@@ -12888,6 +17905,9 @@ function drawIndoorNpc(object) {
             ctx.fillRect(side === 1 ? x + 15 + lift : x - 23 - lift, y - 29 - lift, 8, 8);
         }
     }
+    if (['carpenter', 'hunter', 'miner', 'farmer'].includes(object.role) && (object.mood === 'angry' || object.attackAnim)) {
+        drawProfessionVillagerCombatArt(object, x, y, attackProgress);
+    }
     if (object.role === 'guard') {
         const side = object.facing === -1 ? -1 : 1;
         ctx.fillStyle = 'rgba(190,210,222,0.95)';
@@ -12901,6 +17921,39 @@ function drawIndoorNpc(object) {
             ctx.moveTo(x - side * 9, y - 28);
             ctx.lineTo(x - side * 25, y - 6);
             ctx.stroke();
+        } else if (object.attackAnim.style === 'coalThrowCharge' || object.attackAnim.style === 'coalThrowRelease') {
+            const dir = object.attackAnim.dir || { x: side, y: 0 };
+            const angle = Math.atan2(dir.y, dir.x);
+            const windup = object.attackAnim.style === 'coalThrowCharge' ? attackProgress : 1;
+            const release = object.attackAnim.style === 'coalThrowRelease' ? attackProgress : 0;
+            ctx.save();
+            ctx.translate(x + side * 10, y - 28);
+            ctx.rotate(angle);
+            ctx.strokeStyle = '#d6a06a';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(-4, 3);
+            ctx.lineTo(4 + release * 14 - windup * 10, -9 - windup * 12 + release * 8);
+            ctx.stroke();
+            const coalX = 8 + release * 22 - windup * 12;
+            const coalY = -16 - windup * 12 + release * 8;
+            ctx.fillStyle = '#171d24';
+            ctx.fillRect(coalX - 7, coalY - 7, 14, 14);
+            ctx.fillStyle = '#303946';
+            ctx.fillRect(coalX - 4, coalY - 4, 8, 8);
+            ctx.fillStyle = '#ff9f1c';
+            ctx.fillRect(coalX + 3, coalY - 2, 7, 4);
+            ctx.fillStyle = 'rgba(255,159,28,0.28)';
+            ctx.fillRect(coalX + 8, coalY - 4, 14, 8);
+            if (object.attackAnim.style === 'coalThrowRelease') {
+                ctx.strokeStyle = 'rgba(255,209,102,0.55)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(coalX - 14, coalY + 3);
+                ctx.lineTo(coalX + 18 + attackProgress * 18, coalY + 1);
+                ctx.stroke();
+            }
+            ctx.restore();
         } else if (object.attackAnim.style === 'guardArrowCharge' || object.attackAnim.style === 'guardArrowRelease') {
             const dir = object.attackAnim.dir || { x: side, y: 0 };
             const angle = Math.atan2(dir.y, dir.x);
@@ -12933,7 +17986,7 @@ function drawIndoorNpc(object) {
             drawGuardSwordArt(x, y, object, attackProgress);
         }
     }
-    if (object.mood === 'angry' && !['blacksmith', 'elder', 'basicElder', 'kitchen', 'apothecary', 'guard'].includes(object.role)) {
+    if (object.mood === 'angry' && !['blacksmith', 'elder', 'basicElder', 'kitchen', 'apothecary', 'guard', 'carpenter', 'hunter', 'miner', 'farmer'].includes(object.role)) {
         const side = object.facing === -1 ? -1 : 1;
         ctx.fillStyle = object.attackFlashUntil && performance.now() < object.attackFlashUntil ? '#ffb3b3' : '#d6a06a';
         ctx.fillRect(side === 1 ? x + 10 + attackProgress * 12 : x - 26 - attackProgress * 12, y - 24, 16, 6);
@@ -12941,6 +17994,58 @@ function drawIndoorNpc(object) {
     if (object.hurtUntil && performance.now() < object.hurtUntil) {
         ctx.fillStyle = 'rgba(255, 107, 107, 0.45)';
         ctx.fillRect(x - 14, y - 44, 28, 44);
+    }
+}
+
+function drawForestElderOutfit(object, x, y, attackProgress) {
+    const side = object.facing === -1 ? -1 : 1;
+    ctx.fillStyle = '#244d2a';
+    ctx.fillRect(x - 13, y - 32, 26, 7);
+    ctx.fillStyle = '#b98f68';
+    ctx.fillRect(x - 15, y - 48, 30, 5);
+    ctx.fillRect(x - 9, y - 52, 18, 4);
+    ctx.fillStyle = '#d8c08a';
+    ctx.fillRect(x - 18, y - 50, 8, 4);
+    ctx.fillRect(x + 10, y - 50, 8, 4);
+    ctx.strokeStyle = '#d8c08a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + side * 10, y - 22);
+    ctx.lineTo(x + side * (26 + attackProgress * 8), y - 34);
+    ctx.stroke();
+    ctx.fillStyle = '#d8c08a';
+    ctx.fillRect(x + side * (26 + attackProgress * 8) - 5, y - 39, 10, 9);
+    ctx.fillStyle = '#5a341d';
+    ctx.fillRect(x + side * (22 + attackProgress * 8) - 3, y - 31, 7, 5);
+    if (object.attackAnim?.style === 'command') {
+        ctx.fillStyle = 'rgba(214,160,106,0.35)';
+        ctx.fillRect(x - 26, y - 62, 52, 5);
+        ctx.fillRect(x - 4, y - 76, 8, 32);
+    }
+}
+
+function drawMineElderOutfit(object, x, y, attackProgress) {
+    const side = object.facing === -1 ? -1 : 1;
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x - 13, y - 32, 26, 7);
+    ctx.fillStyle = '#8c98a4';
+    ctx.fillRect(x - 12, y - 48, 24, 5);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(x - 4, y - 52, 8, 6);
+    ctx.strokeStyle = '#8c98a4';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x + side * 10, y - 21);
+    ctx.lineTo(x + side * (24 + attackProgress * 8), y - 34 + attackProgress * 5);
+    ctx.stroke();
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(x + side * (24 + attackProgress * 8) - 6, y - 40 + attackProgress * 5, 12, 12);
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x + side * (27 + attackProgress * 8) - 2, y - 31 + attackProgress * 5, 4, 8);
+    if (object.attackAnim?.style === 'command') {
+        ctx.fillStyle = 'rgba(255,209,102,0.34)';
+        ctx.fillRect(x - 24, y - 62, 48, 5);
+        ctx.fillRect(x - 4, y - 76, 8, 32);
     }
 }
 
@@ -12964,6 +18069,10 @@ function drawVillagerHealthBar(object, x, y) {
         ctx.fillText(object.workState, x, y - 61);
         ctx.textAlign = 'left';
     }
+}
+
+function drawProfessionVillagerCombatArt(object, x, y, attackProgress) {
+    drawVillagerHeldWeapon(object, x, y, attackProgress);
 }
 
 function drawMerchantOutfit(object, x, y) {
@@ -13173,8 +18282,17 @@ function drawIndoorObject(object) {
         drawIndoorNpc(object);
         return;
     }
+    if (object.kind === 'mineMonster') {
+        drawMineCaveMonster(object);
+        return;
+    }
     if (object.kind === 'totem') {
-        drawVillageTotem(object);
+        if (object.mineBoss) drawMineCrystalGuardian(object);
+        else drawVillageTotem(object);
+        return;
+    }
+    if (['mineCart', 'mineSupport', 'mineCollapse', 'mineVein', 'mineCrystalVein', 'mineRelicBox'].includes(object.kind)) {
+        drawMineCaveObject(object);
         return;
     }
     if (object.action === 'jungleRuinClue') {
@@ -13361,6 +18479,33 @@ function drawIndoorObject(object) {
                 ? ['stoneSpear', 'simpleArrow', 'sinewBow', 'poisonArrow', 'bambooTrap', 'bandage']
                 : (object.kind === 'herbRack' ? ['herb', 'toxicMushroom', 'potion'] : ['meat', 'roastMeat', 'stew']));
         drawStoredItemIcons(object, [[x - 70, y - 13], [x - 46, y], [x - 22, y - 13], [x + 2, y], [x + 26, y - 13], [x + 50, y], [x + 74, y - 13]], preferred);
+    } else if (object.kind === 'targetDummy') {
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - 4, y - 28, 8, 56);
+        ctx.fillRect(x - 22, y + 18, 44, 7);
+        ctx.fillStyle = '#d6a06a';
+        ctx.fillRect(x - 18, y - 26, 36, 30);
+        ctx.strokeStyle = '#d94b5f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y - 11, 14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y - 11, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#2d2117';
+        ctx.fillRect(x + 12, y - 19, 18, 3);
+        ctx.fillRect(x - 30, y - 8, 18, 3);
+    } else if (object.kind === 'trapBasket') {
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - object.w / 2, y - object.h / 2 + 8, object.w, object.h - 8);
+        ctx.strokeStyle = '#cde77b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x - 12, y - 6, 13, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 14, y - 1, 13, 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        drawStoredItemIcons(object, [[x - 18, y + 8], [x + 6, y + 8], [x + 24, y + 8]], ['snare', 'fiber', 'simpleArrow']);
     } else if (object.kind === 'basket') {
         if (object.wallModule) {
             ctx.fillStyle = '#4a3320';
@@ -13461,6 +18606,159 @@ function drawIndoorObject(object) {
         ctx.fillStyle = '#7a6040';
         ctx.fillRect(x - object.w / 2, y - object.h / 2, object.w, object.h);
     }
+}
+
+function drawMineCaveObject(object) {
+    const x = object.x;
+    const y = object.y;
+    drawShadow(x, y + object.h * 0.25, object.w * 0.7, 7);
+    if (object.kind === 'mineCart') {
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(x - 34, y - 16, 68, 30);
+        ctx.fillStyle = '#66737f';
+        ctx.fillRect(x - 28, y - 22, 56, 10);
+        ctx.fillStyle = '#121820';
+        ctx.fillRect(x - 24, y + 16, 12, 12);
+        ctx.fillRect(x + 12, y + 16, 12, 12);
+        drawStoredItemIcons(object, [[x - 18, y - 10], [x + 4, y - 8], [x + 22, y - 4]], ['ore', 'coal', 'stone']);
+    } else if (object.kind === 'mineSupport') {
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - 42, y - 36, 8, 72);
+        ctx.fillRect(x + 34, y - 36, 8, 72);
+        ctx.fillRect(x - 48, y - 42, 96, 9);
+        ctx.fillStyle = '#9a6436';
+        ctx.fillRect(x - 26, y - 30, 52, 6);
+    } else if (object.kind === 'mineCollapse') {
+        ctx.fillStyle = object.solid ? '#66737f' : '#303946';
+        ctx.fillRect(x - 54, y - 16, 108, 34);
+        ctx.fillStyle = '#9fb3c8';
+        ctx.fillRect(x - 38, y - 28, 24, 18);
+        ctx.fillRect(x + 8, y - 24, 34, 20);
+        if (object.solid) drawMiniBar(x, y - 42, Math.max(0, object.hp || 0) / (object.maxHp || 18), '#d8e5f2');
+    } else if (object.kind === 'mineVein' || object.kind === 'mineCrystalVein') {
+        const crystal = object.kind === 'mineCrystalVein';
+        ctx.fillStyle = '#48515a';
+        ctx.fillRect(x - 34, y - 28, 68, 54);
+        ctx.fillStyle = crystal ? '#b77dff' : '#c5d6df';
+        ctx.fillRect(x - 16, y - 20, 14, 32);
+        ctx.fillRect(x + 8, y - 12, 18, 24);
+        ctx.fillStyle = crystal ? '#f2ddff' : '#7dcbe8';
+        ctx.fillRect(x - 10, y - 15, 6, 18);
+    } else if (object.kind === 'mineRelicBox') {
+        ctx.fillStyle = '#2f3945';
+        ctx.fillRect(x - 36, y - 18, 72, 36);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 28, y - 12, 56, 7);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 5, y - 4, 10, 12);
+    }
+}
+
+function drawMineCaveMonster(object) {
+    const x = state.underground ? worldX(object.x) : object.x;
+    const y = state.underground ? worldY(object.y) : object.y;
+    if (object.hp <= 0) {
+        drawMineMonsterDeathAnimation(object, x, y);
+        return;
+    }
+    const hurt = (object.hurtUntil || 0) > performance.now();
+    drawShadow(x, y + object.radius * 0.65, object.radius * 1.7, 5);
+    if (object.boss) {
+        ctx.fillStyle = 'rgba(183,125,255,0.24)';
+        ctx.fillRect(x - 30, y - 44, 60, 8);
+        ctx.fillStyle = hurt ? '#ffffff' : '#303946';
+        ctx.fillRect(x - 24, y - 34, 48, 60);
+        ctx.fillStyle = '#66737f';
+        ctx.fillRect(x - 18, y - 46, 36, 18);
+        ctx.fillRect(x - 30, y - 12, 14, 34);
+        ctx.fillRect(x + 16, y - 12, 14, 34);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 9, y - 52, 18, 20);
+        ctx.fillRect(x - 6, y - 8, 12, 24);
+        ctx.fillStyle = '#f2ddff';
+        ctx.fillRect(x - 3, y - 47, 6, 10);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 4, y + 4, 8, 8);
+    } else if (object.mineKind === 'mineBat') {
+        const flap = Math.sin(performance.now() / 230 + object.x) * 3;
+        ctx.fillStyle = hurt ? '#ffffff' : '#252d38';
+        ctx.fillRect(x - 10, y - 10, 20, 18);
+        ctx.fillStyle = '#4a5664';
+        ctx.fillRect(x - 34, y - 7 + flap, 24, 8);
+        ctx.fillRect(x + 10, y - 7 - flap, 24, 8);
+        ctx.fillStyle = '#151a21';
+        ctx.fillRect(x - 7, y + 6, 14, 6);
+        ctx.fillStyle = '#7dcbe8';
+        ctx.fillRect(x - 5, y - 4, 3, 3);
+        ctx.fillRect(x + 2, y - 4, 3, 3);
+    } else if (object.mineKind === 'crystalBug') {
+        ctx.fillStyle = 'rgba(183,125,255,0.22)';
+        ctx.fillRect(x - 23, y - 18, 46, 5);
+        ctx.fillStyle = hurt ? '#ffffff' : '#2f3945';
+        ctx.fillRect(x - 22, y - 6, 44, 14);
+        ctx.fillStyle = '#48515a';
+        ctx.fillRect(x - 16, y - 13, 32, 9);
+        ctx.fillStyle = '#202a33';
+        ctx.fillRect(x - 14, y + 6, 28, 6);
+        ctx.fillStyle = '#66737f';
+        for (let i = -2; i <= 2; i++) {
+            ctx.fillRect(x + i * 8 - 2, y + 10, 4, 7);
+            ctx.fillRect(x + i * 8 - 2, y - 17, 4, 6);
+        }
+        ctx.fillStyle = '#8c98a4';
+        ctx.fillRect(x - 25, y - 2, 6, 5);
+        ctx.fillRect(x + 19, y - 2, 6, 5);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 8, y - 18, 7, 12);
+        ctx.fillRect(x + 3, y - 20, 8, 14);
+        ctx.fillStyle = '#f2ddff';
+        ctx.fillRect(x + 5, y - 16, 3, 7);
+    } else {
+        ctx.fillStyle = 'rgba(255,209,102,0.18)';
+        ctx.fillRect(x - 18, y - 22, 36, 5);
+        ctx.fillStyle = hurt ? '#ffffff' : '#5f6c78';
+        ctx.fillRect(x - 22, y - 10, 44, 22);
+        ctx.fillStyle = '#48515a';
+        ctx.fillRect(x - 16, y - 18, 32, 13);
+        ctx.fillStyle = '#303946';
+        for (let i = -2; i <= 2; i++) ctx.fillRect(x + i * 9 - 3, y + 10, 6, 9);
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(x - 11, y - 22, 22, 8);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 4, y - 6, 8, 8);
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillRect(x - 2, y - 4, 4, 4);
+    }
+    if (object.hp < object.maxHp) drawMiniBar(x, y - object.radius - 18, Math.max(0, object.hp) / object.maxHp, '#ff6b6b');
+}
+
+function drawMineMonsterDeathAnimation(object, x, y) {
+    const progress = clamp((performance.now() - (object.deathAt || performance.now())) / 900, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = 1 - progress;
+    const fall = progress * 14;
+    drawShadow(x, y + object.radius * 0.65 + fall, object.radius * (1.5 - progress * 0.6), 4);
+    ctx.fillStyle = object.mineKind === 'crystalBug' ? '#b77dff' : (object.mineKind === 'mineBat' ? '#303946' : '#66737f');
+    ctx.fillRect(x - object.radius * 0.75, y - object.radius * 0.5 + fall, object.radius * 1.5, object.radius * (0.8 - progress * 0.25));
+    ctx.fillStyle = '#d8e5f2';
+    ctx.fillRect(x - 6, y - object.radius * 0.8 + fall, 12, 4);
+    ctx.restore();
+}
+
+function drawMineCrystalGuardian(object) {
+    const x = object.x;
+    const y = object.y;
+    drawShadow(x, y + 28, 58, 10);
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x - 24, y - 34, 48, 64);
+    ctx.fillStyle = '#66737f';
+    ctx.fillRect(x - 18, y - 28, 36, 18);
+    ctx.fillStyle = '#b77dff';
+    ctx.fillRect(x - 9, y - 46, 18, 22);
+    ctx.fillRect(x - 7, y - 8, 14, 26);
+    ctx.fillStyle = '#f2ddff';
+    ctx.fillRect(x - 3, y - 40, 6, 12);
+    if (object.hp < object.maxHp) drawMiniBar(x, y - 60, Math.max(0, object.hp) / object.maxHp, '#b77dff');
 }
 
 function drawJungleRuinInteriorObject(object) {
@@ -13850,6 +19148,39 @@ function distanceToSegment(point, a, b) {
     return Math.hypot(point.x - px, point.y - py);
 }
 
+function distanceSegmentToRect(a, b, rect) {
+    if (pointInRect(a, rect) || pointInRect(b, rect) || segmentSamplesHitRect(a, b, rect)) return 0;
+    const left = rect.x - rect.w / 2;
+    const right = rect.x + rect.w / 2;
+    const top = rect.y - rect.h / 2;
+    const bottom = rect.y + rect.h / 2;
+    return Math.min(
+        distanceSegments(a, b, { x: left, y: top }, { x: right, y: top }),
+        distanceSegments(a, b, { x: right, y: top }, { x: right, y: bottom }),
+        distanceSegments(a, b, { x: right, y: bottom }, { x: left, y: bottom }),
+        distanceSegments(a, b, { x: left, y: bottom }, { x: left, y: top }),
+    );
+}
+
+function distanceSegments(a1, a2, b1, b2) {
+    if (segmentsIntersect(a1, a2, b1, b2)) return 0;
+    return Math.min(
+        distanceToSegment(a1, b1, b2),
+        distanceToSegment(a2, b1, b2),
+        distanceToSegment(b1, a1, a2),
+        distanceToSegment(b2, a1, a2),
+    );
+}
+
+function segmentsIntersect(a, b, c, d) {
+    const orient = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+    const ab1 = orient(a, b, c);
+    const ab2 = orient(a, b, d);
+    const cd1 = orient(c, d, a);
+    const cd2 = orient(c, d, b);
+    return ab1 * ab2 <= 0 && cd1 * cd2 <= 0;
+}
+
 function riverDistance(x, y) {
     const r = worldRegionSet().river;
     const rivers = [];
@@ -14211,13 +19542,14 @@ function drawWorldObjects(now) {
         ...allVillages().filter(village => isNearView(village, village.radius + 180)).flatMap(village => villageDrawables(village)),
         ...(state.roadLamps || []).filter(lamp => isNearView(lamp, 120)).map(lamp => ({ y: lamp.y, draw: () => drawVillageLamp(lamp) })),
         ...(isNearView(state.ruins, 220) ? [{ y: state.ruins.y, draw: () => drawRuins() }] : []),
+        ...(state.waspHives || []).filter(hive => isNearView(hive, 220)).map(hive => ({ y: hive.y + 24, draw: () => drawWaspHive(hive, now) })),
         ...state.bambooTraps.filter(t => isNearView(t, 90)).map(t => ({ y: t.y - 2, draw: () => drawBambooTrap(t) })),
         ...state.placedFences.filter(t => isNearView(t, 120)).map(t => ({ y: t.y + 8, draw: () => drawBambooFence(t) })),
         ...state.placedStations.filter(t => isNearView(t, 140)).map(t => ({ y: t.y + 10, draw: () => drawStation(t) })),
         ...state.placedTorches.filter(t => isNearView(t, 120)).map(t => ({ y: t.y, draw: () => drawPlacedTorch(t) })),
         ...state.projectiles.filter(p => isNearView(p, 120)).map(p => ({ y: p.y, draw: () => drawProjectile(p) })),
         ...(state.indoorProjectiles || []).filter(p => !p.indoor && isNearView(p, 160)).map(p => ({ y: p.y, draw: () => drawOutdoorVillagerProjectile(p) })),
-        ...visibleResources(180).map(r => ({ y: r.y, draw: () => drawResource(r) })),
+        ...visibleResources(180).map(r => ({ y: resourceSortY(r), draw: () => drawResource(r) })),
         ...(state.roadSigns || []).filter(sign => isNearView(sign, 140)).map(sign => ({ y: sign.y + 18, draw: () => drawRoadSign(sign) })),
         ...state.enemies.filter(e => (e.hp > 0 || (e.deathAt && now - e.deathAt < 1200)) && isNearView(e, 220)).map(e => ({ y: e.y, draw: () => drawEnemy(e, now) })),
         ...state.outdoorVillagers.filter(npc => npc.hp > 0 && isNearView(npc, 160)).map(npc => ({ y: npc.y, draw: () => drawOutdoorVillager(npc, now) })),
@@ -14239,9 +19571,15 @@ function drawOutdoorVillager(npc, now) {
 }
 
 function shouldDrawResource(r) {
+    if (r.kind === 'emptyCropPatch') return isNearView(r, 180);
     if (r.hp <= 0 && (!r.deathAt || performance.now() - r.deathAt > 1600)) return false;
     if (!isNearView(r, 180)) return false;
     return true;
+}
+
+function resourceSortY(r) {
+    if (BIOME_TREE_KINDS.includes(r.kind) || STUMP_TREE_KIND[r.kind]) return r.y + (r.radius || 24) * 0.38;
+    return r.y;
 }
 
 function villageDrawables(village) {
@@ -14252,10 +19590,10 @@ function villageDrawables(village) {
     }
     village.amenities?.lamps?.forEach(lamp => items.push({ y: lamp.y, draw: () => drawVillageLamp(lamp) }));
     if (village.amenities?.altar) items.push({ y: village.amenities.altar.y + 32, draw: () => drawGreenMotherAltar(village.amenities.altar) });
-    if (village.amenities?.flag) items.push({ y: village.amenities.flag.y + 22, draw: () => drawVillageFlag(village.amenities.flag, village) });
+    if (village.amenities?.flag) items.push({ y: village.amenities.flag.y + 46, draw: () => drawVillageFlag(village.amenities.flag, village) });
     if (village.amenities?.noticeBoard) items.push({ y: village.amenities.noticeBoard.y + 20, draw: () => drawVillageNoticeBoard(village.amenities.noticeBoard) });
     if (village.amenities?.bell) items.push({ y: village.amenities.bell.y + 26, draw: () => drawVillageBell(village.amenities.bell) });
-    if (village.well) items.push({ y: village.y + 8, draw: () => drawVillageWell(village.well) });
+    if (village.well) items.push({ y: village.well.y + 16, draw: () => drawVillageWell(village.well) });
     village.buildings.forEach(building => items.push({ y: building.y + building.h * 0.5, draw: () => drawVillageHouse(building) }));
     return items;
 }
@@ -14530,17 +19868,34 @@ function drawVillageHouse(building) {
     const left = Math.round(x - building.w / 2);
     const top = Math.round(y - building.h / 2);
     const style = villageHouseStyle(building);
+    if (building.destroyed) {
+        drawRuinedVillageHouse(building, x, y, left, top, style);
+        return;
+    }
     drawShadow(x, y + building.h * 0.38, building.w * 0.82, 14);
     if (building.village?.tier === 'jungleCult') {
         drawCultTreeHouse(building, x, y, left, top, style);
+        drawVillageHouseDamageOverlay(building, x, y, left, top);
         return;
     }
     if (building.kind === 'guardFortress') {
         drawGuardFortressHouse(building, x, y, left, top, style);
+        drawVillageHouseDamageOverlay(building, x, y, left, top);
         return;
     }
     if (building.kind === 'basicVillager' || building.kind === 'basicElder') {
         drawBasicVillageHouse(building, x, y, left, top, style);
+        drawVillageHouseDamageOverlay(building, x, y, left, top);
+        return;
+    }
+    if (isForestVillage(building.village)) {
+        drawForestVillageHouse(building, x, y, left, top, style);
+        drawVillageHouseDamageOverlay(building, x, y, left, top);
+        return;
+    }
+    if (isMineVillage(building.village)) {
+        drawMineVillageHouse(building, x, y, left, top, style);
+        drawVillageHouseDamageOverlay(building, x, y, left, top);
         return;
     }
     ctx.fillStyle = '#4b3b28';
@@ -14549,10 +19904,11 @@ function drawVillageHouse(building) {
     ctx.fillRect(left + 12, top + 44, building.w - 24, building.h - 42);
     ctx.fillStyle = style.wall;
     ctx.fillRect(left + 18, top + 50, building.w - 36, building.h - 54);
-    for (let yy = top + 54; yy < top + building.h - 10; yy += 14) {
-        ctx.fillStyle = yy % 28 ? 'rgba(90, 52, 29, 0.45)' : 'rgba(40, 30, 20, 0.35)';
+    for (let yy = top + 54, row = 0; yy < top + building.h - 10; yy += 14, row++) {
+        ctx.fillStyle = row % 2 ? 'rgba(90, 52, 29, 0.45)' : 'rgba(40, 30, 20, 0.35)';
         ctx.fillRect(left + 18, yy, building.w - 36, 4);
     }
+    drawVillageHouseSkinPattern(building, x, y, left, top, style);
     const roof = style.roof;
     ctx.fillStyle = roof;
     ctx.beginPath();
@@ -14586,7 +19942,293 @@ function drawVillageHouse(building) {
         ctx.fillStyle = 'rgba(80, 80, 80, 0.35)';
         ctx.fillRect(left + building.w - 12, top - 4, 8, 10);
     }
+    drawProfessionHouseDetails(building, x, y, left, top, style);
     drawVillageHouseSign(building, x, top, style);
+    drawVillageHouseDamageOverlay(building, x, y, left, top);
+}
+
+function drawForestVillageHouse(building, x, y, left, top, style) {
+    const openShed = ['hunter', 'outerHunter', 'carpenter', 'kitchen'].includes(building.kind);
+    drawShadow(x, y + building.h * 0.38, building.w * (openShed ? 0.98 : 0.72), 13);
+    ctx.fillStyle = '#3a2417';
+    ctx.fillRect(left + building.w * 0.16, top + building.h * 0.52, building.w * 0.68, 9);
+    ctx.fillStyle = '#5a341d';
+    (openShed ? [0.18, 0.38, 0.62, 0.82] : [0.22, 0.78]).forEach(r => ctx.fillRect(left + building.w * r - 4, top + 48, 8, building.h - 42));
+    if (!openShed) {
+        ctx.fillStyle = style.wall;
+        ctx.fillRect(left + building.w * 0.18, top + 54, building.w * 0.64, building.h - 54);
+        ctx.fillStyle = '#2f1d12';
+        for (let yy = top + 60; yy < top + building.h - 8; yy += 13) ctx.fillRect(left + building.w * 0.2, yy, building.w * 0.6, 4);
+        ctx.fillStyle = '#1f1a12';
+        ctx.fillRect(x - 13, y + building.h * 0.13, 26, 34);
+    } else {
+        ctx.fillStyle = 'rgba(47,30,18,0.58)';
+        ctx.fillRect(left + building.w * 0.16, top + 64, building.w * 0.68, building.h - 64);
+        ctx.fillStyle = '#8a5a32';
+        ctx.fillRect(left + building.w * 0.21, y + building.h * 0.22, building.w * 0.58, 7);
+    }
+    ctx.fillStyle = style.roof;
+    ctx.beginPath();
+    ctx.moveTo(left + 4, top + 54);
+    ctx.lineTo(x - building.w * 0.18, top + 18);
+    ctx.lineTo(x + building.w * 0.1, top + 6);
+    ctx.lineTo(left + building.w - 2, top + 50);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#244d2a';
+    for (let i = 0; i < 5; i++) ctx.fillRect(left + 18 + i * 26, top + 35 + (i % 2) * 5, 22, 5);
+    if (building.kind === 'elder') {
+        ctx.fillStyle = '#d6a06a';
+        ctx.fillRect(x - 30, top + 38, 60, 6);
+        ctx.fillStyle = '#d8c08a';
+        ctx.fillRect(x - 36, top + 30, 12, 11);
+        ctx.fillRect(x + 24, top + 30, 12, 11);
+    } else if (building.kind === 'hunter' || building.kind === 'outerHunter') {
+        ctx.strokeStyle = '#d7f28a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(left + building.w - 28, y + building.h * 0.2, building.kind === 'outerHunter' ? 20 : 17, -1.2, 1.2);
+        ctx.stroke();
+        ctx.fillStyle = '#b98f68';
+        ctx.fillRect(left + 16, y + building.h * 0.25, 38, 12);
+        if (building.kind === 'outerHunter') {
+            ctx.fillStyle = '#5a341d';
+            ctx.fillRect(left + building.w * 0.46, y + building.h * 0.28, 54, 7);
+            ctx.fillStyle = '#ffd166';
+            ctx.fillRect(left + building.w * 0.5, y + building.h * 0.2, 10, 12);
+            ctx.strokeStyle = '#cde77b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(left + 28, y + building.h * 0.43, 18, 7, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    } else if (building.kind === 'carpenter') {
+        ctx.fillStyle = '#9a6436';
+        ctx.fillRect(left + 12, y + building.h * 0.26, 56, 9);
+        ctx.fillRect(left + 18, y + building.h * 0.38, 48, 8);
+        ctx.fillStyle = '#d8e5f2';
+        ctx.fillRect(left + 76, y + building.h * 0.24, 22, 5);
+    } else if (building.kind === 'guard') {
+        ctx.fillStyle = '#31422a';
+        ctx.fillRect(x - 24, y + building.h * 0.18, 48, 16);
+        ctx.fillStyle = '#d8e5f2';
+        ctx.fillRect(x - 16, y + building.h * 0.2, 32, 4);
+    } else if (building.kind === 'apothecary') {
+        ctx.fillStyle = '#69e08e';
+        ctx.fillRect(left + 20, y + building.h * 0.2, 12, 18);
+        ctx.fillRect(left + 40, y + building.h * 0.24, 12, 14);
+    } else if (building.kind === 'kitchen') {
+        ctx.fillStyle = '#7a3f2a';
+        ctx.fillRect(left + building.w - 42, y + building.h * 0.18, 28, 18);
+        ctx.fillStyle = '#d94b5f';
+        ctx.fillRect(left + building.w - 36, y + building.h * 0.16, 10, 9);
+    }
+    drawVillageHouseSign(building, x, top, style);
+}
+
+function drawMineVillageHouse(building, x, y, left, top, style) {
+    drawShadow(x, y + building.h * 0.4, building.w * 0.82, 14);
+    ctx.fillStyle = '#1f252c';
+    ctx.fillRect(left + 10, top + 54, building.w - 20, building.h - 50);
+    ctx.fillStyle = style.wall;
+    ctx.fillRect(left + 18, top + 60, building.w - 36, building.h - 62);
+    ctx.fillStyle = 'rgba(216,229,242,0.18)';
+    for (let yy = top + 68, row = 0; yy < top + building.h - 10; yy += 18, row++) {
+        for (let xx = left + 24 + (row % 2) * 13; xx < left + building.w - 30; xx += 28) {
+            ctx.fillRect(xx, yy, 20, 7);
+        }
+    }
+    ctx.fillStyle = style.roof;
+    ctx.fillRect(left + 8, top + 38, building.w - 16, 22);
+    ctx.fillStyle = '#171d24';
+    ctx.fillRect(left + 14, top + 31, building.w - 28, 10);
+    ctx.fillStyle = '#8c98a4';
+    for (let xx = left + 18; xx < left + building.w - 24; xx += 28) ctx.fillRect(xx, top + 33, 18, 6);
+    ctx.fillStyle = '#171d24';
+    ctx.fillRect(x - 14, y + building.h * 0.12, 28, 38);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(x + 7, y + building.h * 0.28, 4, 4);
+    ctx.fillStyle = 'rgba(255,209,102,0.28)';
+    ctx.fillRect(x - 18, y + building.h * 0.04, 36, 5);
+    if (building.kind === 'miner') {
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(left - 18, y + building.h * 0.34, 46, 18);
+        ctx.fillStyle = '#8c98a4';
+        ctx.fillRect(left - 12, y + building.h * 0.31, 34, 7);
+        ctx.fillStyle = '#7dcbe8';
+        ctx.fillRect(left + 3, y + building.h * 0.28, 7, 7);
+    } else if (building.kind === 'blacksmith') {
+        ctx.fillStyle = '#ff9f1c';
+        ctx.fillRect(left + building.w - 26, top + 16, 14, 34);
+        ctx.fillStyle = 'rgba(255,159,28,0.32)';
+        ctx.fillRect(left + building.w - 34, top + 8, 30, 9);
+    } else if (building.kind === 'guard') {
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(left + 18, y + building.h * 0.34, 52, 11);
+        ctx.fillStyle = '#d8e5f2';
+        ctx.fillRect(left + 28, y + building.h * 0.31, 30, 5);
+    } else if (building.kind === 'elder') {
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 30, top + 48, 60, 6);
+        ctx.fillStyle = '#8c98a4';
+        ctx.fillRect(x - 20, top + 35, 40, 12);
+    }
+    ctx.strokeStyle = '#303946';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(left + 12, y + building.h * 0.49);
+    ctx.lineTo(left + building.w - 12, y + building.h * 0.49);
+    ctx.stroke();
+    drawVillageHouseTorch(building.x - 24, building.doorY + 8);
+    drawVillageHouseTorch(building.x + 24, building.doorY + 8);
+    drawVillageHouseSign(building, x, top, style);
+}
+
+function drawVillageHouseSkinPattern(building, x, y, left, top, style) {
+    const pattern = style.pattern || '';
+    const wallLeft = left + 22;
+    const wallTop = top + 56;
+    const wallW = building.w - 44;
+    const wallH = building.h - 66;
+    if (!pattern || building.village?.tier === 'jungleCult') return;
+    ctx.save();
+    if (pattern === 'bamboo') {
+        ctx.fillStyle = 'rgba(215,242,138,0.35)';
+        for (let xx = wallLeft + 8; xx < wallLeft + wallW; xx += 15) {
+            ctx.fillRect(xx, wallTop + 2, 3, wallH - 4);
+            ctx.fillRect(xx - 3, wallTop + 18, 9, 2);
+            ctx.fillRect(xx - 3, wallTop + 42, 9, 2);
+        }
+    } else if (pattern === 'stone' || pattern === 'rune') {
+        ctx.fillStyle = pattern === 'rune' ? 'rgba(183,125,255,0.28)' : 'rgba(216,229,242,0.22)';
+        for (let yy = wallTop + 8, row = 0; yy < wallTop + wallH; yy += 18, row++) {
+            for (let xx = wallLeft + (row % 2) * 12; xx < wallLeft + wallW; xx += 26) {
+                ctx.fillRect(xx, yy, 18, 7);
+            }
+        }
+        if (pattern === 'rune') {
+            ctx.fillStyle = 'rgba(215,188,255,0.55)';
+            ctx.fillRect(x - 3, wallTop + 16, 6, 18);
+            ctx.fillRect(x - 10, wallTop + 23, 20, 4);
+        }
+    } else if (pattern === 'reed' || pattern === 'thatch') {
+        ctx.fillStyle = 'rgba(215,242,138,0.28)';
+        for (let xx = wallLeft + 4, col = 0; xx < wallLeft + wallW; xx += 10, col++) {
+            ctx.fillRect(xx, wallTop + 4 + (col % 3), 3, wallH - 8);
+        }
+    } else if (pattern === 'birch') {
+        ctx.fillStyle = 'rgba(48,57,70,0.42)';
+        const seed = Math.floor((building.x * 0.13 + building.y * 0.17) % 17);
+        for (let yy = wallTop + 10, row = 0; yy < wallTop + wallH; yy += 16, row++) {
+            ctx.fillRect(wallLeft + 10 + ((row * 7 + seed) % 24), yy, 18, 3);
+            ctx.fillRect(wallLeft + wallW - 32 - ((row * 5 + seed) % 18), yy + 5, 14, 3);
+        }
+    } else if (pattern === 'flower') {
+        ctx.fillStyle = 'rgba(255,214,236,0.55)';
+        for (let i = 0; i < 6; i++) ctx.fillRect(wallLeft + 12 + i * 18, wallTop + 18 + (i % 2) * 18, 6, 6);
+    } else if (pattern === 'vine' || pattern === 'shadow') {
+        ctx.fillStyle = pattern === 'shadow' ? 'rgba(111,76,194,0.35)' : 'rgba(140,255,102,0.32)';
+        const seed = Math.floor((building.x * 0.11 + building.y * 0.19) % 30);
+        for (let yy = wallTop + 8, row = 0; yy < wallTop + wallH; yy += 18, row++) {
+            ctx.fillRect(wallLeft + 8 + ((row * 9 + seed) % 30), yy, 24, 4);
+        }
+    } else if (pattern === 'adobe' || pattern === 'mud') {
+        ctx.fillStyle = 'rgba(255,209,102,0.22)';
+        for (let yy = wallTop + 9; yy < wallTop + wallH; yy += 17) ctx.fillRect(wallLeft + 8, yy, wallW - 16, 3);
+    } else if (pattern === 'maple') {
+        ctx.fillStyle = 'rgba(255,209,102,0.32)';
+        ctx.fillRect(wallLeft + 15, wallTop + 16, 10, 8);
+        ctx.fillRect(wallLeft + wallW - 28, wallTop + 36, 10, 8);
+    }
+    ctx.restore();
+}
+
+function drawProfessionHouseDetails(building, x, y, left, top, style) {
+    if (building.kind === 'carpenter') {
+        ctx.fillStyle = '#8a5a32';
+        ctx.fillRect(left - 18, y + building.h * 0.34, 44, 9);
+        ctx.fillRect(left - 14, y + building.h * 0.44, 38, 8);
+        ctx.fillStyle = '#d6a06a';
+        ctx.fillRect(left - 12, y + building.h * 0.36, 14, 3);
+        ctx.fillRect(left + 5, y + building.h * 0.46, 15, 3);
+    } else if (building.kind === 'hunter') {
+        ctx.strokeStyle = '#d7f28a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(left + building.w - 20, y + building.h * 0.28, 15, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(left + building.w - 20, y + building.h * 0.28, 7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(left + building.w - 23, y + building.h * 0.28 - 20, 6, 41);
+    } else if (building.kind === 'miner') {
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(left - 20, y + building.h * 0.33, 42, 20);
+        ctx.fillStyle = '#8c98a4';
+        ctx.fillRect(left - 14, y + building.h * 0.28, 28, 9);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(left - 4, y + building.h * 0.25, 8, 8);
+    } else if (building.kind === 'farmer') {
+        ctx.fillStyle = 'rgba(72,48,26,0.8)';
+        for (let i = 0; i < 3; i++) ctx.fillRect(left + 20 + i * 22, y + building.h * 0.5, 16, 5);
+        ctx.fillStyle = '#70bf55';
+        ctx.fillRect(left + 25, y + building.h * 0.44, 5, 13);
+        ctx.fillRect(left + 48, y + building.h * 0.42, 5, 15);
+        ctx.fillStyle = '#ff4d3d';
+        ctx.fillRect(left + 70, y + building.h * 0.44, 8, 8);
+    }
+}
+
+function drawRuinedVillageHouse(building, x, y, left, top, style) {
+    drawShadow(x, y + building.h * 0.38, building.w * 0.78, 12);
+    ctx.fillStyle = '#2d2117';
+    ctx.fillRect(left + 16, y + building.h * 0.18, building.w - 32, 28);
+    ctx.fillStyle = '#5a4632';
+    ctx.fillRect(left + 10, y + building.h * 0.04, building.w * 0.42, 22);
+    ctx.fillRect(left + building.w * 0.52, y + building.h * 0.08, building.w * 0.36, 18);
+    ctx.fillStyle = style.wall || '#7a6040';
+    ctx.fillRect(left + 22, y + building.h * 0.1, building.w * 0.18, 34);
+    ctx.fillRect(left + building.w * 0.62, y + building.h * 0.12, building.w * 0.16, 28);
+    ctx.fillStyle = '#1b1410';
+    ctx.fillRect(x - 16, y + building.h * 0.18, 32, 22);
+    ctx.fillStyle = '#8c6f4d';
+    for (let i = 0; i < 7; i++) {
+        const ox = -building.w * 0.38 + i * (building.w * 0.12);
+        ctx.fillRect(x + ox, y + building.h * 0.44 + Math.sin(i) * 4, 12, 6);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(left + 18, top + 48, building.w - 36, 7);
+    ctx.fillStyle = '#d6a06a';
+    ctx.font = 'bold 11px "Microsoft YaHei"';
+    ctx.textAlign = 'center';
+    ctx.fillText('废墟', x, y + building.h * 0.58);
+    ctx.textAlign = 'left';
+}
+
+function drawVillageHouseDamageOverlay(building, x, y, left, top) {
+    if (!building.maxHp || building.hp >= building.maxHp) return;
+    const ratio = Math.max(0, building.hp) / building.maxHp;
+    ctx.strokeStyle = ratio < 0.35 ? 'rgba(20,12,8,0.72)' : 'rgba(45,30,20,0.58)';
+    ctx.lineWidth = 2;
+    const cracks = ratio < 0.75 ? 2 + Math.floor((1 - ratio) * 6) : 1;
+    for (let i = 0; i < cracks; i++) {
+        const cx = left + 18 + ((i * 31 + building.x) % Math.max(24, building.w - 36));
+        const cy = top + 54 + ((i * 23 + building.y) % Math.max(24, building.h - 58));
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + (i % 2 ? -7 : 8), cy + 8);
+        ctx.lineTo(cx + (i % 2 ? 3 : -4), cy + 16);
+        ctx.stroke();
+    }
+    if (ratio < 0.5) {
+        ctx.fillStyle = 'rgba(18,12,8,0.36)';
+        ctx.fillRect(left + building.w * 0.18, top + 42, building.w * 0.22, 12);
+        ctx.fillRect(left + building.w * 0.62, top + 58, building.w * 0.18, 10);
+    }
+    if (performance.now() - (building.lastDamagedAt || 0) < 2600) {
+        drawMiniBar(x, top - 12, ratio, '#ff9f1c');
+    }
 }
 
 function drawCultTreeHouse(building, x, y, left, top, style) {
@@ -14674,6 +20316,11 @@ function villageHouseStyle(building) {
         guard: { roof: '#3a4652', wall: '#6f7780', sign: '#d8e5f2', icon: '▲' },
         guardFortress: { roof: '#303946', wall: '#6f7780', sign: '#d8e5f2', icon: '▣' },
         merchant: { roof: '#8a5a32', wall: '#9a7a4a', sign: '#ffd166', icon: 'SHOP' },
+        carpenter: { roof: '#6b4a2f', wall: '#8a6040', sign: '#ffd166', icon: '▰' },
+        hunter: { roof: '#355d3f', wall: '#6b4a2f', sign: '#d7f28a', icon: '⌁' },
+        outerHunter: { roof: '#244d2a', wall: '#5a3a24', sign: '#ffd166', icon: '◎' },
+        miner: { roof: '#303946', wall: '#66737f', sign: '#ffd166', icon: '◆' },
+        farmer: { roof: '#6f5a2f', wall: '#7a6040', sign: '#cde77b', icon: '▥' },
         elder: { roof: '#3f2a1c', wall: '#6b4a2f', sign: '#b77dff', icon: '◆' },
         unemployed: { roof: '#5a4632', wall: '#7a6040', sign: '#d6a06a', icon: '•' },
         cultPriest: { roof: '#123d2b', wall: '#3a2417', sign: '#8cff66', icon: '✣' },
@@ -14689,6 +20336,16 @@ function villageHouseStyle(building) {
     }
     if (building.village?.tier === 'basic') {
         return { ...base, roof: profile.roof, wall: profile.wall, sign: profile.sign };
+    }
+    if (building.village?.tier !== 'jungleCult') {
+        return {
+            ...base,
+            roof: hexMix(base.roof, profile.roof, 0.58),
+            wall: hexMix(base.wall, profile.wall, 0.52),
+            sign: hexMix(base.sign, profile.sign, 0.5),
+            accent: profile.accent,
+            pattern: profile.pattern,
+        };
     }
     return base;
 }
@@ -14773,8 +20430,73 @@ function drawBambooFence(fence) {
 function drawBambooTrap(trap) {
     const x = worldX(trap.x);
     const y = worldY(trap.y);
-    drawShadow(x, y + 2, 34, 7);
-    ctx.strokeStyle = trap.used ? 'rgba(100, 80, 48, 0.7)' : '#d7f28a';
+    const kind = trap.kind || 'bambooTrap';
+    drawShadow(x, y + 2, kind === 'vineNetTrap' ? 58 : 34, 7);
+    if (kind === 'snare' || kind === 'forestSnare') {
+        ctx.strokeStyle = trap.used ? 'rgba(100, 80, 48, 0.7)' : (kind === 'forestSnare' ? '#cde77b' : '#ffd166');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x, y - 5, kind === 'forestSnare' ? 20 : 18, kind === 'forestSnare' ? 7 : 9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = kind === 'forestSnare' ? '#5a341d' : '#8c98a4';
+        ctx.fillRect(x - 4, y - 18, 8, 22);
+        if (kind === 'forestSnare' && !trap.used) {
+            ctx.fillStyle = '#2f7f44';
+            ctx.fillRect(x - 24, y - 4, 10, 4);
+            ctx.fillRect(x + 13, y - 8, 12, 4);
+            ctx.fillRect(x - 6, y + 2, 14, 4);
+        }
+        return;
+    }
+    if (kind === 'forestSpikeTrap') {
+        ctx.strokeStyle = trap.used ? 'rgba(100,80,48,0.65)' : '#d6a06a';
+        ctx.lineWidth = 3;
+        for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x - 16 + i * 14, y + 4);
+            ctx.lineTo(x - 8 + i * 14, y - 15);
+            ctx.lineTo(x + i * 14, y + 4);
+            ctx.stroke();
+        }
+        if (!trap.used) {
+            ctx.fillStyle = '#2f7f44';
+            ctx.fillRect(x - 24, y - 2, 48, 5);
+        }
+        return;
+    }
+    if (kind === 'forestBellTrap') {
+        ctx.strokeStyle = trap.used ? 'rgba(100,80,48,0.65)' : '#d8c08a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 18, y - 12);
+        ctx.lineTo(x + 18, y - 12);
+        ctx.stroke();
+        ctx.fillStyle = trap.used ? '#8a6a3d' : '#ffd166';
+        ctx.fillRect(x - 5, y - 16, 10, 12);
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - 2, y - 4, 4, 6);
+        return;
+    }
+    if (kind === 'vineNetTrap' || kind === 'toxicVineSnare') {
+        ctx.strokeStyle = trap.used ? 'rgba(100, 80, 48, 0.7)' : (kind === 'vineNetTrap' ? '#8cff66' : '#5fae49');
+        ctx.lineWidth = 2;
+        for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x - 26, y + i * 7);
+            ctx.lineTo(x + 26, y - i * 7);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + i * 9, y - 22);
+            ctx.lineTo(x - i * 9, y + 14);
+            ctx.stroke();
+        }
+        if (kind === 'toxicVineSnare' && !trap.used) {
+            ctx.fillStyle = '#d94bff';
+            ctx.fillRect(x - 5, y - 10, 10, 8);
+        }
+        return;
+    }
+    ctx.strokeStyle = trap.used ? 'rgba(100, 80, 48, 0.7)' : (kind === 'poisonBambooTrap' ? '#8cff66' : '#d7f28a');
     ctx.lineWidth = 3;
     for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
@@ -14782,6 +20504,10 @@ function drawBambooTrap(trap) {
         ctx.lineTo(x - 7 + i * 9, y - 18);
         ctx.lineTo(x + 2 + i * 9, y + 2);
         ctx.stroke();
+    }
+    if (kind === 'poisonBambooTrap' && !trap.used) {
+        ctx.fillStyle = '#d94bff';
+        ctx.fillRect(x - 8, y - 10, 16, 4);
     }
 }
 
@@ -14886,6 +20612,33 @@ function drawPlacedTorch(torch) {
     ctx.fillRect(x - 2, y - 38, 5, 10);
 }
 
+function drawIndoorPlacedTorch(torch) {
+    const x = torch.x;
+    const y = torch.y;
+    drawShadow(x, y + 1, 18, 5);
+    ctx.fillStyle = COLORS.trunk;
+    ctx.fillRect(x - 3, y - 24, 6, 25);
+    ctx.fillStyle = COLORS.fire1;
+    ctx.fillRect(x - 5, y - 34, 10, 10);
+    ctx.fillStyle = COLORS.fire2;
+    ctx.fillRect(x - 2, y - 38, 5, 10);
+}
+
+function torchLightProfile(torch) {
+    return {
+        x: torch.x,
+        y: torch.y,
+        radius: torch.kind === 'waxTorch' ? 150 : 125,
+        strength: torch.kind === 'shadowLantern' ? 0.42 : 0.56,
+    };
+}
+
+function equippedLightProfile() {
+    if (hasEquippedArmor('矿灯头盔')) return { x: state.player.x, y: state.player.y - 10, radius: 185, strength: 0.62 };
+    if (!hasEquippedArmor('晶灯头盔')) return null;
+    return { x: state.player.x, y: state.player.y - 10, radius: 245, strength: 0.76 };
+}
+
 function drawProjectile(projectile) {
     const x = worldX(projectile.x);
     const y = worldY(projectile.y);
@@ -14927,7 +20680,94 @@ function drawProjectile(projectile) {
         ctx.fillRect(-14, -4, 5, 3);
         ctx.fillRect(-14, 1, 5, 3);
         ctx.restore();
+    } else if (isDirectProjectile(projectile.kind)) {
+        drawDirectProjectileSprite(projectile, x, y);
     }
+}
+
+function drawCoalBombProjectile(projectile, x, y) {
+    const angle = Math.atan2(projectile.targetY - projectile.startY, projectile.targetX - projectile.startX);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#171d24';
+    ctx.fillRect(-8, -7, 16, 14);
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(-5, -5, 10, 10);
+    ctx.fillStyle = '#ff9f1c';
+    ctx.fillRect(5, -2, 8, 4);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(12, -1, 4, 2);
+    ctx.restore();
+}
+
+function drawDirectProjectileSprite(projectile, x, y) {
+    const dir = projectile.dir || normalize(projectile.targetX - projectile.startX, projectile.targetY - projectile.startY);
+    const angle = Math.atan2(dir.y, dir.x);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    if (projectile.kind === 'venomStinger') {
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(-8, -2, 16, 4);
+        ctx.fillStyle = '#d94bff';
+        ctx.fillRect(5, -3, 6, 6);
+    } else if (projectile.kind === 'beeDart') {
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(-9, -3, 18, 6);
+        ctx.fillStyle = '#2d2117';
+        ctx.fillRect(-2, -3, 3, 6);
+        ctx.fillRect(5, -2, 5, 4);
+    } else if (projectile.kind === 'crossbowBolt' || projectile.kind === 'crossbowPoisonBolt' || projectile.kind === 'heavyBolt' || projectile.kind === 'heavyBoltPoison' || projectile.kind === 'vineBolt' || projectile.kind === 'vineBoltPoison') {
+        const heavy = projectile.kind.startsWith('heavy');
+        const vine = projectile.kind.startsWith('vine');
+        ctx.strokeStyle = projectile.kind.includes('Poison') ? '#8cff66' : (vine ? '#9bd86a' : (heavy ? '#303946' : '#d8e5f2'));
+        ctx.lineWidth = heavy ? 5 : 4;
+        ctx.beginPath();
+        ctx.moveTo(heavy ? -18 : -14, 0);
+        ctx.lineTo(heavy ? 18 : 15, 0);
+        ctx.stroke();
+        ctx.fillStyle = projectile.kind.includes('Poison') ? '#8cff66' : '#f8fbff';
+        ctx.fillRect(10, -4, heavy ? 10 : 7, 8);
+        if (vine) {
+            ctx.fillStyle = '#5fae49';
+            ctx.fillRect(-8, -5, 20, 3);
+        }
+    } else if (projectile.kind === 'elderwoodBolt' || projectile.kind === 'elderwoodBoltPoison') {
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(-6, -4, 12, 8);
+        ctx.fillStyle = '#f2ddff';
+        ctx.fillRect(1, -2, 7, 4);
+        ctx.fillStyle = 'rgba(183,125,255,0.28)';
+        ctx.fillRect(-10, -2, 5, 4);
+    } else if (projectile.kind === 'greenRootBolt' || projectile.kind === 'greenRootBoltPoison') {
+        ctx.strokeStyle = '#5fae49';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-9, 0);
+        ctx.quadraticCurveTo(1, -6, 14, 0);
+        ctx.stroke();
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(10, -4, 8, 8);
+    } else if (projectile.kind === 'pollenBolt' || projectile.kind === 'pollenBoltPoison') {
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(-4, -4, 8, 8);
+        ctx.fillStyle = '#ff6b9a';
+        ctx.fillRect(2, -2, 6, 4);
+    } else if (projectile.kind === 'vineDart' || projectile.kind === 'vineDartPoison') {
+        ctx.strokeStyle = projectile.kind.includes('Poison') ? '#8cff66' : '#5fae49';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-16, 0);
+        ctx.lineTo(18, 0);
+        ctx.stroke();
+        ctx.fillStyle = '#d94bff';
+        ctx.fillRect(12, -2, 5, 4);
+    } else {
+        ctx.fillStyle = '#d8e5f2';
+        ctx.fillRect(-5, -3, 10, 6);
+    }
+    ctx.restore();
 }
 
 function isNearView(item, margin = 0) {
@@ -14959,6 +20799,102 @@ function drawRuins() {
         ctx.fillStyle = 'rgba(183, 125, 255, 0.55)';
         ctx.fillRect(x - 18, y - 6, 36, 58);
     }
+}
+
+function drawWaspHive(hive, now) {
+    const x = worldX(hive.x);
+    const y = worldY(hive.y);
+    const ruined = hive.state === 'ruined';
+    const hurt = hive.hurtUntil && now < hive.hurtUntil;
+    const shake = hurt ? Math.sin(now / 18) * 4 : 0;
+    const pulse = Math.sin(now / 260) * 1.5;
+    ctx.save();
+    drawShadow(x, y + 30, ruined ? 108 : 138, ruined ? 16 : 24);
+    ctx.translate(x + shake, y);
+    if (!ruined) {
+        ctx.fillStyle = 'rgba(255,209,102,0.16)';
+        ctx.beginPath();
+        ctx.ellipse(0, -38, 96 + pulse * 2, 70 + pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(-10, -108, 20, 42);
+        ctx.fillStyle = '#7a4a2a';
+        ctx.fillRect(-42, -84, 84, 20);
+        const bands = [
+            [-58, -72, 116, 30, '#8a5a32'],
+            [-68, -52, 136, 38, '#d99a43'],
+            [-62, -22, 124, 42, '#b8732f'],
+            [-48, 12, 96, 34, '#ffd166'],
+        ];
+        for (const [bx, by, bw, bh, color] of bands) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.fillStyle = '#6b3b1f';
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                const hx = -38 + col * 19 + (row % 2) * 8;
+                const hy = -54 + row * 17;
+                if (Math.hypot(hx * 0.9, hy + 18) > 56) continue;
+                drawHexCell(hx, hy, 7, row + col);
+            }
+        }
+        ctx.fillStyle = '#fff0a8';
+        ctx.fillRect(-18, 18, 12, 16);
+        ctx.fillRect(12, 12, 10, 22);
+        ctx.fillStyle = '#ffbf4d';
+        ctx.fillRect(-16, 32, 8, 6);
+        ctx.fillRect(14, 32, 8, 6);
+        for (let i = 0; i < 8; i++) {
+            const a = now / 360 + i * Math.PI * 2 / 8;
+            ctx.fillStyle = i % 2 ? '#2d2117' : '#ffd166';
+            ctx.fillRect(Math.cos(a) * 72 - 3, -38 + Math.sin(a * 1.3) * 32, 7, 4);
+        }
+    } else {
+        ctx.fillStyle = '#4a2a18';
+        ctx.fillRect(-54, -30, 108, 42);
+        ctx.fillStyle = '#8a5a32';
+        ctx.fillRect(-42, -54, 84, 28);
+        ctx.fillStyle = '#d99a43';
+        ctx.fillRect(-34, -66, 68, 16);
+        ctx.fillStyle = '#2d2117';
+        ctx.fillRect(-28, -50, 22, 16);
+        ctx.fillRect(6, -43, 26, 18);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(-18, 10, 12, 8);
+        ctx.fillRect(18, 4, 10, 9);
+        ctx.fillStyle = 'rgba(255,209,102,0.22)';
+        ctx.fillRect(-64, 18, 128, 6);
+    }
+    ctx.restore();
+    if (!ruined && hive.hp < hive.maxHp) drawMiniBar(x, y - 108, Math.max(0, hive.hp) / hive.maxHp, '#ffd166');
+    ctx.fillStyle = ruined ? '#d6a06a' : '#ffd166';
+    ctx.font = 'bold 12px "Microsoft YaHei"';
+    ctx.textAlign = 'center';
+    ctx.fillText(ruined ? '废墟蜂巢' : '黄蜂巢', x, y + 60);
+    ctx.textAlign = 'left';
+}
+
+function drawHexCell(x, y, size, phase = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = phase % 3 === 0 ? '#3d2415' : '#5a341d';
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 6 + i * Math.PI / 3;
+        const px = Math.cos(a) * size;
+        const py = Math.sin(a) * size;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#f0a83d';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
 }
 
 function drawResource(r) {
@@ -15128,7 +21064,55 @@ function drawPoisonBloom(r, x, y) {
     ctx.fillRect(x - 5, y - 27, 10, 3);
 }
 
+function drawCropPatch(r, x, y) {
+    drawShadow(x, y + 2, 34, 7);
+    ctx.fillStyle = 'rgba(72,48,26,0.72)';
+    ctx.fillRect(x - 18, y - 5, 36, 10);
+    if ((r.tilledUntil || 0) > performance.now()) {
+        ctx.fillStyle = 'rgba(214,160,106,0.55)';
+        ctx.fillRect(x - 19, y - 7, 38, 3);
+        ctx.fillRect(x - 17, y - 1, 34, 3);
+        ctx.fillRect(x - 15, y + 5, 30, 2);
+    }
+    if (r.kind === 'emptyCropPatch') {
+        ctx.fillStyle = 'rgba(214,160,106,0.38)';
+        ctx.fillRect(x - 15, y - 2, 30, 3);
+        ctx.fillRect(x - 12, y + 4, 24, 2);
+        return;
+    }
+    ctx.fillStyle = '#2f7f44';
+    for (let i = -1; i <= 1; i++) ctx.fillRect(x + i * 10 - 2, y - 22, 4, 20);
+    if (r.kind === 'cropCarrot') {
+        ctx.fillStyle = '#ff9f1c';
+        ctx.fillRect(x - 12, y - 10, 6, 12);
+        ctx.fillRect(x + 6, y - 12, 6, 14);
+        ctx.fillStyle = '#70bf55';
+        ctx.fillRect(x - 14, y - 20, 10, 5);
+        ctx.fillRect(x + 4, y - 22, 10, 5);
+    } else if (r.kind === 'cropCorn') {
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 5, y - 27, 10, 24);
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillRect(x - 2, y - 24, 4, 18);
+        ctx.fillStyle = '#5fae49';
+        ctx.fillRect(x - 13, y - 18, 9, 16);
+        ctx.fillRect(x + 4, y - 20, 9, 18);
+    } else {
+        ctx.fillStyle = '#ff4d3d';
+        ctx.fillRect(x - 13, y - 18, 9, 9);
+        ctx.fillRect(x + 4, y - 22, 10, 10);
+        ctx.fillRect(x - 1, y - 12, 8, 8);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 9, y - 25, 6, 5);
+        ctx.fillRect(x + 7, y - 28, 6, 5);
+    }
+}
+
 function drawGatherablePatch(r, x, y) {
+    if (isCropPatchKind(r.kind) || r.kind === 'emptyCropPatch') {
+        drawCropPatch(r, x, y);
+        return;
+    }
     if (r.kind === 'hardwoodTree') {
         drawHardwoodTree(r, x, y);
         return;
@@ -16598,12 +22582,12 @@ function drawEnemy(e, now) {
     const leapProgress = e.leapUntil > now ? clamp((now - e.leapStartAt) / Math.max(1, e.leapUntil - e.leapStartAt), 0, 1) : 0;
     const leapLift = e.leapUntil > now ? Math.sin(leapProgress * Math.PI) * 18 : 0;
     const swoopProgress = e.swoopUntil > now ? clamp((now - e.swoopStartAt) / Math.max(1, e.swoopUntil - e.swoopStartAt), 0, 1) : 0;
-    const flying = ['bat', 'bee', 'meadowMoth', 'drySandWasp', 'mineCrystalBat'].includes(e.kind);
+    const flying = ['bat', 'bee', 'meadowMoth', 'drySandWasp', 'mineCrystalBat', 'waspQueen'].includes(e.kind);
     const flyLift = flying ? 16 + Math.sin(now / 90) * 6 + Math.sin(swoopProgress * Math.PI) * 18 : 0;
     const chargeLean = e.chargeUntil > now ? 8 : 0;
     const spriteScale = e.kind === 'scorpion' ? 2.55 : (e.kind === 'golem' && e.boss ? 4.15 : 3.2);
     const bounce = Math.sin(now / 140) * (e.kind === 'slime' ? 3 : 1.2) - leapLift - flyLift;
-    const concealed = e.kind !== 'bat' && e.kind !== 'bee' && tallGrassCoverAt(e);
+    const concealed = e.kind !== 'bat' && e.kind !== 'bee' && e.kind !== 'waspQueen' && tallGrassCoverAt(e);
     const revealed = e.windupUntil || e.hurtUntil || distance(e, state.player) < 54;
     if (concealed && !revealed) ctx.globalAlpha = 0.18;
     drawShadow(x, y + 1, e.radius * (flying ? 1.1 : 1.62), e.radius * (flying ? 0.25 : 0.42));
@@ -16664,6 +22648,18 @@ function drawEnemy(e, now) {
         ctx.font = 'bold 13px "Microsoft YaHei"';
         ctx.textAlign = 'center';
         ctx.fillText('BOSS', x, y - e.radius - 38);
+        ctx.textAlign = 'left';
+    }
+    if (e.kind === 'waspQueen') {
+        ctx.strokeStyle = 'rgba(255, 209, 102, 0.78)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x, y - 22, e.radius + 18 + Math.sin(now / 120) * 4, e.radius + 8, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 13px "Microsoft YaHei"';
+        ctx.textAlign = 'center';
+        ctx.fillText('蜂后 BOSS', x, y - e.radius - 46);
         ctx.textAlign = 'left';
     }
 }
@@ -16791,6 +22787,10 @@ function drawEnemySprite(e, x, y, scale, now, tint = '') {
         drawBeeEnemy(x, y, now, tint);
         return;
     }
+    if (e.kind === 'waspQueen') {
+        drawWaspQueenEnemy(e, x, y, now, tint);
+        return;
+    }
     if (e.kind === 'hare') {
         drawHareEnemy(x, y, now, tint, e.facing?.x || 1);
         return;
@@ -16864,9 +22864,9 @@ function drawBiomeEnemyAttackAnimation(e, x, y, now) {
             ctx.fillRect(-2, -29, 13, 4);
             ctx.fillRect(15, -20, 9, 4);
         }
-    } else if (['meadowMoth', 'drySandWasp', 'mineCrystalBat'].includes(e.kind)) {
+    } else if (['meadowMoth', 'drySandWasp', 'mineCrystalBat', 'waspQueen'].includes(e.kind)) {
         ctx.translate(x, y - 28);
-        const color = e.kind === 'meadowMoth' ? 'rgba(255,209,102,0.75)' : (e.kind === 'drySandWasp' ? 'rgba(140,255,102,0.68)' : 'rgba(125,203,232,0.78)');
+        const color = e.kind === 'meadowMoth' ? 'rgba(255,209,102,0.75)' : (e.kind === 'drySandWasp' || e.kind === 'waspQueen' ? 'rgba(140,255,102,0.68)' : 'rgba(125,203,232,0.78)');
         ctx.fillStyle = color;
         for (let i = 0; i < 6; i++) {
             const ox = -24 + i * 9;
@@ -16905,6 +22905,42 @@ function drawBeeEnemy(x, y, now, tint = '') {
     ctx.fillStyle = tint || 'rgba(210, 245, 255, 0.72)';
     ctx.fillRect(x - 13, y - 31 + wing, 9, 6);
     ctx.fillRect(x + 4, y - 31 - wing, 9, 6);
+}
+
+function drawWaspQueenEnemy(e, x, y, now, tint = '') {
+    const wing = Math.sin(now / 72) * 5;
+    const pulse = Math.sin(now / 180) * 2;
+    ctx.save();
+    ctx.translate(x, y - 8);
+    drawShadow(0, 26, 62, 10);
+    ctx.fillStyle = tint || 'rgba(210,245,255,0.62)';
+    ctx.fillRect(-39, -48 + wing, 24, 17);
+    ctx.fillRect(15, -48 - wing, 24, 17);
+    ctx.fillStyle = tint || 'rgba(255,255,255,0.46)';
+    ctx.fillRect(-34, -44 + wing, 14, 6);
+    ctx.fillRect(20, -44 - wing, 14, 6);
+    ctx.fillStyle = '#2d2117';
+    ctx.fillRect(-24, -36, 48, 22);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(-21, -34, 42, 5);
+    ctx.fillRect(-18, -24, 36, 5);
+    ctx.fillStyle = '#d99a43';
+    ctx.fillRect(-16, -47, 32, 14);
+    ctx.fillStyle = '#fff0a8';
+    ctx.fillRect(-10, -53, 20, 7);
+    ctx.fillStyle = '#2d2117';
+    ctx.fillRect(-7, -43, 4, 4);
+    ctx.fillRect(3, -43, 4, 4);
+    ctx.fillStyle = '#8cff66';
+    ctx.fillRect(-4, -18, 8, 34 + pulse);
+    ctx.fillStyle = '#d99a43';
+    ctx.fillRect(-14, 4, 28, 12);
+    ctx.fillStyle = '#2d2117';
+    ctx.fillRect(-18, -8, 6, 4);
+    ctx.fillRect(12, -8, 6, 4);
+    ctx.fillStyle = 'rgba(255,209,102,0.42)';
+    ctx.fillRect(-30, -56, 60, 4);
+    ctx.restore();
 }
 
 function drawBiomeEnemy(e, x, y, now, tint = '') {
@@ -17169,6 +23205,31 @@ function drawEnemyTelegraph(e, x, y, now) {
         ctx.fillStyle = 'rgba(255, 209, 102, 0.22)';
         ctx.fillRect(12, -8, 42 + pulse, 16);
         ctx.restore();
+    } else if (e.kind === 'waspQueen') {
+        const angle = Math.atan2(e.attackDir.y, e.attackDir.x);
+        ctx.save();
+        ctx.translate(x + e.attackDir.x * 52, y + e.attackDir.y * 52 - 8);
+        ctx.rotate(angle);
+        ctx.strokeStyle = 'rgba(255, 209, 102, 0.95)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-20, 0);
+        ctx.lineTo(118 + pulse * 2, 0);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(140, 255, 102, 0.78)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(6, -13);
+        ctx.lineTo(72 + pulse, 0);
+        ctx.lineTo(6, 13);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 209, 102, 0.18)';
+        ctx.fillRect(16, -18, 94 + pulse * 2, 36);
+        ctx.fillStyle = 'rgba(45, 33, 23, 0.72)';
+        for (let i = 0; i < 5; i++) {
+            ctx.fillRect(24 + i * 18 + pulse, i % 2 ? -12 : 9, 8, 4);
+        }
+        ctx.restore();
     } else if (e.kind === 'shade') {
         const angle = Math.atan2(e.attackDir.y, e.attackDir.x);
         ctx.save();
@@ -17274,8 +23335,13 @@ function drawPlayer(now) {
     const p = state.player;
     const x = worldX(p.x);
     const y = worldY(p.y);
+    drawPlayerAtScreen(x, y, now);
+}
+
+function drawPlayerAtScreen(x, y, now) {
+    const p = state.player;
     if (state.lose) {
-        drawPlayerDeathAnimation(x, y, now, false);
+        drawPlayerDeathAnimation(x, y, now);
         return;
     }
     const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
@@ -17295,26 +23361,130 @@ function drawPlayer(now) {
         ctx.globalAlpha = 1;
     }
     drawArmorOverlay(x + p.facing.x * Math.abs(lean), y + step);
-    if (p.attackUntil > now) {
+    drawEquippedShieldOverlay(x + p.facing.x * Math.abs(lean), y + step, p);
+    if (p.attackUntil > now && p.attackVisualType !== 'ranged') {
         drawAttackSlash(x, y, p.attackDir || p.facing, now);
     }
     drawPlayerHandsAndWeapon(x, y + step, p, now);
 }
 
 function drawArmorOverlay(x, y) {
-    if (state.equipment.armor === '无') return;
-    const color = state.equipment.armor === '铁甲' ? 'rgba(190, 210, 222, 0.95)' : 'rgba(128, 78, 48, 0.95)';
-    const trim = state.equipment.armor === '铁甲' ? '#ffffff' : '#d6a06a';
+    const names = equippedArmorNames();
+    if (!names.length) return;
+    names.forEach((name, index) => drawSingleArmorOverlay(x, y - index * 1, name));
+}
+
+function drawSingleArmorOverlay(x, y, name) {
+    const style = armorVisualStyle(name);
+    const color = style.base;
+    const trim = style.trim;
     ctx.fillStyle = color;
     ctx.fillRect(x - 15, y - 36, 30, 18);
     ctx.fillRect(x - 18, y - 32, 8, 12);
     ctx.fillRect(x + 10, y - 32, 8, 12);
     ctx.fillStyle = trim;
     ctx.fillRect(x - 11, y - 34, 22, 3);
-    if (state.equipment.armor === '铁甲') {
-        ctx.fillStyle = 'rgba(130, 150, 165, 0.9)';
+    if (style.center) {
+        ctx.fillStyle = style.center;
         ctx.fillRect(x - 2, y - 36, 4, 18);
     }
+    if (style.pattern === 'cloak') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 21, y - 35, 7, 22);
+        ctx.fillRect(x + 14, y - 35, 7, 22);
+    } else if (style.pattern === 'spikes') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 17, y - 39, 6, 5);
+        ctx.fillRect(x + 11, y - 39, 6, 5);
+        ctx.fillRect(x - 4, y - 38, 8, 4);
+    } else if (style.pattern === 'leaf') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 13, y - 39, 10, 6);
+        ctx.fillRect(x + 3, y - 38, 11, 6);
+        ctx.fillRect(x - 5, y - 28, 10, 5);
+    } else if (style.pattern === 'root') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 14, y - 31, 28, 4);
+        ctx.fillRect(x - 9, y - 24, 18, 4);
+        ctx.fillRect(x - 16, y - 36, 4, 18);
+        ctx.fillRect(x + 12, y - 36, 4, 18);
+    } else if (style.pattern === 'mask') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 9, y - 47, 18, 8);
+        ctx.fillStyle = '#101820';
+        ctx.fillRect(x - 5, y - 44, 3, 3);
+        ctx.fillRect(x + 3, y - 44, 3, 3);
+    } else if (style.pattern === 'parasite') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 3, y - 39, 6, 24);
+        ctx.fillRect(x - 16, y - 27, 32, 4);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 4, y - 32, 8, 6);
+    } else if (style.pattern === 'lampHelm') {
+        ctx.fillStyle = style.accent;
+        ctx.fillRect(x - 10, y - 48, 20, 8);
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillRect(x - 4, y - 50, 8, 8);
+        ctx.fillStyle = 'rgba(255, 209, 102, 0.42)';
+        ctx.fillRect(x - 12, y - 46, 24, 4);
+    }
+}
+
+function armorVisualStyle(name) {
+    return {
+        布衣: { base: 'rgba(180, 170, 142, 0.9)', trim: '#f8fbff', accent: '#d8e5f2', pattern: 'cloak' },
+        皮甲: { base: 'rgba(128, 78, 48, 0.95)', trim: '#d6a06a', accent: '#5a341d' },
+        铁甲: { base: 'rgba(190, 210, 222, 0.95)', trim: '#ffffff', center: 'rgba(130, 150, 165, 0.9)' },
+        魔晶甲: { base: 'rgba(95, 72, 150, 0.95)', trim: '#d7bcff', center: '#b77dff', pattern: 'spikes', accent: '#f2ddff' },
+        兔毛披肩: { base: 'rgba(218, 196, 168, 0.92)', trim: '#ffffff', accent: '#f1dfc3', pattern: 'cloak' },
+        蝎壳甲: { base: 'rgba(128, 72, 34, 0.95)', trim: '#d99a43', accent: '#6d4121', pattern: 'spikes' },
+        厚毛皮衣: { base: 'rgba(105, 70, 42, 0.96)', trim: '#ead8bd', accent: '#b98f68', pattern: 'cloak' },
+        湿地甲壳甲: { base: 'rgba(47, 75, 58, 0.95)', trim: '#d7f28a', accent: '#6f8750', pattern: 'spikes' },
+        泥沼护甲: { base: 'rgba(38, 63, 52, 0.96)', trim: '#8cff66', center: '#6d5438', accent: '#8cff66' },
+        丛林叶披肩: { base: 'rgba(28, 84, 45, 0.92)', trim: '#8cff66', accent: '#5fae49', pattern: 'leaf' },
+        板根木甲: { base: 'rgba(91, 55, 30, 0.96)', trim: '#c18a52', accent: '#2a1a10', pattern: 'root' },
+        毒菇面罩: { base: 'rgba(54, 40, 65, 0.94)', trim: '#8cff66', accent: '#d94bff', pattern: 'mask' },
+        绿母寄生甲: { base: 'rgba(26, 74, 36, 0.96)', trim: '#9cffb7', accent: '#5fae49', pattern: 'parasite' },
+        矿灯头盔: { base: 'rgba(70, 78, 88, 0.96)', trim: '#ffd166', center: '#c5d6df', accent: '#ffd166', pattern: 'lampHelm' },
+        晶灯头盔: { base: 'rgba(82, 92, 105, 0.96)', trim: '#f2ddff', center: '#ffd166', accent: '#b77dff', pattern: 'lampHelm' },
+    }[name] || { base: 'rgba(128, 78, 48, 0.95)', trim: '#d6a06a', accent: '#d49a5a' };
+}
+
+function shieldVisualStyle(name) {
+    return {
+        木盾: { base: '#8a5a32', trim: '#d6a06a' },
+        铁盾: { base: '#c5d6df', trim: '#ffffff' },
+        藤编圆盾: { base: '#2f7f44', trim: '#d7f28a', pattern: 'vine' },
+        板根盾: { base: '#6b3b1f', trim: '#c18a52', pattern: 'root' },
+    }[name] || { base: '#8a5a32', trim: '#d6a06a' };
+}
+
+function drawEquippedShieldOverlay(x, y, p) {
+    if (state.equipment.shield === '无' || p.blocking) return;
+    const style = shieldVisualStyle(state.equipment.shield);
+    const side = (p.facing?.x || 1) >= 0 ? -1 : 1;
+    const sx = x + side * 18;
+    const sy = y - 29;
+    ctx.save();
+    ctx.fillStyle = style.base;
+    ctx.strokeStyle = '#101820';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 8, 13, -0.2 * side, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = style.trim;
+    ctx.fillRect(sx - 5, sy - 8, 10, 3);
+    if (style.pattern === 'vine') {
+        ctx.fillStyle = '#5fae49';
+        ctx.fillRect(sx - 6, sy - 1, 12, 2);
+        ctx.fillRect(sx - 1, sy - 10, 2, 20);
+    } else if (style.pattern === 'root') {
+        ctx.fillStyle = '#2a1a10';
+        ctx.fillRect(sx - 5, sy - 2, 10, 4);
+        ctx.fillRect(sx - 1, sy - 10, 3, 20);
+    }
+    ctx.restore();
 }
 
 function drawPlayerHandsAndWeapon(x, y, p, now) {
@@ -17327,13 +23497,25 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
     ctx.fillStyle = COLORS.skin;
     ctx.fillRect(handX - 4, handY - 4, 8, 8);
     if (p.blocking && state.equipment.shield !== '无') {
-        ctx.fillStyle = state.equipment.shield === '铁盾' ? '#c5d6df' : '#8a5a32';
+        const shieldStyle = shieldVisualStyle(state.equipment.shield);
+        ctx.fillStyle = shieldStyle.base;
         ctx.strokeStyle = '#101820';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.ellipse(handX + dir.x * 12, handY + dir.y * 12, 12, 16, Math.atan2(dir.y, dir.x), 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = shieldStyle.trim;
+        ctx.fillRect(handX + dir.x * 12 - 6, handY + dir.y * 12 - 9, 12, 4);
+        if (shieldStyle.pattern === 'vine') {
+            ctx.fillStyle = '#5fae49';
+            ctx.fillRect(handX + dir.x * 12 - 8, handY + dir.y * 12 - 2, 16, 3);
+            ctx.fillRect(handX + dir.x * 12 - 2, handY + dir.y * 12 - 12, 3, 24);
+        } else if (shieldStyle.pattern === 'root') {
+            ctx.fillStyle = '#2a1a10';
+            ctx.fillRect(handX + dir.x * 12 - 7, handY + dir.y * 12 - 3, 14, 5);
+            ctx.fillRect(handX + dir.x * 12 - 2, handY + dir.y * 12 - 13, 4, 26);
+        }
         return;
     }
     if (heldItem && !isHandWeaponItem(heldItem)) {
@@ -17346,6 +23528,10 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
     }
     if (heldItem === 'sinewBow') {
         drawBowInHand(handX, handY, dir, directRangedPullAmount('sinewBow', attacking));
+        return;
+    }
+    if (isLegacyWeaponItem(heldItem)) {
+        drawLegacyWeaponInHand(heldItem, handX, handY, dir, attacking);
         return;
     }
     if (simpleWeaponDef(heldItem)) {
@@ -17374,7 +23560,11 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
 }
 
 function isHandWeaponItem(key) {
-    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'stoneSpear', 'slingshot', 'sinewBow', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'wood', 'bamboo', 'stone'].includes(key) || !key;
+    return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'ironAxe', 'ironPickaxe', 'ironSickle', 'stoneSpear', 'slingshot', 'sinewBow', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'antlerSpear', 'stoneCoreHammer', 'wood', 'bamboo', 'stone'].includes(key) || !key;
+}
+
+function isLegacyWeaponItem(key) {
+    return ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'ironAxe', 'ironPickaxe', 'ironSickle', 'stoneSpear', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'antlerSpear', 'stoneCoreHammer', 'wood', 'bamboo', 'stone'].includes(key);
 }
 
 function directRangedPullAmount(key, attacking) {
@@ -17383,18 +23573,240 @@ function directRangedPullAmount(key, attacking) {
     return attacking ? 0.45 : 0;
 }
 
+function drawLegacyWeaponInHand(key, handX, handY, dir, attacking) {
+    const angle = Math.atan2(dir.y, dir.x);
+    const progress = attackVisualProgress();
+    ctx.save();
+    ctx.translate(handX + dir.x * (attacking ? 17 : 10), handY + dir.y * (attacking ? 17 : 10));
+    ctx.rotate(angle + (attacking ? Math.sin(progress * Math.PI) * 0.16 : 0));
+    const shaft = '#5a341d';
+    const stone = '#a8b3bd';
+    const metal = '#d8e5f2';
+    const crystal = '#b77dff';
+    const bambooColor = '#9bd86a';
+    const venomColor = '#8cff66';
+    const drawShaft = (length, width = 4, color = shaft) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(length, 0);
+        ctx.stroke();
+    };
+    switch (key) {
+        case 'stoneAxe':
+            drawShaft(42, 4, '#5a341d');
+            ctx.fillStyle = '#66737f';
+            ctx.fillRect(32, -12, 22, 6);
+            ctx.fillRect(36, -18, 15, 6);
+            ctx.fillRect(42, -6, 12, 6);
+            ctx.fillRect(28, -6, 9, 12);
+            ctx.fillStyle = '#d8e5f2';
+            ctx.fillRect(50, -13, 4, 10);
+            ctx.fillStyle = '#d6a06a';
+            ctx.fillRect(24, -5, 13, 10);
+            break;
+        case 'stonePickaxe':
+            drawShaft(43, 4, '#5a341d');
+            ctx.fillStyle = '#9a6436';
+            ctx.fillRect(29, -5, 13, 10);
+            ctx.fillStyle = '#66737f';
+            ctx.fillRect(25, -12, 31, 5);
+            ctx.fillRect(48, -17, 10, 5);
+            ctx.fillRect(24, 7, 18, 5);
+            ctx.fillRect(34, -10, 8, 20);
+            ctx.fillStyle = '#d8e5f2';
+            ctx.fillRect(55, -18, 5, 5);
+            ctx.fillRect(20, 8, 6, 4);
+            break;
+        case 'stoneSickle':
+            drawShaft(30, 4, '#5a341d');
+            ctx.fillStyle = '#66737f';
+            ctx.fillRect(28, -16, 10, 5);
+            ctx.fillRect(36, -20, 16, 5);
+            ctx.fillRect(50, -15, 8, 5);
+            ctx.fillRect(44, -10, 8, 5);
+            ctx.fillRect(33, -5, 13, 5);
+            ctx.fillStyle = '#d8e5f2';
+            ctx.fillRect(52, -19, 6, 4);
+            ctx.fillStyle = '#5a341d';
+            ctx.fillRect(20, -5, 11, 10);
+            break;
+        case 'ironAxe':
+            drawShaft(46, 4, '#5a341d');
+            ctx.fillStyle = '#c5d6df';
+            ctx.fillRect(34, -15, 25, 7);
+            ctx.fillRect(38, -22, 18, 7);
+            ctx.fillRect(44, -8, 14, 7);
+            ctx.fillRect(30, -8, 10, 15);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(56, -16, 5, 12);
+            ctx.fillStyle = '#d6a06a';
+            ctx.fillRect(25, -5, 14, 10);
+            break;
+        case 'ironPickaxe':
+            drawShaft(47, 4, '#5a341d');
+            ctx.fillStyle = '#9a6436';
+            ctx.fillRect(31, -5, 13, 10);
+            ctx.fillStyle = '#c5d6df';
+            ctx.fillRect(20, -13, 42, 6);
+            ctx.fillRect(56, -19, 11, 5);
+            ctx.fillRect(18, 7, 24, 5);
+            ctx.fillRect(36, -10, 8, 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(65, -19, 5, 5);
+            ctx.fillRect(16, 8, 6, 4);
+            break;
+        case 'ironSickle':
+            drawShaft(32, 4, '#5a341d');
+            ctx.fillStyle = '#c5d6df';
+            ctx.fillRect(28, -18, 12, 5);
+            ctx.fillRect(38, -24, 18, 5);
+            ctx.fillRect(54, -19, 9, 5);
+            ctx.fillRect(50, -13, 8, 5);
+            ctx.fillRect(34, -7, 16, 5);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(58, -23, 6, 4);
+            ctx.fillStyle = '#5a341d';
+            ctx.fillRect(21, -5, 11, 10);
+            break;
+        case 'stoneSpear':
+            drawShaft(58, 4);
+            drawLegacyTip(58, stone, 10);
+            break;
+        case 'bambooSpear':
+            drawShaft(66, 3, bambooColor);
+            drawLegacyTip(66, '#d7f28a', 8);
+            ctx.fillStyle = '#1f5f34';
+            ctx.fillRect(18, -2, 32, 4);
+            break;
+        case 'antlerSpear':
+            drawShaft(62, 4, '#6b4a2f');
+            ctx.strokeStyle = '#f1dfc3';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(56, 0);
+            ctx.lineTo(76, 0);
+            ctx.moveTo(62, -2);
+            ctx.lineTo(70, -18);
+            ctx.moveTo(62, 2);
+            ctx.lineTo(72, 16);
+            ctx.moveTo(67, 0);
+            ctx.lineTo(78, -10);
+            ctx.stroke();
+            ctx.fillStyle = '#d8c08a';
+            ctx.fillRect(40, -5, 12, 10);
+            break;
+        case 'venomDagger':
+            drawLegacyDagger(venomColor, '#213c1e', 38);
+            ctx.fillStyle = 'rgba(140,255,102,0.5)';
+            ctx.fillRect(24, -9, 18, 5);
+            break;
+        case 'ironSword':
+            drawLegacySword('#c5d6df', '#ffffff', 58, '#5a341d', '#d8e5f2');
+            break;
+        case 'crystalBlade':
+            drawLegacySword('#8f6bd8', '#ffffff', 68, '#2f2450', '#b77dff', true);
+            break;
+        case 'stoneCoreHammer':
+            drawShaft(40, 6);
+            ctx.fillStyle = '#48515a';
+            ctx.fillRect(35, -16, 24, 32);
+            ctx.fillStyle = crystal;
+            ctx.fillRect(42, -8, 10, 16);
+            if (state.player.meleeCharge?.key === key) {
+                ctx.strokeStyle = 'rgba(255,209,102,0.75)';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(31, -20, 32, 40);
+            }
+            break;
+        case 'wood':
+            drawShaft(34, 7, '#8a5a32');
+            break;
+        case 'bamboo':
+            drawShaft(48, 4, bambooColor);
+            ctx.fillStyle = '#d7f28a';
+            ctx.fillRect(14, -2, 18, 4);
+            break;
+        case 'stone':
+            ctx.fillStyle = stone;
+            ctx.fillRect(8, -8, 18, 16);
+            ctx.fillStyle = '#d8e5f2';
+            ctx.fillRect(13, -11, 8, 5);
+            break;
+        default:
+            drawShaft(42);
+            drawLegacyTip(42, metal, 8);
+    }
+    ctx.restore();
+}
+
+function drawLegacyTip(x, color, size) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x + size, 0);
+    ctx.lineTo(x - size * 0.45, -size * 0.6);
+    ctx.lineTo(x - size * 0.25, size * 0.6);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawLegacyDagger(bladeColor, handleColor, length = 34) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-8, -4, 13, 8);
+    ctx.fillStyle = '#d8c08a';
+    ctx.fillRect(2, -8, 4, 16);
+    ctx.fillStyle = bladeColor;
+    ctx.beginPath();
+    ctx.moveTo(length - 8, 0);
+    ctx.lineTo(7, -5);
+    ctx.lineTo(9, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(12, -2, Math.max(6, length - 26), 2);
+}
+
+function drawLegacySword(bladeColor, shineColor, length = 58, handleColor = '#5a341d', guardColor = '#d8e5f2', crystal = false) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-12, -4, 16, 8);
+    ctx.fillStyle = guardColor;
+    ctx.fillRect(2, -13, 5, 26);
+    ctx.fillRect(-1, -10, 18, 5);
+    ctx.fillRect(-1, 5, 18, 5);
+    ctx.fillStyle = bladeColor;
+    ctx.fillRect(14, -4, Math.max(0, length - 24), 8);
+    ctx.fillRect(length - 10, -3, 6, 6);
+    ctx.fillRect(length - 4, -2, 4, 4);
+    if (crystal) {
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(22, -8, length - 34, 4);
+        ctx.fillRect(22, 4, length - 34, 4);
+        ctx.fillRect(length - 14, -6, 8, 12);
+        ctx.fillStyle = 'rgba(183,125,255,0.35)';
+        ctx.fillRect(30, -11, 34, 4);
+    }
+    ctx.strokeStyle = shineColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(18, -1);
+    ctx.lineTo(length - 8, -1);
+    ctx.stroke();
+}
+
 function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
     const def = simpleWeaponDef(key);
     if (!def) return;
     const angle = Math.atan2(dir.y, dir.x);
     const attackProgress = attackVisualProgress();
     const heavy = ['vineStoneHammer', 'resinHammer'].includes(key);
-    const flexible = ['ropeSickle', 'frogWhip', 'scorpionHook'].includes(key);
+    const flexible = ['ropeSickle', 'frogWhip', 'poisonVineWhip', 'scorpionHook'].includes(key);
     const lunge = attacking ? (heavy ? Math.sin(attackProgress * Math.PI) * 4 : 7) : 0;
     ctx.save();
     ctx.translate(handX + dir.x * (10 + lunge), handY + dir.y * (10 + lunge));
     ctx.rotate(angle + weaponSwingRotation(key, attackProgress, attacking));
-    const visualScale = clamp((def.profile.range || 50) / 84, 0.72, 1.35);
+    const staffHeld = isStaffWeapon(key);
+    const visualScale = staffHeld ? 0.82 : (key === 'poisonVineBlowpipe' ? 0.85 : (flexible ? 0.95 : clamp((def.profile.range || 50) / 84, 0.72, 1.35)));
     ctx.scale(visualScale, visualScale);
     const chargeGlow = state.player.meleeCharge?.key === key ? meleeChargeAmount(state.player.meleeCharge, performance.now()) : 0;
     const palette = {
@@ -17490,7 +23902,7 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
         case 'toxicKnife':
             drawDagger(palette.venom, palette.dark);
             ctx.fillStyle = 'rgba(140,255,102,0.55)';
-            ctx.fillRect(30, -8, 12, 16);
+            ctx.fillRect(20, -6, 8, 12);
             break;
         case 'beeNeedleSpear':
             drawShaft(56, 3, palette.wood);
@@ -17505,7 +23917,7 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
             drawSlingInHand(attacking ? directRangedPullAmount('sling', true) : directRangedPullAmount('sling', false));
             break;
         case 'bambooCrossbow':
-            drawCrossbowInHand(directRangedPullAmount('bambooCrossbow', attacking));
+            drawCrossbowInHand(directRangedPullAmount('bambooCrossbow', attacking), '#9bd86a', '#f1dfc3');
             break;
         case 'ropeSickle':
             drawRopeSickle(palette.stone, palette.hide, attackProgress, attacking);
@@ -17518,15 +23930,102 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
             ctx.fillRect(40, -6, 5, 5);
             break;
         case 'frogWhip':
-            drawWhipCurve('#8cff66', '#d94bff', attackProgress, attacking);
+            drawFrogTongueWhip(attackProgress, attacking);
             break;
         case 'scorpionHook':
             drawScorpionHook(palette.wood, palette.venom, attackProgress, attacking);
             break;
         case 'shadowWoodBlade':
-            drawDagger(palette.shadow, palette.dark, 48);
-            ctx.fillStyle = 'rgba(183,125,255,0.35)';
-            ctx.fillRect(24, -13, 28, 5);
+            drawShadowBlade(palette.dark, palette.shadow);
+            break;
+        case 'clawHookBlade':
+            drawHookBlade('#c99a62', '#fff3d0', palette.dark);
+            break;
+        case 'pollenDartFan':
+            ctx.fillStyle = '#ffd166';
+            for (let i = -2; i <= 2; i++) {
+                ctx.save();
+                ctx.rotate(i * 0.2);
+                ctx.fillRect(8, i * 3 - 2, 34, 4);
+                ctx.restore();
+            }
+            ctx.fillStyle = '#ff6b9a';
+            ctx.fillRect(0, -5, 12, 10);
+            break;
+        case 'crystalFangSpear':
+            drawShaft(64, 4, '#1f2428');
+            drawTip(64, '#b77dff', 12);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(56, -2, 14, 4);
+            break;
+        case 'boneShardMace':
+            drawShaft(38, 6, '#5a341d');
+            ctx.fillStyle = '#d8d0bd';
+            ctx.fillRect(34, -12, 20, 24);
+            ctx.fillStyle = '#fff3d0';
+            ctx.fillRect(48, -16, 5, 8);
+            ctx.fillRect(48, 8, 5, 8);
+            break;
+        case 'ironwoodMachete':
+            drawMachete('#c5d6df', '#1f2428', '#b77dff');
+            break;
+        case 'ironwoodArbalest':
+            drawCrossbowInHand(directRangedPullAmount('ironwoodArbalest', attacking), '#303946', '#b77dff', 1.25);
+            break;
+        case 'willowRecurveBow':
+            drawBowInHand(0, 0, { x: 1, y: 0 }, directRangedPullAmount('willowRecurveBow', attacking), '#6f8750', '#d7f28a', 'willowRecurveBow');
+            break;
+        case 'elderwoodStaff':
+            ctx.save();
+            ctx.rotate(-0.62);
+            drawMagicStaff('#4a4036', '#d7bcff', directRangedPullAmount('elderwoodStaff', attacking));
+            ctx.restore();
+            break;
+        case 'darkwoodScimitar':
+            drawScimitar('#6f4cc2', '#151f16', '#b77dff');
+            break;
+        case 'buttressRootMaul':
+            drawWeightedHammer(40, '#7a4a2a', '#2a1a10', chargeGlow, attackProgress, '#5fae49');
+            break;
+        case 'cypressMudSaber':
+            drawMudSaber('#6f8750', '#46351f', '#6d5438');
+            break;
+        case 'blossomwoodWand':
+            ctx.save();
+            ctx.rotate(-0.48);
+            drawMagicStaff('#b87462', '#ffd166', directRangedPullAmount('blossomwoodWand', attacking), '#ff6b9a', false, 31);
+            ctx.restore();
+            break;
+        case 'vineWrappedSpear':
+            drawShaft(56, 4, '#5fae49');
+            drawTip(56, '#a8b3bd', 9);
+            ctx.strokeStyle = '#cde77b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(10, -5);
+            ctx.lineTo(48, 5);
+            ctx.stroke();
+            break;
+        case 'poisonVineWhip':
+            drawPoisonVineWhip(attackProgress, attacking);
+            break;
+        case 'jungleMachete':
+            drawMachete('#d8e5f2', '#5a341d', '#5fae49');
+            break;
+        case 'vineBambooCrossbow':
+            drawCrossbowInHand(directRangedPullAmount('vineBambooCrossbow', attacking), '#70bf55', '#cde77b', 1.05);
+            break;
+        case 'poisonVineBlowpipe':
+            drawBlowpipeInHand(directRangedPullAmount('poisonVineBlowpipe', attacking));
+            break;
+        case 'greenMotherRootStaff':
+            ctx.save();
+            ctx.rotate(-0.78);
+            drawMagicStaff('#173b24', '#8cff66', directRangedPullAmount('greenMotherRootStaff', attacking), '#b77dff', true, 36);
+            ctx.restore();
+            break;
+        case 'sacrificialVineHorn':
+            drawHornInHand(attackProgress, attacking);
             break;
         default:
             drawShaft(40);
@@ -17537,14 +24036,84 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
 
 function drawDagger(bladeColor, handleColor, length = 34) {
     ctx.fillStyle = handleColor;
-    ctx.fillRect(-7, -4, 14, 8);
+    ctx.fillRect(-8, -4, 13, 8);
+    ctx.fillStyle = '#d8c08a';
+    ctx.fillRect(2, -8, 4, 16);
     ctx.fillStyle = bladeColor;
     ctx.beginPath();
-    ctx.moveTo(length, 0);
-    ctx.lineTo(5, -6);
-    ctx.lineTo(9, 6);
+    ctx.moveTo(length - 8, 0);
+    ctx.lineTo(7, -5);
+    ctx.lineTo(9, 5);
     ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(12, -2, Math.max(6, length - 26), 2);
+}
+
+function drawMachete(bladeColor, handleColor, accentColor) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-9, -5, 18, 10);
+    ctx.fillRect(4, -8, 5, 16);
+    ctx.fillStyle = bladeColor;
+    ctx.fillRect(10, -8, 34, 16);
+    ctx.fillRect(28, -11, 18, 6);
+    ctx.fillRect(44, -6, 8, 12);
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(14, -6, 28, 3);
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(16, 6, 28, 3);
+}
+
+function drawScimitar(bladeColor, handleColor, accentColor) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-9, -5, 18, 10);
+    ctx.fillStyle = bladeColor;
+    ctx.fillRect(8, -3, 12, 8);
+    ctx.fillRect(18, -7, 14, 8);
+    ctx.fillRect(30, -11, 13, 8);
+    ctx.fillRect(42, -14, 10, 7);
+    ctx.fillRect(49, -10, 6, 6);
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(20, -4, 24, 3);
+    ctx.fillRect(39, -7, 12, 3);
+}
+
+function drawMudSaber(bladeColor, handleColor, mudColor) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-9, -5, 18, 10);
+    ctx.fillStyle = bladeColor;
+    ctx.fillRect(9, -7, 27, 12);
+    ctx.fillRect(34, -10, 11, 9);
+    ctx.fillRect(42, -7, 7, 7);
+    ctx.fillStyle = mudColor;
+    ctx.fillRect(18, 3, 26, 5);
+    ctx.fillStyle = '#d7f28a';
+    ctx.fillRect(15, -5, 20, 2);
+}
+
+function drawHookBlade(bladeColor, tipColor, handleColor) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-9, -5, 18, 10);
+    ctx.fillStyle = bladeColor;
+    ctx.fillRect(8, -5, 25, 10);
+    ctx.fillRect(28, -14, 10, 9);
+    ctx.fillRect(34, -17, 8, 6);
+    ctx.fillRect(35, 5, 8, 8);
+    ctx.fillStyle = tipColor;
+    ctx.fillRect(38, -16, 5, 5);
+    ctx.fillRect(40, 9, 5, 5);
+}
+
+function drawShadowBlade(handleColor, glowColor) {
+    ctx.fillStyle = handleColor;
+    ctx.fillRect(-9, -5, 18, 10);
+    ctx.fillStyle = '#2f2450';
+    ctx.fillRect(8, -6, 26, 12);
+    ctx.fillRect(31, -10, 12, 8);
+    ctx.fillRect(40, -7, 8, 7);
+    ctx.fillStyle = glowColor;
+    ctx.fillRect(14, -9, 25, 4);
+    ctx.fillRect(24, 5, 18, 4);
 }
 
 function attackVisualProgress() {
@@ -17610,8 +24179,10 @@ function drawSlingInHand(pull = 0) {
     ctx.fillRect(15 - pull * 12, -4, 8, 8);
 }
 
-function drawCrossbowInHand(pull = 0) {
-    ctx.strokeStyle = '#9bd86a';
+function drawCrossbowInHand(pull = 0, stockColor = '#9bd86a', stringColor = '#f1dfc3', scale = 1) {
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.strokeStyle = stockColor;
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(-8, 0);
@@ -17619,7 +24190,7 @@ function drawCrossbowInHand(pull = 0) {
     ctx.moveTo(18, -18);
     ctx.lineTo(18, 18);
     ctx.stroke();
-    ctx.strokeStyle = '#f1dfc3';
+    ctx.strokeStyle = stringColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(18, -18);
@@ -17628,6 +24199,57 @@ function drawCrossbowInHand(pull = 0) {
     ctx.stroke();
     ctx.fillStyle = '#d8e5f2';
     ctx.fillRect(4 - pull * 8, -2, 44, 4);
+    ctx.restore();
+}
+
+function drawMagicStaff(shaftColor, gemColor, pull = 0, accent = '#d8e5f2', root = false, length = 38) {
+    const gemX = length - 4;
+    ctx.strokeStyle = shaftColor;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.quadraticCurveTo(length * 0.38, root ? -6 : 2, length, 0);
+    ctx.stroke();
+    ctx.fillStyle = gemColor;
+    ctx.fillRect(gemX, -8, 12, 16);
+    ctx.fillStyle = accent;
+    ctx.fillRect(gemX + 3, -4, 6, 8);
+    if (pull > 0.05) {
+        ctx.strokeStyle = `rgba(255,255,255,${0.25 + pull * 0.45})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(gemX + 6, 0, 11 + pull * 7, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    if (root) {
+        ctx.strokeStyle = '#5fae49';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(8, -5);
+        ctx.lineTo(length - 6, 6);
+        ctx.moveTo(16, 6);
+        ctx.lineTo(length - 14, -5);
+        ctx.stroke();
+    }
+}
+
+function drawBlowpipeInHand(pull = 0) {
+    ctx.strokeStyle = '#173b24';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-8, 0);
+    ctx.lineTo(42, 0);
+    ctx.stroke();
+    ctx.strokeStyle = '#5fae49';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(2, -4);
+    ctx.lineTo(34, 5);
+    ctx.stroke();
+    ctx.fillStyle = '#8cff66';
+    ctx.fillRect(37 + pull * 3, -3, 9, 6);
+    ctx.fillStyle = '#d94bff';
+    ctx.fillRect(41 + pull * 3, -2, 4, 4);
 }
 
 function drawWhipCurve(lineColor, tipColor, progress = 0, attacking = false) {
@@ -17640,6 +24262,77 @@ function drawWhipCurve(lineColor, tipColor, progress = 0, attacking = false) {
     ctx.stroke();
     ctx.fillStyle = tipColor;
     ctx.fillRect(55 + wave * 0.45, -9 + wave * 0.2, 8, 8);
+}
+
+function drawFrogTongueWhip(progress = 0, attacking = false) {
+    const snap = attacking ? Math.sin(progress * Math.PI) * 24 : 5;
+    ctx.strokeStyle = '#d94bff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-5, 0);
+    ctx.bezierCurveTo(12, -9, 28, 12 + snap * 0.65, 54 + snap * 0.25, -3);
+    ctx.stroke();
+    ctx.strokeStyle = '#8cff66';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(5, -2);
+    ctx.bezierCurveTo(22, 3, 34, 11 + snap * 0.35, 48 + snap * 0.2, -1);
+    ctx.stroke();
+    ctx.fillStyle = '#ffd6ec';
+    ctx.fillRect(51 + snap * 0.25, -7, 11, 7);
+}
+
+function drawPoisonVineWhip(progress = 0, attacking = false) {
+    const snap = attacking ? Math.sin(progress * Math.PI) * 20 : 4;
+    ctx.strokeStyle = '#5fae49';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-5, 0);
+    ctx.bezierCurveTo(13, -18 - snap * 0.3, 35, -12 + snap, 63 + snap * 0.35, -9);
+    ctx.stroke();
+    ctx.strokeStyle = '#8cff66';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(2, 4);
+    ctx.bezierCurveTo(20, -5, 38, 9 + snap * 0.45, 58 + snap * 0.35, -5);
+    ctx.stroke();
+    ctx.fillStyle = '#d94bff';
+    ctx.fillRect(56 + snap * 0.35, -14, 9, 9);
+    ctx.fillStyle = '#cde77b';
+    for (let i = 12; i <= 48; i += 12) ctx.fillRect(i, (i % 24 ? -8 : 5), 5, 5);
+}
+
+function drawHornInHand(progress = 0, attacking = false) {
+    const lift = attacking ? -5 - Math.sin(progress * Math.PI) * 4 : 0;
+    ctx.save();
+    ctx.translate(0, lift);
+    ctx.rotate(attacking ? -0.2 : 0.08);
+    ctx.fillStyle = '#5fae49';
+    ctx.fillRect(-8, -5, 17, 10);
+    ctx.fillStyle = '#d8c08a';
+    ctx.beginPath();
+    ctx.moveTo(4, -9);
+    ctx.lineTo(36, -12);
+    ctx.lineTo(53, -5);
+    ctx.lineTo(54, 7);
+    ctx.lineTo(35, 12);
+    ctx.lineTo(4, 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#7a4a2a';
+    ctx.fillRect(8, -6, 12, 12);
+    ctx.fillStyle = '#f1dfc3';
+    ctx.fillRect(44, -4, 10, 8);
+    if (attacking) {
+        ctx.strokeStyle = 'rgba(216,192,138,0.72)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(58, 0, 8 + i * 8 + progress * 8, -0.55, 0.55);
+            ctx.stroke();
+        }
+    }
+    ctx.restore();
 }
 
 function drawRopeSickle(bladeColor, ropeColor, progress = 0, attacking = false) {
@@ -17730,18 +24423,18 @@ function drawSlingshotInHand(handX, handY, dir, pull) {
     ctx.restore();
 }
 
-function drawBowInHand(handX, handY, dir, pull) {
+function drawBowInHand(handX, handY, dir, pull, bowColor = '#6b3b1f', stringColor = '#f1dfc3', ammoKey = 'sinewBow') {
     const angle = Math.atan2(dir.y, dir.x);
     ctx.save();
     ctx.translate(handX + dir.x * 13, handY + dir.y * 13);
     ctx.rotate(angle);
-    ctx.strokeStyle = '#6b3b1f';
+    ctx.strokeStyle = bowColor;
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(0, -24);
     ctx.quadraticCurveTo(18, 0, 0, 24);
     ctx.stroke();
-    ctx.strokeStyle = '#f1dfc3';
+    ctx.strokeStyle = stringColor;
     ctx.lineWidth = 2;
     const pullBack = pull * 20;
     ctx.beginPath();
@@ -17749,8 +24442,8 @@ function drawBowInHand(handX, handY, dir, pull) {
     ctx.lineTo(-pullBack, 0);
     ctx.lineTo(0, 24);
     ctx.stroke();
-    if (pull > 0.05 && directRangedAmmoFor('sinewBow')) {
-        ctx.strokeStyle = directRangedAmmoFor('sinewBow') === 'poisonArrow' ? '#8cff66' : '#d8e5f2';
+    if (pull > 0.05 && directRangedAmmoFor(ammoKey)) {
+        ctx.strokeStyle = directRangedAmmoFor(ammoKey) === 'poisonArrow' ? '#8cff66' : '#d8e5f2';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(-pullBack - 8, 0);
@@ -17810,12 +24503,368 @@ function drawDecorations() {
             ctx.stroke();
         } else if (item.kind === 'jungleRuin') {
             drawJungleRuinEntrance(item, x, y);
+        } else if (item.kind === 'mineCave') {
+            drawMineCaveEntrance(item, x, y);
         } else {
             ctx.fillStyle = COLORS.grass2;
             ctx.fillRect(x - 8, y - 6, 4, 12);
             ctx.fillRect(x, y - 10, 4, 16);
             ctx.fillRect(x + 8, y - 5, 4, 10);
         }
+    }
+}
+
+function drawMineCaveEntrance(cave, x, y) {
+    drawShadow(x, y + 18, 124, 20);
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x - 58, y - 34, 116, 50);
+    ctx.fillStyle = '#66737f';
+    ctx.fillRect(x - 48, y - 48, 96, 18);
+    ctx.fillStyle = '#111820';
+    ctx.fillRect(x - 28, y - 26, 56, 44);
+    ctx.fillStyle = '#5a341d';
+    ctx.fillRect(x - 44, y - 30, 9, 52);
+    ctx.fillRect(x + 35, y - 30, 9, 52);
+    ctx.fillRect(x - 48, y - 34, 96, 9);
+    ctx.fillStyle = '#c5d6df';
+    ctx.fillRect(x - 64, y + 20, 34, 7);
+    ctx.fillRect(x + 32, y + 18, 26, 8);
+    ctx.fillStyle = '#7dcbe8';
+    ctx.fillRect(x + 8, y - 38, 8, 8);
+}
+
+function drawUnderground(now) {
+    const ug = state.underground;
+    ctx.fillStyle = '#05070a';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    ctx.fillStyle = '#111820';
+    ctx.fillRect(worldX(0), worldY(0), ug.width, ug.height);
+    drawUndergroundLayout(ug);
+    drawUndergroundObjects(now);
+    for (const torch of state.underground?.torches || []) drawPlacedTorch(torch);
+    drawPlayer(now);
+    for (const projectile of state.undergroundProjectiles || []) drawProjectile(projectile);
+    drawUndergroundLighting(now);
+}
+
+function drawUndergroundLayout(ug) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const tunnel of ug.tunnels || []) {
+        ctx.strokeStyle = '#05070a';
+        ctx.lineWidth = tunnel.width + 54;
+        ctx.beginPath();
+        ctx.moveTo(worldX(tunnel.x1), worldY(tunnel.y1));
+        ctx.lineTo(worldX(tunnel.x2), worldY(tunnel.y2));
+        ctx.stroke();
+        ctx.strokeStyle = '#3f4c57';
+        ctx.lineWidth = tunnel.width + 34;
+        ctx.beginPath();
+        ctx.moveTo(worldX(tunnel.x1), worldY(tunnel.y1));
+        ctx.lineTo(worldX(tunnel.x2), worldY(tunnel.y2));
+        ctx.stroke();
+        ctx.strokeStyle = '#9fb3c8';
+        ctx.lineWidth = tunnel.width + 6;
+        ctx.globalAlpha = 0.1;
+        ctx.beginPath();
+        ctx.moveTo(worldX(tunnel.x1), worldY(tunnel.y1));
+        ctx.lineTo(worldX(tunnel.x2), worldY(tunnel.y2));
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#172129';
+        ctx.lineWidth = tunnel.width;
+        ctx.beginPath();
+        ctx.moveTo(worldX(tunnel.x1), worldY(tunnel.y1));
+        ctx.lineTo(worldX(tunnel.x2), worldY(tunnel.y2));
+        ctx.stroke();
+    }
+    for (const room of ug.rooms || []) {
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(worldX(room.x - room.w / 2 - 30), worldY(room.y - room.h / 2 - 30), room.w + 60, room.h + 60);
+        ctx.fillStyle = '#3f4c57';
+        ctx.fillRect(worldX(room.x - room.w / 2 - 18), worldY(room.y - room.h / 2 - 18), room.w + 36, room.h + 36);
+        ctx.strokeStyle = '#9fb3c8';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.22;
+        ctx.strokeRect(worldX(room.x - room.w / 2 - 7), worldY(room.y - room.h / 2 - 7), room.w + 14, room.h + 14);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#172129';
+        ctx.fillRect(worldX(room.x - room.w / 2), worldY(room.y - room.h / 2), room.w, room.h);
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(worldX(room.x - room.w / 2), worldY(room.y - room.h / 2), room.w, room.h);
+    }
+    const grid = 64;
+    const startX = Math.floor(camera.x / grid) * grid;
+    const startY = Math.floor(camera.y / grid) * grid;
+    for (let y = startY; y < camera.y + VIEW.height + grid; y += grid) {
+        for (let x = startX; x < camera.x + VIEW.width + grid; x += grid) {
+            if (!undergroundWalkableAt(x + grid / 2, y + grid / 2)) continue;
+            const n = valueNoise(x * 0.012, y * 0.012);
+            ctx.fillStyle = n > 0.58 ? 'rgba(30,41,50,0.45)' : 'rgba(8,14,21,0.18)';
+            ctx.fillRect(worldX(x), worldY(y), grid, grid);
+            if (n > 0.72) {
+                ctx.fillStyle = 'rgba(125,203,232,0.12)';
+                ctx.fillRect(worldX(x + 12), worldY(y + 18), 22, 5);
+            }
+        }
+    }
+    ctx.restore();
+}
+
+function drawUndergroundObjects(now) {
+    const ug = state.underground;
+    const drawables = [
+        ...(ug.resources || []).filter(item => item.hp > 0).map(item => ({ y: item.y, draw: () => drawUndergroundResource(item) })),
+        ...(ug.objects || []).map(item => ({ y: item.y, draw: () => drawUndergroundObject(item) })),
+        ...(ug.enemies || []).filter(item => item.hp > 0 || (item.deathAt && now - item.deathAt < 900)).map(item => ({ y: item.y, draw: () => drawMineCaveMonster(item) })),
+    ];
+    drawables.sort((a, b) => a.y - b.y).forEach(item => item.draw());
+}
+
+function drawUndergroundResource(resource) {
+    const x = worldX(resource.x);
+    const y = worldY(resource.y);
+    if (resource.kind === 'wallCrystal') {
+        drawWallCrystal(resource, x, y);
+        if (resource.hp < resource.maxHp) drawMiniBar(x, y - 34, resource.hp / resource.maxHp, '#b77dff');
+        return;
+    }
+    const rect = undergroundResourceCollisionRect(resource);
+    const w = rect.w;
+    const h = rect.h;
+    drawShadow(x, y + h * 0.38, w * 0.72, 6);
+    if (resource.kind === 'coalSeam') {
+        drawPixelRockCluster(x, y, w, h, ['#2c333d', '#47515c', '#171d24'], ['#6f7b88', '#a8b3bd']);
+        ctx.fillStyle = '#c5d6df';
+        ctx.fillRect(x + w * 0.18, y - h * 0.28, w * 0.12, h * 0.08);
+    } else if (resource.kind === 'ironVein') {
+        drawPixelRockCluster(x, y, w, h, ['#48515a', '#66737f', '#2f3945'], ['#c5d6df', '#7dcbe8']);
+    } else if (resource.kind === 'crystalVein') {
+        drawPixelRockCluster(x, y, w, h, ['#3a3150', '#48515a', '#202a33'], ['#b77dff', '#f2ddff', '#7dcbe8']);
+        ctx.fillStyle = 'rgba(183,125,255,0.18)';
+        ctx.fillRect(x - w * 0.38, y - h * 0.58, w * 0.76, 4);
+    } else if (resource.kind === 'coreCluster') {
+        drawPixelRockCluster(x, y, w, h, ['#303946', '#66737f', '#202a33'], ['#ffd166', '#b77dff']);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillRect(x - 7, y - 7, 14, 14);
+        ctx.fillStyle = '#fff3b0';
+        ctx.fillRect(x - 3, y - 3, 6, 6);
+    } else if (resource.kind === 'fangGeode') {
+        drawPixelRockCluster(x, y, w, h, ['#31404c', '#66737f', '#202a33'], ['#f2ddff', '#b77dff', '#ffffff']);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x + 10, y - 16, 8, 18);
+    } else if (resource.kind === 'mireCoreCluster') {
+        drawPixelRockCluster(x, y, w, h, ['#263f34', '#6d5438', '#1b2420'], ['#8cff66', '#ffd166']);
+        ctx.fillStyle = '#8cff66';
+        ctx.fillRect(x - 6, y - 8, 12, 16);
+    } else if (resource.kind === 'shadowOreVein') {
+        drawPixelRockCluster(x, y, w, h, ['#171326', '#34204a', '#0b0912'], ['#6f4cc2', '#d8c4ff']);
+        ctx.fillStyle = 'rgba(111,76,194,0.32)';
+        ctx.fillRect(x - w * 0.34, y - h * 0.44, w * 0.68, 4);
+    } else if (resource.kind === 'boneDeposit') {
+        drawPixelRockCluster(x, y, w, h, ['#4b463c', '#6d6656', '#2f2a24'], ['#d8d0bd', '#fff3d0']);
+    } else {
+        drawPixelRockCluster(x, y, w, h, ['#48515a', '#66737f', '#303946'], ['#9fb3c8']);
+    }
+    if (resource.hp < resource.maxHp) drawMiniBar(x, y - h / 2 - 16, resource.hp / resource.maxHp, resource.kind === 'crystalVein' || resource.kind === 'coreCluster' ? '#b77dff' : '#ffd166');
+}
+
+function drawPixelRockCluster(x, y, w, h, rockColors, veinColors = []) {
+    ctx.fillStyle = rockColors[2] || rockColors[0];
+    ctx.fillRect(x - w * 0.42, y - h * 0.18, w * 0.84, h * 0.54);
+    ctx.fillStyle = rockColors[0];
+    ctx.fillRect(x - w * 0.5, y - h * 0.05, w * 0.38, h * 0.38);
+    ctx.fillRect(x - w * 0.12, y - h * 0.32, w * 0.46, h * 0.58);
+    ctx.fillStyle = rockColors[1] || rockColors[0];
+    ctx.fillRect(x - w * 0.32, y - h * 0.36, w * 0.28, h * 0.24);
+    ctx.fillRect(x + w * 0.12, y - h * 0.06, w * 0.35, h * 0.26);
+    if (veinColors.length) {
+        ctx.fillStyle = veinColors[0];
+        ctx.fillRect(x - w * 0.22, y - h * 0.22, w * 0.12, h * 0.48);
+        ctx.fillRect(x + w * 0.1, y - h * 0.33, w * 0.16, h * 0.34);
+        ctx.fillStyle = veinColors[1] || veinColors[0];
+        ctx.fillRect(x - w * 0.16, y - h * 0.16, w * 0.06, h * 0.2);
+        ctx.fillRect(x + w * 0.17, y - h * 0.26, w * 0.06, h * 0.14);
+        if (veinColors[2]) {
+            ctx.fillStyle = veinColors[2];
+            ctx.fillRect(x + w * 0.28, y - h * 0.02, w * 0.08, h * 0.14);
+        }
+    }
+}
+
+function drawUndergroundObject(object) {
+    const x = worldX(object.x);
+    const y = worldY(object.y);
+    if (object.kind === 'exit') {
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(x - 42, y - 28, 84, 56);
+        ctx.fillStyle = '#66737f';
+        ctx.fillRect(x - 48, y + 20, 96, 8);
+    } else if (object.kind === 'wallCrystal') {
+        drawWallCrystal(object, x, y);
+    } else if (object.kind === 'mineChest') {
+        drawShadow(x, y + 12, 46, 8);
+        ctx.fillStyle = object.lockedByBoss && state.underground.enemies.some(enemy => enemy.boss && enemy.hp > 0) ? '#303946' : '#5a341d';
+        ctx.fillRect(x - 28, y - 16, 56, 32);
+        ctx.fillStyle = object.lockedByBoss ? '#b77dff' : '#ffd166';
+        ctx.fillRect(x - 6, y - 5, 12, 10);
+    } else if (object.kind === 'collapse' && object.hp > 0) {
+        ctx.fillStyle = '#66737f';
+        ctx.fillRect(x - (object.w || 116) / 2, y - (object.h || 58) / 2, object.w || 116, object.h || 58);
+        ctx.fillStyle = '#9fb3c8';
+        ctx.fillRect(x - 34, y - 35, 26, 18);
+        ctx.fillRect(x + 8, y - 28, 36, 20);
+        drawMiniBar(x, y - 52, object.hp / object.maxHp, '#d8e5f2');
+    } else if (object.kind === 'railTracks') {
+        ctx.strokeStyle = '#66737f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 44, y - 18);
+        ctx.lineTo(x + 44, y + 12);
+        ctx.moveTo(x - 42, y - 2);
+        ctx.lineTo(x + 42, y + 28);
+        ctx.stroke();
+        ctx.fillStyle = '#5a341d';
+        for (let i = -3; i <= 3; i++) ctx.fillRect(x + i * 14 - 4, y + i * 5 + 2, 8, 18);
+    } else if (object.kind === 'abandonedCamp') {
+        drawShadow(x, y + 10, 54, 8);
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - 30, y - 8, 60, 16);
+        ctx.fillStyle = object.searched ? '#6d5438' : '#d8c08a';
+        ctx.fillRect(x - 18, y - 22, 36, 18);
+        ctx.fillStyle = '#303946';
+        ctx.fillRect(x + 14, y - 18, 18, 22);
+    } else if (object.kind === 'batNest' || object.kind === 'brokenBatNest') {
+        ctx.fillStyle = object.kind === 'brokenBatNest' ? '#20242b' : '#303946';
+        ctx.fillRect(x - 28, y - 20, 56, 28);
+        ctx.fillStyle = '#66737f';
+        ctx.fillRect(x - 18, y - 28, object.kind === 'brokenBatNest' ? 22 : 36, 14);
+        ctx.fillStyle = '#7dcbe8';
+        if (object.kind !== 'brokenBatNest') ctx.fillRect(x - 4, y - 14, 8, 5);
+        if (object.hp > 0 && object.hp < object.maxHp) drawMiniBar(x, y - 40, object.hp / object.maxHp, '#ff6b6b');
+    } else if (object.kind === 'crystalEggs') {
+        drawShadow(x, y + 12, 42, 6);
+        ctx.fillStyle = '#48515a';
+        ctx.fillRect(x - 24, y - 8, 48, 18);
+        ctx.fillStyle = '#b77dff';
+        ctx.fillRect(x - 15, y - 22, 10, 20);
+        ctx.fillRect(x + 2, y - 28, 12, 26);
+        ctx.fillStyle = '#f2ddff';
+        ctx.fillRect(x + 6, y - 22, 4, 12);
+    }
+}
+
+function drawWallCrystal(object, x, y) {
+    ctx.fillStyle = 'rgba(183,125,255,0.22)';
+    ctx.fillRect(x - 22, y - 20, 44, 6);
+    ctx.fillStyle = '#48515a';
+    ctx.fillRect(x - 20, y - 8, 40, 16);
+    ctx.fillStyle = object.color || '#b77dff';
+    ctx.fillRect(x - 12, y - 26, 8, 28);
+    ctx.fillRect(x + 2, y - 18, 10, 24);
+    ctx.fillStyle = '#f2ddff';
+    ctx.fillRect(x - 9, y - 21, 3, 12);
+    ctx.fillRect(x + 6, y - 14, 3, 10);
+}
+
+function drawUndergroundLighting(now) {
+    const heldLight = ['torch', 'waxTorch', 'shadowLantern'].includes(selectedHotbarItem());
+    const nightVision = now < state.player.nightVisionUntil;
+    lightCtx.clearRect(0, 0, VIEW.width, VIEW.height);
+    lightCtx.globalCompositeOperation = 'source-over';
+    lightCtx.fillStyle = `rgba(0, 0, 0, ${nightVision ? 0.34 : 0.9})`;
+    lightCtx.fillRect(0, 0, VIEW.width, VIEW.height);
+    lightCtx.globalCompositeOperation = 'destination-out';
+    const drawLight = (x, y, radius, strength = 0.75) => {
+        const sx = worldX(x);
+        const sy = worldY(y);
+        if (sx < -radius || sy < -radius || sx > VIEW.width + radius || sy > VIEW.height + radius) return;
+        const gradient = lightCtx.createRadialGradient(sx, sy, 6, sx, sy, radius);
+        gradient.addColorStop(0, `rgba(255,255,255,${strength})`);
+        gradient.addColorStop(0.55, `rgba(255,255,255,${strength * 0.42})`);
+        gradient.addColorStop(1, 'rgba(255,255,255,0)');
+        lightCtx.fillStyle = gradient;
+        lightCtx.beginPath();
+        lightCtx.arc(sx, sy, radius, 0, Math.PI * 2);
+        lightCtx.fill();
+    };
+    const gearLight = equippedLightProfile();
+    const playerRadius = nightVision ? 290 : Math.max(heldLight ? 205 : 72, gearLight?.radius || 0);
+    const playerStrength = nightVision ? 0.78 : Math.max(heldLight ? 0.68 : 0.62, gearLight?.strength || 0);
+    drawLight(state.player.x, state.player.y, playerRadius, playerStrength);
+    for (const object of state.underground?.objects || []) {
+        if (object.kind === 'crystalEggs') drawLight(object.x, object.y, 105, 0.42);
+    }
+    for (const torch of state.underground?.torches || []) {
+        const light = torchLightProfile(torch);
+        drawLight(light.x, light.y, light.radius, light.strength);
+    }
+    for (const resource of state.underground?.resources || []) {
+        if (resource.hp > 0 && resource.kind === 'wallCrystal') drawLight(resource.x, resource.y, resource.glowRadius || 145, 0.62);
+        if (resource.hp > 0 && (resource.kind === 'crystalVein' || resource.kind === 'coreCluster')) drawLight(resource.x, resource.y, resource.kind === 'coreCluster' ? 150 : 118, 0.42);
+    }
+    for (const enemy of state.underground?.enemies || []) {
+        if (enemy.hp > 0 && isGlowingMineMonster(enemy)) drawLight(enemy.x, enemy.y, enemy.boss ? 170 : 100, enemy.boss ? 0.58 : 0.38);
+    }
+    lightCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(lightCanvas, 0, 0);
+}
+
+function isGlowingMineMonster(enemy) {
+    return enemy.mineKind === 'crystalBug' || enemy.mineKind === 'stoneCrawler' || enemy.boss;
+}
+
+function drawMineCaveInterior(now) {
+    ctx.fillStyle = '#05070a';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    ctx.fillStyle = '#26313b';
+    ctx.fillRect(48, 48, VIEW.width - 96, VIEW.height - 92);
+    ctx.fillStyle = '#141b22';
+    ctx.fillRect(84, 84, VIEW.width - 168, VIEW.height - 166);
+    for (let x = 94; x < VIEW.width - 94; x += 38) {
+        for (let y = 94; y < VIEW.height - 94; y += 38) {
+            ctx.fillStyle = ((x + y) / 38) % 2 ? 'rgba(102,115,127,0.18)' : 'rgba(8,14,21,0.16)';
+            ctx.fillRect(x, y, 34, 34);
+            if ((x * 3 + y) % 152 === 0) {
+                ctx.fillStyle = 'rgba(125,203,232,0.15)';
+                ctx.fillRect(x + 7, y + 8, 12, 4);
+            }
+        }
+    }
+    ctx.fillStyle = '#080d12';
+    ctx.fillRect(48, 48, VIEW.width - 96, 36);
+    ctx.fillRect(48, 48, 36, VIEW.height - 92);
+    ctx.fillRect(VIEW.width - 84, 48, 36, VIEW.height - 92);
+    ctx.fillRect(48, VIEW.height - 82, VIEW.width - 96, 36);
+    ctx.fillStyle = 'rgba(255,209,102,0.1)';
+    ctx.fillRect(104, 104, 54, 5);
+    ctx.fillStyle = '#111820';
+    ctx.fillRect(VIEW.width / 2 - 76, VIEW.height - 82, 152, 36);
+    state.indoor.objects
+        .slice()
+        .sort((a, b) => a.y - b.y)
+        .forEach(drawIndoorObject);
+    for (const torch of state.indoor.building.placedTorches || []) drawIndoorPlacedTorch(torch);
+    drawIndoorPlayer(now);
+    drawIndoorProjectiles();
+    drawIndoorLighting(now);
+    drawIndoorObjectLabels();
+    const heldLight = ['torch', 'waxTorch', 'shadowLantern'].includes(selectedHotbarItem());
+    if (!heldLight && performance.now() >= state.player.nightVisionUntil) {
+        ctx.fillStyle = 'rgba(0,0,0,0.38)';
+        ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    }
+    const target = nearestIndoorObject();
+    if (target) {
+        ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
+        ctx.fillRect(VIEW.width / 2 - 190, VIEW.height - 40, 380, 28);
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 13px "Microsoft YaHei"';
+        ctx.textAlign = 'center';
+        ctx.fillText(indoorPromptText(target), VIEW.width / 2, VIEW.height - 21);
+        ctx.textAlign = 'left';
     }
 }
 
@@ -17859,15 +24908,27 @@ function drawAttackSlash(x, y, dir, now) {
     ctx.translate(handX, handY);
     ctx.rotate(angle);
     if (style === 'thrust' || style === 'stab' || style === 'pick') {
-        const length = range * (style === 'stab' ? 0.68 : 0.88);
+        const length = range;
         ctx.strokeStyle = style === 'pick' ? 'rgba(168, 179, 189, 0.95)' : 'rgba(255, 243, 176, 0.95)';
-        ctx.lineWidth = style === 'stab' ? 4 : 5;
+        ctx.lineWidth = style === 'stab' ? 8 : (style === 'pick' ? 10 : 12);
         ctx.beginPath();
-        ctx.moveTo(8 + progress * 10, 0);
-        ctx.lineTo(length + progress * 14, 0);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(length, 0);
         ctx.stroke();
         ctx.fillStyle = style === 'pick' ? 'rgba(216, 229, 242, 0.85)' : 'rgba(255, 209, 102, 0.85)';
-        ctx.fillRect(length + progress * 14 - 3, -3, 7, 6);
+        ctx.fillRect(length - 3, -3, 7, 6);
+        ctx.restore();
+        return;
+    }
+    if (style === 'rope') {
+        ctx.strokeStyle = 'rgba(215, 242, 138, 0.9)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(range * 0.42, Math.sin(progress * Math.PI) * 28, range, 0);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 243, 176, 0.9)';
+        ctx.fillRect(range - 5, -5, 10, 10);
         ctx.restore();
         return;
     }
@@ -17875,12 +24936,12 @@ function drawAttackSlash(x, y, dir, now) {
         ctx.strokeStyle = 'rgba(255, 243, 176, 0.95)';
         ctx.lineWidth = 8;
         ctx.beginPath();
-        ctx.arc(0, 0, range * 0.58, -1.05 + progress * 0.55, 0.15 + progress * 0.55);
+        ctx.arc(0, 0, range, -1.05 + progress * 0.55, 0.15 + progress * 0.55);
         ctx.stroke();
         ctx.strokeStyle = 'rgba(255, 159, 28, 0.7)';
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(0, 0, range * 0.42, -0.9 + progress * 0.45, -0.08 + progress * 0.45);
+        ctx.arc(0, 0, range * 0.72, -0.9 + progress * 0.45, -0.08 + progress * 0.45);
         ctx.stroke();
         ctx.restore();
         return;
@@ -17888,22 +24949,24 @@ function drawAttackSlash(x, y, dir, now) {
     ctx.strokeStyle = 'rgba(255, 243, 176, 0.95)';
     ctx.lineWidth = 7;
     ctx.beginPath();
-    ctx.arc(0, 0, range * 0.62, -0.85 + progress * 0.35, 0.55 + progress * 0.35);
+    ctx.arc(0, 0, range, -0.85 + progress * 0.35, 0.55 + progress * 0.35);
     ctx.stroke();
     ctx.strokeStyle = 'rgba(255, 159, 28, 0.7)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, range * 0.46, -0.65 + progress * 0.25, 0.42 + progress * 0.25);
+    ctx.arc(0, 0, range * 0.72, -0.65 + progress * 0.25, 0.42 + progress * 0.25);
     ctx.stroke();
     ctx.restore();
 }
 
 function drawParticles() {
+    const scene = currentSceneKey();
     for (const p of state.particles) {
+        if ((p.scene || 'surface') !== scene) continue;
         const alpha = clamp(p.life / 0.6, 0, 1);
         ctx.globalAlpha = alpha;
         ctx.fillStyle = p.color;
-        ctx.fillRect(worldX(p.x), worldY(p.y), p.size, p.size);
+        ctx.fillRect(sceneX(p.x), sceneY(p.y), p.size, p.size);
     }
     ctx.globalAlpha = 1;
 }
@@ -17911,13 +24974,14 @@ function drawParticles() {
 function drawFloatTexts() {
     ctx.textAlign = 'center';
     ctx.font = 'bold 16px "Microsoft YaHei"';
+    const scene = currentSceneKey();
     for (const t of state.floatTexts) {
-        if (!!t.indoor !== !!state.indoor) continue;
+        if ((t.scene || (t.indoor ? 'indoor' : 'surface')) !== scene) continue;
         ctx.globalAlpha = clamp(t.life / 0.85, 0, 1);
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillText(t.text, worldX(t.x) + 1, worldY(t.y) + 1);
+        ctx.fillText(t.text, sceneX(t.x) + 1, sceneY(t.y) + 1);
         ctx.fillStyle = t.color;
-        ctx.fillText(t.text, worldX(t.x), worldY(t.y));
+        ctx.fillText(t.text, sceneX(t.x), sceneY(t.y));
     }
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
@@ -17944,18 +25008,18 @@ function drawThrowablePreview() {
     for (let i = 0; i <= 12; i++) {
         const t = i / 12;
         const arc = Math.sin(t * Math.PI) * 42;
-        const x = worldX(lerp(start.x, target.x, t));
-        const y = worldY(lerp(start.y, target.y, t) - arc);
+        const x = sceneX(lerp(start.x, target.x, t));
+        const y = sceneY(lerp(start.y, target.y, t) - arc);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
     }
     ctx.stroke();
     ctx.setLineDash([]);
-    const wet = terrainInfoAt(target.x, target.y).kind === 'water';
+    const wet = !state.indoor && !state.underground && terrainInfoAt(target.x, target.y).kind === 'water';
     ctx.fillStyle = wet ? 'rgba(159, 179, 200, 0.18)' : 'rgba(255, 159, 28, 0.18)';
     ctx.strokeStyle = wet ? 'rgba(216, 229, 242, 0.85)' : 'rgba(255, 209, 102, 0.95)';
     ctx.beginPath();
-    ctx.arc(worldX(target.x), worldY(target.y), wet ? 82 : 138, 0, Math.PI * 2);
+    ctx.arc(sceneX(target.x), sceneY(target.y), wet ? 82 : 138, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -17964,27 +25028,28 @@ function drawThrowablePreview() {
 function drawDirectRangedPreview() {
     const aim = state.player.rangedAim;
     if (!aim) return;
-    const ammo = directRangedAmmoFor(aim.key, aim.ammo);
-    if (!ammo) return;
+    const staffCast = isStaffWeapon(aim.key);
+    const ammo = staffCast ? '' : directRangedAmmoFor(aim.key, aim.ammo);
+    if (!staffCast && !ammo) return;
     const charge = directRangedCharge(aim, performance.now());
     const dir = currentAimDir();
-    const range = aim.key === 'slingshot' ? (150 + charge * 240) : (230 + charge * 390);
+    const range = staffCast ? (210 + charge * 280) : (aim.key === 'slingshot' ? (150 + charge * 240) : (230 + charge * 390));
     const start = { x: state.player.x, y: state.player.y - 10 };
     const end = { x: start.x + dir.x * range, y: start.y + dir.y * range };
     ctx.save();
-    ctx.strokeStyle = aim.key === 'slingshot' ? 'rgba(216, 229, 242, 0.68)' : 'rgba(255, 209, 102, 0.72)';
+    ctx.strokeStyle = staffCast ? `${staffProjectileColor(aim.key)}b8` : (aim.key === 'slingshot' ? 'rgba(216, 229, 242, 0.68)' : 'rgba(255, 209, 102, 0.72)');
     ctx.lineWidth = 2 + charge * 2;
-    ctx.setLineDash(aim.key === 'slingshot' ? [5, 8] : [12, 6]);
+    ctx.setLineDash(aim.key === 'slingshot' ? [5, 8] : (staffCast ? [8, 5] : [12, 6]));
     ctx.beginPath();
-    ctx.moveTo(worldX(start.x), worldY(start.y));
-    ctx.lineTo(worldX(end.x), worldY(end.y));
+    ctx.moveTo(sceneX(start.x), sceneY(start.y));
+    ctx.lineTo(sceneX(end.x), sceneY(end.y));
     ctx.stroke();
     ctx.setLineDash([]);
-    const barX = worldX(state.player.x) - 28;
-    const barY = worldY(state.player.y - state.player.radius - 34);
+    const barX = sceneX(state.player.x) - 28;
+    const barY = sceneY(state.player.y - state.player.radius - 34);
     ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
     ctx.fillRect(barX, barY, 56, 7);
-    ctx.fillStyle = aim.key === 'slingshot' ? '#d8e5f2' : '#ffd166';
+    ctx.fillStyle = staffCast ? staffProjectileColor(aim.key) : (aim.key === 'slingshot' ? '#d8e5f2' : '#ffd166');
     ctx.fillRect(barX, barY, 56 * charge, 7);
     ctx.strokeStyle = '#101820';
     ctx.strokeRect(barX, barY, 56, 7);
@@ -17995,8 +25060,8 @@ function drawItemUseProgress() {
     const use = state.player.usingItem;
     if (!use) return;
     const progress = clamp((performance.now() - use.startedAt) / use.duration, 0, 1);
-    const x = state.indoor ? state.player.x : worldX(state.player.x);
-    const y = state.indoor ? state.player.y - state.player.radius - 28 : worldY(state.player.y - state.player.radius - 28);
+    const x = sceneX(state.player.x);
+    const y = sceneY(state.player.y - state.player.radius - 28);
     ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
     ctx.fillRect(x - 34, y, 68, 8);
     ctx.fillStyle = '#9cffb7';
@@ -18015,8 +25080,8 @@ function drawPlacementPreview() {
     const item = selectedHotbarItem();
     const preview = placementPreviewForItem(item);
     if (!preview || !state.inventory[item]) return;
-    const x = worldX(preview.x);
-    const y = worldY(preview.y);
+    const x = sceneX(preview.x);
+    const y = sceneY(preview.y);
     ctx.save();
     ctx.globalAlpha = 0.72;
     ctx.fillStyle = preview.valid ? 'rgba(94, 224, 137, 0.22)' : 'rgba(255, 107, 107, 0.22)';
@@ -18026,10 +25091,10 @@ function drawPlacementPreview() {
     ctx.ellipse(x, y + 2, preview.radius, Math.max(6, preview.radius * 0.42), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    if (item === 'torch') {
+    if (['torch', 'waxTorch', 'shadowLantern'].includes(item)) {
         ctx.fillStyle = '#8a5a32';
         ctx.fillRect(x - 2, y - 22, 4, 24);
-        ctx.fillStyle = preview.valid ? '#ffd166' : '#ff6b6b';
+        ctx.fillStyle = preview.valid ? (item === 'shadowLantern' ? '#b77dff' : '#ffd166') : '#ff6b6b';
         ctx.fillRect(x - 5, y - 30, 10, 8);
     } else if (item === 'bambooFence') {
         ctx.strokeStyle = preview.valid ? '#d7f28a' : '#ffb3b3';
@@ -18104,7 +25169,15 @@ function drawNightOverlay() {
         lightCtx.arc(sx, sy, light.radius, 0, Math.PI * 2);
         lightCtx.fill();
     };
-    drawLight({ x: state.player.x, y: state.player.y, radius: performance.now() < state.player.nightVisionUntil ? 270 : (selectedHotbarItem() === 'torch' || state.equipment.utility === '火把' ? 150 : 62), strength: performance.now() < state.player.nightVisionUntil ? 0.68 : 0.36 });
+    const gearLight = equippedLightProfile();
+    const nightVision = performance.now() < state.player.nightVisionUntil;
+    const heldLight = ['torch', 'waxTorch', 'shadowLantern'].includes(selectedHotbarItem()) || state.equipment.utility === '火把';
+    drawLight({
+        x: state.player.x,
+        y: state.player.y,
+        radius: nightVision ? 270 : Math.max(heldLight ? 150 : 62, gearLight?.radius || 0),
+        strength: nightVision ? 0.68 : Math.max(heldLight ? 0.48 : 0.36, gearLight?.strength || 0),
+    });
     drawLight({ x: state.camp.x, y: state.camp.y, radius: state.camp.repaired ? 180 : 85, strength: 0.58 });
     for (const village of allVillages()) {
         for (const building of village.buildings || []) {
@@ -18123,7 +25196,7 @@ function drawNightOverlay() {
         drawLight({ x: lamp.x, y: lamp.y - 24, radius: 145, strength: 0.54 });
     }
     for (const torch of state.placedTorches) {
-        drawLight({ x: torch.x, y: torch.y, radius: torch.kind === 'waxTorch' ? 150 : 125, strength: torch.kind === 'shadowLantern' ? 0.42 : 0.56 });
+        drawLight(torchLightProfile(torch));
     }
     for (const fire of state.placedStations) {
         if (fire.kind === 'campfire') drawLight({ x: fire.x, y: fire.y, radius: 150, strength: 0.55 });
@@ -18135,10 +25208,10 @@ function drawNightOverlay() {
 function drawHarvestProgress() {
     const p = state.player;
     const node = p.harvestTarget;
-    if (!node || node.hp <= 0 || !keys.has('e')) return;
+    if (!node || node.hp <= 0 || (!keys.has('e') && !touchInput.interact)) return;
     const progress = clamp(1 - node.hp / node.maxHp, 0, 1);
-    const x = worldX(node.x);
-    const y = worldY(node.y - node.radius - 16);
+    const x = sceneX(node.x);
+    const y = sceneY(node.y - (node.radius || 24) - 16);
     ctx.fillStyle = 'rgba(8, 14, 21, 0.78)';
     ctx.fillRect(x - 30, y, 60, 8);
     ctx.fillStyle = harvestBlockReason(node) ? '#ff6b6b' : '#ffd166';
@@ -18146,6 +25219,56 @@ function drawHarvestProgress() {
     ctx.strokeStyle = '#101820';
     ctx.lineWidth = 2;
     ctx.strokeRect(x - 30, y, 60, 8);
+}
+
+function playerStatusEffects(now = performance.now()) {
+    const p = state.player;
+    const effects = [
+        { label: '迅捷', until: p.speedBoostUntil, color: '#ffd166', bg: 'rgba(82,61,20,0.84)' },
+        { label: '再生', until: p.regenUntil, color: '#9cffb7', bg: 'rgba(22,74,45,0.84)' },
+        { label: '蜂王浆', until: p.royalJellyUntil, color: '#fff0a8', bg: 'rgba(106,59,31,0.86)' },
+        { label: '硬皮', until: p.ironSkinUntil, color: '#d8e5f2', bg: 'rgba(38,56,77,0.86)' },
+        { label: '夜视', until: p.nightVisionUntil, color: '#d7bcff', bg: 'rgba(45,36,84,0.86)' },
+        { label: '轻身', until: p.jumpPotionUntil, color: '#7dcbe8', bg: 'rgba(32,76,103,0.84)' },
+        { label: '抗毒', until: p.poisonResistUntil, color: '#d6ff9c', bg: 'rgba(36,88,42,0.84)' },
+        { label: '暗影', until: p.shadowUntil, color: '#d8c4ff', bg: 'rgba(36,26,58,0.86)' },
+        { label: '中毒', until: p.poisonUntil, color: '#9cff7a', bg: 'rgba(42,88,38,0.86)' },
+        { label: '眩晕', until: p.dizzyUntil, color: '#ffd166', bg: 'rgba(120,85,28,0.86)' },
+        { label: '迟缓', until: p.slowUntil, color: '#7dcbe8', bg: 'rgba(32,76,103,0.86)' },
+        { label: '神经毒', until: p.neuroToxinUntil, color: '#d5ffd8', bg: 'rgba(18,67,45,0.86)' },
+        { label: '饥饿毒', until: p.hungerToxinUntil, color: '#cde77b', bg: 'rgba(72,76,32,0.86)' },
+        { label: '虚弱毒', until: p.weakToxinUntil, color: '#8cff66', bg: 'rgba(34,68,42,0.86)' },
+    ];
+    return effects
+        .filter(effect => (effect.until || 0) > now)
+        .map(effect => ({ ...effect, remaining: Math.max(0, effect.until - now) }));
+}
+
+function drawPlayerStatusEffects(now = performance.now()) {
+    const effects = playerStatusEffects(now);
+    if (!effects.length) return;
+    const startX = 500;
+    let x = startX;
+    let y = 18;
+    ctx.font = 'bold 12px "Microsoft YaHei"';
+    ctx.textAlign = 'left';
+    for (const effect of effects) {
+        const seconds = Math.ceil(effect.remaining / 1000);
+        const text = `${effect.label} ${seconds}s`;
+        const width = Math.max(70, ctx.measureText(text).width + 18);
+        if (x + width > VIEW.width - 18) {
+            x = startX;
+            y += 26;
+        }
+        ctx.fillStyle = effect.bg;
+        ctx.fillRect(x, y, width, 21);
+        ctx.strokeStyle = effect.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, 21);
+        ctx.fillStyle = effect.color;
+        ctx.fillText(text, x + 8, y + 15);
+        x += width + 8;
+    }
 }
 
 function drawUiOverlay() {
@@ -18160,7 +25283,7 @@ function drawUiOverlay() {
     ctx.fillStyle = 'rgba(255,255,255,0.76)';
     ctx.font = 'bold 13px "Microsoft YaHei"';
     ctx.fillText('按 I 打开背包 / 合成栏', 30, 120);
-    const prompt = state.indoor ? indoorPromptText(nearestIndoorObject()) : interactPromptText(nearestInteractable());
+    const prompt = state.underground ? undergroundPromptText() : (state.indoor ? indoorPromptText(nearestIndoorObject()) : interactPromptText(nearestInteractable()));
     if (prompt) {
         ctx.fillStyle = 'rgba(8, 14, 21, 0.72)';
         ctx.fillRect(18, 128, 460, 24);
@@ -18168,57 +25291,7 @@ function drawUiOverlay() {
         ctx.font = 'bold 13px "Microsoft YaHei"';
         ctx.fillText(prompt, 30, 145);
     }
-    if (state.player.poisonUntil > performance.now()) {
-        ctx.fillStyle = 'rgba(42, 88, 38, 0.82)';
-        ctx.fillRect(402, 64, 62, 20);
-        ctx.strokeStyle = '#9cff7a';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(402, 64, 62, 20);
-        ctx.fillStyle = '#d9ffd0';
-        ctx.font = 'bold 13px "Microsoft YaHei"';
-        ctx.fillText('中毒', 419, 79);
-    }
-    if (state.player.dizzyUntil > performance.now()) {
-        ctx.fillStyle = 'rgba(120, 85, 28, 0.82)';
-        ctx.fillRect(402, 88, 62, 20);
-        ctx.strokeStyle = '#ffd166';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(402, 88, 62, 20);
-        ctx.fillStyle = '#fff3b0';
-        ctx.font = 'bold 13px "Microsoft YaHei"';
-        ctx.fillText('眩晕', 419, 103);
-    }
-    if ((state.player.slowUntil || 0) > performance.now()) {
-        ctx.fillStyle = 'rgba(32, 76, 103, 0.82)';
-        ctx.fillRect(470, 88, 74, 20);
-        ctx.strokeStyle = '#7dcbe8';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(470, 88, 74, 20);
-        ctx.fillStyle = '#d8f6ff';
-        ctx.font = 'bold 13px "Microsoft YaHei"';
-        ctx.fillText('迟缓50%', 480, 103);
-    }
-    if ((state.player.neuroToxinUntil || 0) > performance.now()) {
-        const flicker = Math.sin(performance.now() / 90) > 0 ? 0.32 : 0.08;
-        ctx.fillStyle = `rgba(0, 0, 0, ${flicker})`;
-        ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-        ctx.fillStyle = '#d5ffd8';
-        ctx.font = 'bold 13px "Microsoft YaHei"';
-        ctx.fillText('神经毒', 552, 103);
-    }
-    if ((state.player.hungerToxinUntil || 0) > performance.now()) {
-        ctx.fillStyle = '#cde77b';
-        ctx.font = 'bold 13px "Microsoft YaHei"';
-        ctx.fillText('饥饿毒', 616, 103);
-    }
-    if ((state.player.weakToxinUntil || 0) > performance.now()) {
-        ctx.fillStyle = '#8cff66';
-        ctx.fillRect(672, 88, 6, 20);
-        ctx.fillRect(666, 94, 18, 6);
-        ctx.fillStyle = '#d9ffd6';
-        ctx.font = 'bold 13px "Microsoft YaHei"';
-        ctx.fillText('虚弱毒', 690, 103);
-    }
+    drawPlayerStatusEffects(performance.now());
     drawCultToxinVisualEffects(performance.now());
     drawHotbar();
 
@@ -18343,10 +25416,11 @@ function drawHotbar() {
         ctx.fillText(String(index + 1), x + 4, y + 12);
         if (state.inventory[key] > 0) {
             drawPixelItemIcon(ctx, key, x + slot / 2, y + 28, 28);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 13px "Microsoft YaHei"';
+            const label = hotbarItemCountText(key);
+            ctx.fillStyle = hotbarItemCountColor(key);
+            ctx.font = isDurableItem(key) ? 'bold 10px "Microsoft YaHei"' : 'bold 13px "Microsoft YaHei"';
             ctx.textAlign = 'right';
-            ctx.fillText(String(state.inventory[key]), x + slot - 5, y + slot - 5);
+            ctx.fillText(label, x + slot - 5, y + slot - 5);
         }
     });
     const selectedKey = hotbarItems[state.selectedHotbar];
@@ -18357,6 +25431,19 @@ function drawHotbar() {
         ctx.fillText(`${RESOURCE_LABELS[selectedKey]}：按 ${state.selectedHotbar + 1} 使用/装备`, VIEW.width / 2, y - 16);
     }
     ctx.restore();
+}
+
+function hotbarItemCountText(key) {
+    if (!isDurableItem(key)) return String(state.inventory[key] || 0);
+    return `${currentDurability(key)}${(state.inventory[key] || 0) > 1 ? `×${state.inventory[key]}` : ''}`;
+}
+
+function hotbarItemCountColor(key) {
+    if (!isDurableItem(key)) return '#ffffff';
+    const ratio = currentDurability(key) / durableMaxForItem(key);
+    if (ratio <= 0.25) return '#ff6b6b';
+    if (ratio <= 0.5) return '#ffd166';
+    return '#9cffb7';
 }
 
 function hotbarLayout() {
@@ -18460,7 +25547,7 @@ function drawGroundContact(x, y, kind) {
 
 function resourceName(kind) {
     if (STUMP_TREE_KIND[kind]) return `${resourceName(STUMP_TREE_KIND[kind])}树桩`;
-    return { tree: '树木', grassOakTree: '平原橡树', meadowBlossomTree: '花冠树', forestOakTree: '森林橡树', birchTree: '白桦树', pineTree: '松树', mapleTree: '枫树', deadTree: '枯树', darkTree: '暗绿树', swampCypressTree: '沼泽柏树', reedWillowTree: '湿地柳树', mineIronwoodTree: '矿脉铁木', ruinsElderTree: '遗迹古树', hardwoodTree: '丛林硬木', buttressRoot: '板根树', jungleLeafPlant: '丛林大叶', jungleVine: '藤蔓', jungleFruitBush: '热带果丛', jungleHerb: '丛林草药', jungleOrchid: '树上兰花', poisonBloom: '毒花', stump: '树桩', woodFence: '木栅栏', rock: '岩石', pebble: '小石子', grass: '草丛', tallGrass: '高草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', toxicMushroom: '毒蘑菇', flower: '野花', meadowFlower: '花海花簇', lotus: '莲花', cactus: '仙人掌', ore: '铁矿', bamboo: '竹子', resinPatch: '树脂', sapPatch: '树液', beehive: '蜂巢', mudClump: '泥块' }[kind] || '资源';
+    return { tree: '树木', grassOakTree: '平原橡树', meadowBlossomTree: '花冠树', forestOakTree: '森林橡树', birchTree: '白桦树', pineTree: '松树', mapleTree: '枫树', deadTree: '枯树', darkTree: '暗绿树', swampCypressTree: '沼泽柏树', reedWillowTree: '湿地柳树', mineIronwoodTree: '矿脉铁木', ruinsElderTree: '遗迹古树', hardwoodTree: '丛林硬木', buttressRoot: '板根树', jungleLeafPlant: '丛林大叶', jungleVine: '藤蔓', jungleFruitBush: '热带果丛', jungleHerb: '丛林草药', jungleOrchid: '树上兰花', poisonBloom: '毒花', stump: '树桩', woodFence: '木栅栏', rock: '岩石', pebble: '小石子', grass: '草丛', tallGrass: '高草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', toxicMushroom: '毒蘑菇', flower: '野花', meadowFlower: '花海花簇', lotus: '莲花', cactus: '仙人掌', cropCarrot: '胡萝卜田', cropCorn: '玉米田', cropTomato: '番茄田', ore: '铁矿', bamboo: '竹子', resinPatch: '树脂', sapPatch: '树液', beehive: '蜂巢', mudClump: '泥块' }[kind] || '资源';
 }
 
 function loop(now) {
@@ -18471,7 +25558,7 @@ function loop(now) {
 
 window.addEventListener('keydown', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'q', 'Q', 'i', 'I', 'Escape', 'Shift'].includes(key)) event.preventDefault();
+    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'q', 'Q', 'k', 'K', 'i', 'I', 'Escape', 'Shift'].includes(key)) event.preventDefault();
     if (key === 'i') {
         toggleInventory();
         return;
@@ -18505,6 +25592,10 @@ window.addEventListener('keydown', event => {
         useSelectedHotbarItem();
         return;
     }
+    if (key === 'k' && !event.repeat) {
+        dismissNearestVillagerFollower();
+        return;
+    }
     if (key === 'e') {
         keys.add(key);
         if (!event.repeat) {
@@ -18516,8 +25607,9 @@ window.addEventListener('keydown', event => {
         attack();
     }
     else if (key === 'r') {
-        state.player.x = state.camp.x + 80;
-        state.player.y = state.camp.y + 40;
+        const point = safeOutdoorPointNear({ x: state.camp.x + 80, y: state.camp.y + 40 }, state.camp, 220);
+        state.player.x = point.x;
+        state.player.y = point.y;
         showToast('已回到营地附近。');
     } else {
         keys.add(key);
@@ -18885,6 +25977,7 @@ function regenerateWilderness(message = '新的随机地图开始了。先收集
     worldSeed = createWorldSeed();
     resetWorldCaches();
     state = createState();
+    ensurePlayerSafeOutdoorPosition();
     showToast(message);
     renderHud();
     requestAnimationFrame(() => document.getElementById('loading-screen')?.classList.add('hidden'));
@@ -18961,6 +26054,7 @@ document.getElementById('inventory-overlay').addEventListener('click', event => 
 
 setupWildernessSettingsUi();
 setupMobileControls();
+ensurePlayerSafeOutdoorPosition();
 renderHud();
 showToast('自由移动探索。靠近资源按 E 采集，空格或鼠标攻击。');
 requestAnimationFrame(() => document.getElementById('loading-screen')?.classList.add('hidden'));
