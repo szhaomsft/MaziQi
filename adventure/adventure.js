@@ -22,6 +22,7 @@ const MAX_VILLAGER_FOLLOWERS = 2;
 const DYNAMIC_SPAWN_MIN_DISTANCE = 560;
 const DYNAMIC_SPAWN_MAX_DISTANCE = 940;
 const ACTIVE_ENEMY_KEEP_DISTANCE = 1750;
+const DEBUG_START_AT_FINAL_BOSS = true;
 const BIOME_TREE_KINDS = [
     'tree', 'grassOakTree', 'meadowBlossomTree', 'forestOakTree', 'birchTree', 'pineTree', 'mapleTree',
     'deadTree', 'darkTree', 'hardwoodTree', 'buttressRoot', 'swampCypressTree', 'reedWillowTree',
@@ -51,6 +52,14 @@ const VILLAGER_HOSTILE_MONSTERS = new Set([
     'jungleSnake', 'vineStalker',
     'swampMireling', 'drySandWasp',
     'ruinsBoneGuard',
+]);
+const FIRE_FEARING_CREATURES = new Set([
+    'bat', 'mineCrystalBat', 'mineBat',
+    'hare', 'deer', 'boar', 'wolf',
+    'bee', 'frog', 'scorpion', 'jungleSnake',
+    'grassRunner', 'tallgrassRaptor', 'meadowMoth',
+    'forestBear', 'bambooPanda', 'birchStag',
+    'pineLynx', 'mapleFox', 'reedCrab', 'drySandWasp',
 ]);
 const keys = new Set();
 const mouse = { x: VIEW.width / 2, y: VIEW.height / 2, down: false, blocking: false };
@@ -82,7 +91,15 @@ let worldRegionsCacheSeed = null;
 let worldRegionsCache = null;
 let villagePathCacheSeed = null;
 let villagePathCache = null;
-let state = createState();
+let state = null;
+let loadingTaskId = 0;
+let gameLoopStarted = false;
+let worldLoading = false;
+let frameCacheId = 0;
+let cachedNearbyVillageKey = '';
+let cachedNearbyVillages = [];
+let cachedVisibleVillageKey = '';
+let cachedVisibleVillages = [];
 
 const RESOURCE_LABELS = {
     wood: '木头',
@@ -126,6 +143,7 @@ const RESOURCE_LABELS = {
     beeStinger: '蜂刺',
     beeswax: '蜂蜡',
     royalJelly: '蜂王浆',
+    royalJellyCore: '蜂王浆核心',
     rabbitFur: '兔毛',
     rabbitFoot: '兔腿',
     antler: '鹿角',
@@ -135,6 +153,8 @@ const RESOURCE_LABELS = {
     scorpionShell: '蝎壳',
     batWing: '蝠翼',
     stoneCore: '石核',
+    crystalCore: '晶核核心',
+    ancientVineCore: '古藤核心',
     shadowShard: '暗影残片',
     shadowEssence: '暗影精华',
     beastClaw: '兽爪',
@@ -235,6 +255,18 @@ const RESOURCE_LABELS = {
     recipeNoteGuard: '武备笔记',
     recipeNoteElder: '古老笔记',
     recipeNoteWorkbench: '工匠笔记',
+    cultNoteDream: '没寄出的家信',
+    cultNoteRootSpeech: '听根日记',
+    cultNoteGreenBottle: '绿瓶封条',
+    cultNoteRootArmor: '根甲碎片',
+    cultNotePriestDiary: '祭司私记',
+    cultNoteRootAltar: '根坛记录',
+    villageNoteFamily: '没寄出的家书',
+    villageNoteDebt: '欠账纸条',
+    villageNoteGuardShift: '守夜排班',
+    villageNoteWeather: '雨季便条',
+    villageNoteMineWarning: '矿洞警告',
+    villageNoteKitchenList: '厨房清单',
     vineRoundShield: '藤编圆盾',
     buttressShield: '板根盾',
     jungleLeafCloak: '丛林叶披肩',
@@ -556,6 +588,8 @@ const ITEM_ICON_TYPES = {
     vineNetTrap: 'trap', toxicVineSnare: 'trap', poisonBambooTrap: 'trap', jungleSalve: 'salve', vineStaminaDrink: 'speed', poisonLeafWrap: 'antidote', jungleTotem: 'jungleLeaf',
     mapleSnack: 'sap', honeyRoastMeat: 'meat', roastMeat: 'meat', key: 'key',
     recipeNoteBlacksmith: 'stationWorkbench', recipeNoteApothecary: 'stationPotion', recipeNoteGuard: 'arrow', recipeNoteElder: 'charm', recipeNoteWorkbench: 'stationWorkbench',
+    cultNoteDream: 'stationWorkbench', cultNoteRootSpeech: 'stationWorkbench', cultNoteGreenBottle: 'stationPotion', cultNoteRootArmor: 'armor', cultNotePriestDiary: 'charm', cultNoteRootAltar: 'charm',
+    villageNoteFamily: 'stationWorkbench', villageNoteDebt: 'stationWorkbench', villageNoteGuardShift: 'arrow', villageNoteWeather: 'stationWorkbench', villageNoteMineWarning: 'pickaxe', villageNoteKitchenList: 'meat',
 };
 Object.assign(ITEM_ICON_TYPES, Object.fromEntries(SIMPLE_WEAPON_DEFS.map(weapon => [weapon.id, weapon.icon])));
 const PIXEL_ICON_PALETTES = {
@@ -978,6 +1012,160 @@ const SPRITES = {
         ],
         map: { o: 'outline', h: 'hair', s: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot' },
     },
+    playerRun1: {
+        w: 16,
+        rows: [
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '....hssssh......',
+            '....hseesh......',
+            '.....ssss.......',
+            '...sbbbbbb......',
+            '...bbggggbb.....',
+            '...bggggggbs....',
+            '....ggggggs.....',
+            '....pp...p......',
+            '...pp....pp.....',
+            '...k......k.....',
+            '..kk......kk....',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot' },
+    },
+    playerRun2: {
+        w: 16,
+        rows: [
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '....hssssh......',
+            '....hseesh......',
+            '.....ssss.......',
+            '......bbbbbbs...',
+            '...bbggggbb.....',
+            '..sbggggggb.....',
+            '...sgggggg......',
+            '.....p...pp.....',
+            '....pp....pp....',
+            '.....k.....k....',
+            '....kk....kk....',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot' },
+    },
+    playerSprint: {
+        w: 16,
+        rows: [
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '....hssssh......',
+            '....hseesh......',
+            '.....ssss.......',
+            '..ssbbbbbb......',
+            '..sbbggggbb.....',
+            '...bggggggbs....',
+            '....ggggggs.....',
+            '...pp...p.......',
+            '..pp.....pp.....',
+            '..k......k......',
+            '.kk.......kk....',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot' },
+    },
+    playerSwim1: {
+        w: 16,
+        rows: [
+            '................',
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '....hssssh......',
+            '.ss.hseesh..ss..',
+            '..ss.ssss.ss....',
+            '....bbbbbb......',
+            '...bggggggb.....',
+            '..wwggggggww....',
+            '.wwwwp..pwwww...',
+            '....pp..pp......',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot', w: 'water2' },
+    },
+    playerSwim2: {
+        w: 16,
+        rows: [
+            '................',
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '..ss.hssssh.ss..',
+            '.ss..hseesh..ss.',
+            '.....ssss.......',
+            '....bbbbbb......',
+            '...bggggggb.....',
+            '.wwwggggggwww...',
+            '...wwp..pww.....',
+            '.....pp..pp.....',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot', w: 'water2' },
+    },
+    playerEat1: {
+        w: 16,
+        rows: [
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '....hssssh......',
+            '....hseeSh......',
+            '.....ssSs.......',
+            '....bbbbbb......',
+            '...bbggggbb.....',
+            '...bggggggb.....',
+            '....gggggg......',
+            '....p....p......',
+            '...pp....pp.....',
+            '...k......k.....',
+            '..kk......kk....',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', S: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot' },
+    },
+    playerEat2: {
+        w: 16,
+        rows: [
+            '................',
+            '.....oooooo.....',
+            '....ohhhhho.....',
+            '....hssssh......',
+            '....hseesh......',
+            '.....sSSs.......',
+            '....bbbSbb......',
+            '...bbggSgbb.....',
+            '...bggggggb.....',
+            '....gggggg......',
+            '....p....p......',
+            '...pp....pp.....',
+            '...k......k.....',
+            '..kk......kk....',
+            '................',
+            '................',
+        ],
+        map: { o: 'outline', h: 'hair', s: 'skin', S: 'skin', e: 'outline', b: 'shirt', g: 'shirt', p: 'pants', k: 'boot' },
+    },
     tree: {
         w: 18,
         rows: [
@@ -1248,46 +1436,83 @@ function breakdownRecipe(def) {
 }
 
 function createTestGearLoadout() {
+    if (DEBUG_START_AT_FINAL_BOSS) {
+        return {
+            inventory: {
+                crystalBlade: 1,
+                stoneCoreHammer: 1,
+                ironPickaxe: 1,
+                crystalArmor: 1,
+                crystalLampHelmet: 1,
+                ironShield: 1,
+                coalBomb: 24,
+                poisonVial: 12,
+                strongBandage: 8,
+                royalJellyPotion: 4,
+                ironSkinPotion: 4,
+                speedPotion: 4,
+                roastMeat: 8,
+                simpleArrow: 60,
+                poisonArrow: 30,
+                royalJellyCore: 1,
+                crystalCore: 1,
+                ancientVineCore: 1,
+            },
+            hotbarItems: ['crystalBlade', 'stoneCoreHammer', 'coalBomb', 'poisonVial', 'strongBandage', 'royalJellyPotion', 'ironSkinPotion', 'speedPotion', 'roastMeat'],
+        };
+    }
     return {
         inventory: {
             stoneAxe: 1,
             stonePickaxe: 1,
-            stoneSickle: 1,
-            ironSword: 1,
-            sinewBow: 1,
-            woodShield: 1,
-            leatherArmor: 1,
-            minerLampHelmet: 1,
-            rabbitCloak: 1,
-            simpleArrow: 24,
-            poisonArrow: 6,
-            coalBomb: 2,
-            honeySalve: 2,
-            bandage: 4,
-            roastMeat: 4,
-            torch: 4,
+            stoneSickle: 0,
+            ironSword: 0,
+            sinewBow: 0,
+            woodShield: 0,
+            leatherArmor: 0,
+            minerLampHelmet: 0,
+            rabbitCloak: 0,
+            simpleArrow: 0,
+            poisonArrow: 0,
+            coalBomb: 0,
+            honeySalve: 0,
+            bandage: 2,
+            roastMeat: 2,
+            torch: 2,
         },
-        hotbarItems: ['ironSword', 'sinewBow', 'stonePickaxe', 'stoneAxe', 'coalBomb', 'honeySalve', 'bandage', 'roastMeat', 'torch'],
+        hotbarItems: ['stoneAxe', 'stonePickaxe', 'bandage', 'roastMeat', 'torch', '', '', '', ''],
     };
 }
 
 function createState() {
     const jungleCult = createJungleCultVillage();
-    const village = createMineVillage() || createVillage(startingForestVillageRegion());
-    activeAdvancedVillage = village;
-    const forestVillage = createVillage(startingForestVillageRegion());
-    const secondVillage = createSecondVillage(village);
-    const thirdVillage = wildernessSettings.fortressEnabled ? createFortressVillage(village, secondVillage) : null;
-    const villages = [jungleCult, village, forestVillage, secondVillage, thirdVillage].filter(Boolean);
+    const plainVillage = createVillage();
+    activeAdvancedVillage = plainVillage;
+    const village = createMineVillage() || plainVillage;
+    const forestVillage = createForestVillage();
+    const secondVillage = createSecondVillage(plainVillage);
+    const thirdVillage = wildernessSettings.fortressEnabled ? createFortressVillage(plainVillage, secondVillage) : null;
+    const villages = [plainVillage, jungleCult, village, forestVillage, secondVillage, thirdVillage].filter(Boolean);
     const resources = createResources(village);
     const waspHives = createWaspHives(resources);
     const spawnDens = createSpawnDens();
     const decorations = createDecorations();
     const jungleRuin = decorations.find(item => item.kind === 'jungleRuin');
     const mineCave = decorations.find(item => item.kind === 'mineCave');
-    const playerSpawn = village.spawn;
+    const ruinsPoint = worldRegionSet().ruins[0];
+    const playerSpawn = DEBUG_START_AT_FINAL_BOSS
+        ? { x: snapToGroundGrid(ruinsPoint.x), y: snapToGroundGrid(ruinsPoint.y + 150) }
+        : (jungleCult?.spawn || village.spawn);
     const enemies = createEnemies(spawnDens);
     if (jungleRuin) enemies.push(createJungleRuinGuardian(jungleRuin));
+    if (DEBUG_START_AT_FINAL_BOSS) {
+        enemies.forEach(enemy => {
+            if (enemy.boss && enemy.kind === 'golem') {
+                enemy.hp = 0;
+                enemy.deathAt = performance.now();
+            }
+        });
+    }
     limitInitialEnemiesNearPlayer(enemies, playerSpawn);
     const testGear = createTestGearLoadout();
     const gameState = {
@@ -1338,16 +1563,16 @@ function createState() {
             meleeCharge: null,
             pendingMeleeCharge: null,
         },
-        inventory: { wood: 0, oakWood: 0, blossomWood: 0, birchWood: 0, pineWood: 0, mapleWood: 0, deadWood: 0, darkWood: 0, cypressWood: 0, willowWood: 0, ironwood: 0, elderWood: 0, buttressWood: 0, bamboo: 0, bambooShard: 0, jungleLeaf: 0, vine: 0, jungleFruit: 0, hardwood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, carrot: 0, corn: 0, tomato: 0, repairKit: 0, jerky: 0, minerRation: 0, vegetableSoup: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, royalJelly: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, shadowShard: 0, shadowEssence: 0, beastClaw: 0, pollenDust: 0, thickFur: 0, reedShell: 0, mireCore: 0, crystalFang: 0, boneShard: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, ironAxe: 0, ironPickaxe: 0, ironSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, minerLampHelmet: 0, crystalLampHelmet: 0, rabbitCloak: 0, scorpionArmor: 0, thickFurCoat: 0, reedShellArmor: 0, mireCoreArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, royalJellyPotion: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0, ...testGear.inventory },
+        inventory: { wood: 0, oakWood: 0, blossomWood: 0, birchWood: 0, pineWood: 0, mapleWood: 0, deadWood: 0, darkWood: 0, cypressWood: 0, willowWood: 0, ironwood: 0, elderWood: 0, buttressWood: 0, bamboo: 0, bambooShard: 0, jungleLeaf: 0, vine: 0, jungleFruit: 0, hardwood: 0, stone: 0, fiber: 0, pebble: 0, berry: 0, herb: 0, mushroom: 0, flower: 0, lotus: 0, cactusFruit: 0, carrot: 0, corn: 0, tomato: 0, repairKit: 0, jerky: 0, minerRation: 0, vegetableSoup: 0, resin: 0, sap: 0, honey: 0, beeStinger: 0, beeswax: 0, royalJelly: 0, royalJellyCore: 0, rabbitFur: 0, rabbitFoot: 0, antler: 0, sinew: 0, frogLeg: 0, frogTongue: 0, scorpionShell: 0, batWing: 0, stoneCore: 0, crystalCore: 0, ancientVineCore: 0, shadowShard: 0, shadowEssence: 0, beastClaw: 0, pollenDust: 0, thickFur: 0, reedShell: 0, mireCore: 0, crystalFang: 0, boneShard: 0, toxicMushroom: 0, mud: 0, ore: 0, coal: 0, hide: 0, meat: 0, slimeGel: 0, fang: 0, venom: 0, crystal: 0, stoneAxe: 0, stonePickaxe: 0, stoneSickle: 0, ironAxe: 0, ironPickaxe: 0, ironSickle: 0, stoneSpear: 0, slingshot: 0, bambooSpear: 0, ironSword: 0, crystalBlade: 0, venomDagger: 0, sinewBow: 0, antlerSpear: 0, stoneCoreHammer: 0, leatherArmor: 0, clothArmor: 0, ironArmor: 0, crystalArmor: 0, minerLampHelmet: 0, crystalLampHelmet: 0, rabbitCloak: 0, scorpionArmor: 0, thickFurCoat: 0, reedShellArmor: 0, mireCoreArmor: 0, woodShield: 0, ironShield: 0, coalBomb: 0, poisonVial: 0, campfire: 0, torch: 0, waxTorch: 0, shadowLantern: 0, bedroll: 0, campCharm: 0, antlerCharm: 0, snare: 0, bambooFence: 0, bambooTrap: 0, beehiveBox: 0, stoneCoreTotem: 0, reedMat: 0, chest: 0, potionTable: 0, workbench: 0, forge: 0, campFlag: 0, potion: 0, honeySalve: 0, royalJellyPotion: 0, nightVisionPotion: 0, jumpPotion: 0, poisonResistPotion: 0, shadowPotion: 0, stew: 0, salve: 0, antidote: 0, speedPotion: 0, regenPotion: 0, ironSkinPotion: 0, bandage: 0, strongBandage: 0, roastMeat: 0, honeyRoastMeat: 0, mapleSnack: 0, resinGlue: 0, simpleArrow: 0, poisonArrow: 0, beeDart: 0, antlerHorn: 0, key: 0, copperCoin: 0, ...testGear.inventory },
         equipment: {
-            tool: '石镐',
-            weapon: '铁剑',
-            armor: '皮甲',
-            armors: { body: '皮甲', cloak: '兔毛披肩', head: '矿灯头盔' },
-            shield: '木盾',
-            attack: 6,
-            range: 68,
-            defense: 3,
+            tool: DEBUG_START_AT_FINAL_BOSS ? '铁镐' : '石斧',
+            weapon: DEBUG_START_AT_FINAL_BOSS ? '魔晶剑' : '徒手',
+            armor: DEBUG_START_AT_FINAL_BOSS ? '魔晶甲' : '无',
+            armors: { body: DEBUG_START_AT_FINAL_BOSS ? '魔晶甲' : '无', cloak: '无', head: DEBUG_START_AT_FINAL_BOSS ? '晶灯头盔' : '无' },
+            shield: DEBUG_START_AT_FINAL_BOSS ? '铁盾' : '无',
+            attack: DEBUG_START_AT_FINAL_BOSS ? 9 : 1,
+            range: DEBUG_START_AT_FINAL_BOSS ? 82 : 32,
+            defense: DEBUG_START_AT_FINAL_BOSS ? 6 : 0,
             utility: '无',
         },
         resources,
@@ -1397,13 +1622,16 @@ function createState() {
         learnedRecipeTeachers: {},
         completedRecipeTasks: {},
         foundRecipeNotes: {},
+        generatedStoryNotes: {},
+        readStoryNotes: {},
         indoor: null,
         villageReputation: 2,
         villageTasks: createVillageTasks(),
+        storyCores: DEBUG_START_AT_FINAL_BOSS ? { royalJellyCore: true, crystalCore: true, ancientVineCore: true } : {},
         wolfPacks: createWolfPackStates(),
         timeOfDay: 0.28,
         dayLength: wildernessSettings.dayLength,
-        quest: 'collect-basic',
+        quest: DEBUG_START_AT_FINAL_BOSS ? 'final-altar' : 'collect-basic',
         win: false,
         lose: false,
         deathStartedAt: 0,
@@ -1423,9 +1651,17 @@ function startingForestVillageRegion() {
         y: forest.y,
         radius: Math.max(520, Math.min(760, forest.radius * 0.46)),
         seed: (forest.seed || 115) + 13.37,
-        tier: 'advanced',
+        tier: 'forest',
         preferredSkin: 'forest',
     };
+}
+
+function createForestVillage() {
+    const village = createVillage(startingForestVillageRegion());
+    village.tier = 'forest';
+    village.skin = village.skin || 'forest';
+    village.layoutName = 'forest-lodge';
+    return village;
 }
 
 function createStartingVillagerFollowers(village, player) {
@@ -1790,20 +2026,27 @@ function createSecondVillage(primary) {
 }
 
 function createMineVillage(primary = null) {
+    const target = mineVillageRegion();
+    if (!target) return null;
+    const village = createVillage(target);
+    village.layoutName = 'mine-union';
+    village.tier = 'mine';
+    village.skin = 'mine';
+    return village;
+}
+
+function mineVillageRegion() {
     const regions = worldRegionSet();
     const mine = (regions.mine || []).slice().sort((a, b) => b.radius - a.radius)[0];
     if (!mine) return null;
-    const target = {
+    return {
         x: mine.x,
         y: mine.y,
         radius: Math.max(500, Math.min(760, mine.radius * 0.5)),
         seed: (mine.seed || 10) + 431,
-        tier: 'advanced',
+        tier: 'mine',
         preferredSkin: 'mine',
     };
-    const village = createVillage(target);
-    village.layoutName = 'mine-union';
-    return village;
 }
 
 function fortressWallThickness() {
@@ -1883,6 +2126,8 @@ function createVillageRoadLamps(villages) {
 
 function villageDisplayName(village) {
     if (village?.tier === 'jungleCult') return '丛林教派';
+    if (isMineVillage(village)) return '矿区村';
+    if (isForestVillage(village)) return '林地村';
     if (village?.tier === 'fortress') return '铁堡村';
     if (village?.tier === 'basic') return '低级村';
     return '高级村';
@@ -2077,6 +2322,40 @@ function roadVillageEndpoint(village) {
 
 function allVillages() {
     return state?.villages?.length ? state.villages : (state?.village ? [state.village] : []);
+}
+
+function activeVillages(margin = 1250) {
+    return allVillages().filter(village => isVillageActive(village, margin));
+}
+
+function nearbyVillagesForPoint(point, margin = 1000) {
+    if (!point) return [];
+    const key = `${frameCacheId}:${Math.floor(point.x / 192)}:${Math.floor(point.y / 192)}:${Math.round(margin)}`;
+    if (key === cachedNearbyVillageKey) return cachedNearbyVillages;
+    cachedNearbyVillageKey = key;
+    cachedNearbyVillages = allVillages().filter(village => distance(point, village) <= (village.radius || 0) + margin + 280);
+    return cachedNearbyVillages;
+}
+
+function visibleVillages(margin = 180) {
+    const key = `${frameCacheId}:${Math.floor(camera.x / 192)}:${Math.floor(camera.y / 192)}:${Math.round(margin)}`;
+    if (key === cachedVisibleVillageKey) return cachedVisibleVillages;
+    cachedVisibleVillageKey = key;
+    cachedVisibleVillages = allVillages().filter(village => isNearView(village, (village.radius || 0) + margin + 240));
+    return cachedVisibleVillages;
+}
+
+function isVillageActive(village, margin = 1250) {
+    if (!village || !state?.player) return false;
+    if (state.indoor?.building?.village === village) return true;
+    return distance(state.player, village) <= (village.radius || 0) + margin;
+}
+
+function shouldUpdateOutdoorNpc(npc) {
+    if (!npc || npc.kind === 'totem') return true;
+    if (npc.follower || npc.playerAggro || npc.animalAggressor || npc.villagerAggressor || npc.villageWarTargetVillage) return true;
+    if (distance(npc, state.player) < 1600) return true;
+    return isVillageActive(homeVillageFor(npc), 950);
 }
 
 function homeVillageFor(npc) {
@@ -3045,6 +3324,7 @@ function mineCaveMonster(mineKind, label, x, y) {
         mineBat: { hp: 18, attack: 3, speed: 150, radius: 16, drop: { batWing: 1, coal: 1 } },
         crystalBug: { hp: 34, attack: 4, speed: 82, radius: 19, drop: { crystalFang: 1, ore: 2 } },
         stoneCrawler: { hp: 42, attack: 5, speed: 68, radius: 21, drop: { stoneCore: 1, stone: 4 } },
+        hollowArtisanKing: { hp: 520, attack: 12, speed: 118, radius: 38, drop: {} },
     }[mineKind];
     return {
         kind: 'mineMonster',
@@ -3081,6 +3361,134 @@ function updateMineCave(dt, now) {
     }
     for (const monster of aliveMonsters) updateMineCaveMonster(monster, dt, now);
     state.indoor.objects = objects.filter(object => object.kind !== 'mineMonster' || object.hp > 0 || (object.deathAt && now - object.deathAt < 900));
+}
+
+function updateFinalBossArena(dt, now) {
+    if (state.indoor?.building?.kind !== 'finalBossArena') return;
+    const boss = finalBoss();
+    if (!boss) return;
+    updateMineMonsterStatusEffects(boss, dt, now);
+    if (boss.hp <= 0) {
+        completeFinalBossFight(now);
+        return;
+    }
+    updateHollowArtisanKing(boss, dt, now);
+}
+
+function finalBoss() {
+    return state.indoor?.objects?.find(object => object.finalBoss && object.hp > 0);
+}
+
+function updateHollowArtisanKing(boss, dt, now) {
+    if (boss.knockX || boss.knockY) {
+        moveIndoorEntitySafely(boss, (boss.knockX || 0) * dt * 0.35, (boss.knockY || 0) * dt * 0.35);
+        boss.knockX *= Math.pow(0.035, dt);
+        boss.knockY *= Math.pow(0.035, dt);
+    }
+    const p = state.player;
+    const phase = boss.hp < boss.maxHp * 0.34 ? 3 : (boss.hp < boss.maxHp * 0.67 ? 2 : 1);
+    if ((boss.castingUntil || 0) <= now) boss.castingUntil = 0;
+    if (phase !== boss.phase) {
+        boss.phase = phase;
+        boss.nextSkillAt = Math.min(boss.nextSkillAt || now, now + 260);
+        addFloatText(phase === 2 ? '蜂群核心' : '古藤核心', boss.x, boss.y - 78, '#ffd166');
+        spawnBurst(boss.x, boss.y - 26, phase === 2 ? '#ffd166' : '#8cff66', 28, 220, 52);
+    }
+    const dist = distance(boss, p);
+    const dir = normalize(p.x - boss.x, p.y - boss.y);
+    boss.facing = dir.x >= 0 ? 1 : -1;
+    if (dist > 96 && !boss.castingUntil) {
+        moveIndoorEntitySafely(boss, dir.x * boss.speed * (phase === 2 ? 1.28 : 1.05) * dt, dir.y * boss.speed * (phase === 2 ? 1.28 : 1.05) * dt);
+    }
+    if (dist < boss.radius + p.radius + 16 && now >= (boss.nextAttackAt || 0)) {
+        boss.nextAttackAt = now + 760;
+        boss.attackFlashUntil = now + 220;
+        applyEnemyDamageToTarget(boss, p, boss.attack + phase, phase === 3 ? '藤根重击' : '晶臂挥击', now);
+        return;
+    }
+    if (now >= (boss.nextSkillAt || 0)) {
+        boss.nextSkillAt = now + (phase === 1 ? 1250 : (phase === 2 ? 980 : 820));
+        if (phase === 1) castHollowKingCrystalSpike(boss, now);
+        else if (phase === 2) castHollowKingBeeVolley(boss, now);
+        else castHollowKingVineSnare(boss, now);
+    }
+}
+
+function castHollowKingCrystalSpike(boss, now) {
+    const p = state.player;
+    boss.castingUntil = now + 360;
+    boss.attackFlashUntil = now + 360;
+    const dir = normalize(p.x - boss.x, p.y - boss.y);
+    for (let i = 1; i <= 6; i++) {
+        const point = { x: boss.x + dir.x * i * 70, y: boss.y + dir.y * i * 70 };
+        spawnBurst(point.x, point.y, '#b77dff', 8, 90, 18);
+        if (distance(point, p) < p.radius + 42) {
+            applyEnemyDamageToTarget(boss, p, 8, '晶刺', now);
+            p.slowUntil = Math.max(p.slowUntil || 0, now + 900);
+        }
+    }
+    addFloatText('晶刺', boss.x, boss.y - 66, '#d7bcff');
+}
+
+function castHollowKingBeeVolley(boss, now) {
+    const p = state.player;
+    boss.castingUntil = now + 280;
+    boss.attackFlashUntil = now + 280;
+    const count = boss.phase >= 3 ? 9 : 7;
+    for (let i = 0; i < count; i++) {
+        const angle = Math.atan2(p.y - boss.y, p.x - boss.x) + (i - (count - 1) / 2) * 0.15;
+        state.indoorProjectiles ||= [];
+        state.indoorProjectiles.push({
+            kind: 'beeDart',
+            owner: 'enemy',
+            indoor: true,
+            x: boss.x,
+            y: boss.y - 18,
+            startX: boss.x,
+            startY: boss.y - 18,
+            targetX: clamp(boss.x + Math.cos(angle) * 520, 90, VIEW.width - 90),
+            targetY: clamp(boss.y + Math.sin(angle) * 520, 90, VIEW.height - 90),
+            dir: { x: Math.cos(angle), y: Math.sin(angle) },
+            startedAt: now,
+            duration: 640,
+            profile: { damage: 5, color: '#ffd166', owner: 'enemy', effect: boss.phase >= 3 ? 'poison' : '' },
+            splashRadius: 0,
+        });
+    }
+    addFloatText('蜂群弹幕', boss.x, boss.y - 66, '#ffd166');
+}
+
+function castHollowKingVineSnare(boss, now) {
+    const p = state.player;
+    boss.castingUntil = now + 420;
+    boss.attackFlashUntil = now + 420;
+    const anchors = [
+        { x: p.x, y: p.y },
+        { x: p.x + 72, y: p.y - 24 },
+        { x: p.x - 72, y: p.y + 24 },
+        { x: boss.x + 130, y: boss.y + 70 },
+        { x: boss.x - 130, y: boss.y + 70 },
+    ];
+    for (const point of anchors) {
+        spawnBurst(point.x, point.y, '#5fae49', 10, 80, 28);
+        if (distance(point, p) < p.radius + 54) {
+            applyEnemyDamageToTarget(boss, p, 7, '古藤缠绕', now);
+            p.slowUntil = Math.max(p.slowUntil || 0, now + 2100);
+            p.trappedUntil = Math.max(p.trappedUntil || 0, now + 1250);
+        }
+    }
+    addFloatText('古藤缠绕', boss.x, boss.y - 66, '#8cff66');
+}
+
+function completeFinalBossFight(now = performance.now()) {
+    if (state.finalBossDefeated) return;
+    state.finalBossDefeated = true;
+    state.win = true;
+    state.winTitle = '空心匠王倒下！';
+    state.winText = '空心匠王倒下了，三枚核心重新分离。荒野终于不再被封在旧机器里。';
+    spawnBurst(state.player.x, state.player.y - 28, '#ffd166', 44, 300, 80);
+    showToast('空心匠王被击败。荒野恢复了平衡。');
+    renderHud();
 }
 
 function updateUnderground(dt, now) {
@@ -3185,6 +3593,7 @@ function updateUndergroundEnemy(enemy, dt, now, ug) {
         enemy.knockY *= Math.pow(0.02, dt);
     }
     if ((enemy.rootedUntil || 0) > now) return;
+    if (updateLocalMineBatFireFear(enemy, dt, now, undergroundFireFearSources(ug), moveUndergroundEntity)) return;
     const p = state.player;
     const dist = distance(enemy, p);
     if (dist < enemy.radius + p.radius + 10 && now >= (enemy.nextAttackAt || 0)) {
@@ -3204,6 +3613,17 @@ function updateUndergroundEnemy(enemy, dt, now, ug) {
     }
     const dir = normalize(target.x - enemy.x, target.y - enemy.y);
     moveUndergroundEntity(enemy, dir.x * enemy.speed * dt, dir.y * enemy.speed * dt);
+}
+
+function undergroundFireFearSources(ug) {
+    const sources = [];
+    const p = state.player;
+    if (selectedItemIsFireLight()) sources.push({ x: p.x, y: p.y, radius: 220, strength: 1.2 });
+    for (const torch of ug?.torches || []) {
+        if (torch.kind === 'shadowLantern') continue;
+        sources.push({ x: torch.x, y: torch.y, radius: torch.kind === 'waxTorch' ? 245 : 210, strength: torch.kind === 'waxTorch' ? 1.1 : 1 });
+    }
+    return sources;
 }
 
 function updateMineMonsterStatusEffects(enemy, dt, now) {
@@ -3236,6 +3656,10 @@ function updateMineMonsterStatusEffects(enemy, dt, now) {
     if (enemy.hp <= 0) {
         enemy.hp = 0;
         enemy.deathAt = now;
+        if (enemy.finalBoss) {
+            completeFinalBossFight(now);
+            return;
+        }
         const drops = grantMineMonsterDrops(enemy);
         addFloatText(drops, enemy.x, enemy.y - 52, '#9cffb7');
         showToast(`${enemy.label} 被持续伤害击败，获得 ${drops}`);
@@ -3382,6 +3806,7 @@ function updateMineCaveMonster(monster, dt, now) {
         monster.knockY *= Math.pow(0.02, dt);
     }
     if ((monster.rootedUntil || 0) > now) return;
+    if (updateLocalMineBatFireFear(monster, dt, now, indoorMineFireFearSources(), moveIndoorEntitySafely)) return;
     const p = state.player;
     const dist = distance(monster, p);
     if (dist < monster.radius + p.radius + 10 && now >= (monster.nextAttackAt || 0)) {
@@ -3404,6 +3829,43 @@ function updateMineCaveMonster(monster, dt, now) {
     const bounds = indoorMovementBounds();
     monster.x = clamp(monster.x, bounds.left, bounds.right);
     monster.y = clamp(monster.y, bounds.top, bounds.bottom);
+}
+
+function indoorMineFireFearSources() {
+    const sources = [];
+    const p = state.player;
+    if (selectedItemIsFireLight()) sources.push({ x: p.x, y: p.y, radius: 220, strength: 1.2 });
+    for (const torch of state.indoor?.building?.placedTorches || []) {
+        if (torch.kind === 'shadowLantern') continue;
+        sources.push({ x: torch.x, y: torch.y, radius: torch.kind === 'waxTorch' ? 245 : 210, strength: torch.kind === 'waxTorch' ? 1.1 : 1 });
+    }
+    for (const object of state.indoor?.objects || []) {
+        if (object.kind === 'hearth' || object.kind === 'campfire') sources.push({ x: object.x, y: object.y, radius: 230, strength: 1.05 });
+    }
+    return sources;
+}
+
+function updateLocalMineBatFireFear(monster, dt, now, sources, moveFn) {
+    if (monster.mineKind !== 'mineBat') return false;
+    const fire = strongestFireFearAt(monster, sources) || rememberedFireFearSource(monster, now);
+    if (!fire) return false;
+    rememberFireFearSource(monster, fire, now, 1.42);
+    const safeRadius = monster.fireFleeSource?.safeRadius || fire.radius * 1.42 + monster.radius;
+    if (fire.dist > safeRadius) {
+        monster.fireFleeSource = null;
+        return false;
+    }
+    monster.nextAttackAt = Math.max(monster.nextAttackAt || 0, now + 1200);
+    monster.targetX = monster.homeX;
+    monster.targetY = monster.homeY;
+    const jitter = Math.sin(now * 0.006 + monster.homeX * 0.02) * 0.28;
+    const away = normalize(monster.x - fire.x - jitter * (monster.y - fire.y), monster.y - fire.y + jitter * (monster.x - fire.x));
+    moveFn(monster, away.x * monster.speed * 1.95 * dt, away.y * monster.speed * 1.95 * dt);
+    if (now >= (monster.nextFireFearTextAt || 0)) {
+        monster.nextFireFearTextAt = now + 1500;
+        addFloatText('惧火', monster.x, monster.y - 38, '#ffb347');
+    }
+    return true;
 }
 
 function applyMineMonsterDamage(monster, now) {
@@ -3847,6 +4309,92 @@ function currentAimDir() {
     return Math.hypot(dx, dy) > 18 ? normalize(dx, dy) : p.facing;
 }
 
+function aimAssistBaseDir() {
+    const p = state.player;
+    const playerScreenX = worldX(p.x);
+    const playerScreenY = worldY(p.y);
+    const dx = mouse.x - playerScreenX;
+    const dy = mouse.y - playerScreenY;
+    return {
+        dir: Math.hypot(dx, dy) > 18 ? normalize(dx, dy) : p.facing,
+        explicit: Math.hypot(dx, dy) > 18,
+    };
+}
+
+function currentAimDirWithAutoLock(profile = currentAttackProfile(), now = performance.now()) {
+    const p = state.player;
+    const base = aimAssistBaseDir();
+    const target = findAutoLockTarget(profile, base.dir, base.explicit, now);
+    if (!target) {
+        p.autoLockTarget = null;
+        return base.dir;
+    }
+    p.autoLockTarget = target;
+    p.autoLockUntil = now + Math.max(260, (profile.cooldown || 0.35) * 650);
+    return normalize(target.x - p.x, target.y - p.y);
+}
+
+function findAutoLockTarget(profile, baseDir, explicitAim, now = performance.now()) {
+    const p = state.player;
+    const held = p.autoLockTarget;
+    const range = autoLockRangeForProfile(profile);
+    const minDot = explicitAim ? 0.22 : -0.18;
+    if (held && isValidAutoLockTarget(held, range + 60)) {
+        const dir = normalize(held.x - p.x, held.y - p.y);
+        const dot = dir.x * baseDir.x + dir.y * baseDir.y;
+        if (dot > minDot - 0.18) return held;
+    }
+    let best = null;
+    for (const target of autoLockCandidates()) {
+        if (!isValidAutoLockTarget(target, range)) continue;
+        const dx = target.x - p.x;
+        const dy = target.y - p.y;
+        const dist = Math.hypot(dx, dy);
+        const dir = normalize(dx, dy);
+        const dot = dir.x * baseDir.x + dir.y * baseDir.y;
+        if (dot < minDot && dist > 92) continue;
+        const attackingPlayer = target.attackTarget === p || target.playerAggro || target.mood === 'angry';
+        const lowHp = (target.hp || 1) <= Math.max(8, (target.maxHp || 24) * 0.28);
+        const score = dot * 160 - dist * 0.32 + (attackingPlayer ? 70 : 0) + (lowHp ? 26 : 0);
+        if (!best || score > best.score) best = { target, score };
+    }
+    return best?.target || null;
+}
+
+function autoLockRangeForProfile(profile = currentAttackProfile()) {
+    const base = profile.range || 60;
+    if (profile.name?.includes('箭') || profile.name?.includes('弩') || profile.name?.includes('弹')) return Math.max(360, base * 0.9);
+    if (profile.style === 'thrust' || profile.style === 'rope') return base + 150;
+    return base + 112;
+}
+
+function autoLockCandidates() {
+    if (state.underground) return [
+        ...(state.underground.enemies || []).filter(target => target.hp > 0),
+        ...(state.underground.objects || []).filter(target => target.kind === 'batNest' && (target.hp ?? 1) > 0),
+    ];
+    if (state.indoor) {
+        return (state.indoor.objects || []).filter(target => {
+            if ((target.hp ?? 0) <= 0) return false;
+            if (target.kind === 'mineMonster' || target.kind === 'totem') return true;
+            return target.kind === 'npc' && (target.playerAggro || target.mood === 'angry');
+        });
+    }
+    return [
+        ...state.enemies.filter(target => target.hp > 0),
+        ...(state.outdoorVillagers || []).filter(target => target.hp > 0 && !target.follower && (target.playerAggro || target.mood === 'angry')),
+        ...(state.waspHives || []).filter(target => target.state !== 'ruined'),
+    ];
+}
+
+function isValidAutoLockTarget(target, range) {
+    if (!target || (target.hp ?? 1) <= 0) return false;
+    if (target.state === 'ruined') return false;
+    if (target.kind === 'npc' && target.follower) return false;
+    if (target.kind === 'npc' && !(target.playerAggro || target.mood === 'angry')) return false;
+    return distance(state.player, target) <= range + (target.radius || 18);
+}
+
 function showToast(message) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -3894,6 +4442,19 @@ function closeInventoryOnPlayerHit() {
 }
 
 function update(dt, now) {
+    frameCacheId++;
+    if (worldLoading) {
+        render(now);
+        requestAnimationFrame(loop);
+        return;
+    }
+    if (state.pausedByMenu) {
+        updateFloatTexts(dt);
+        updateCamera();
+        render(now);
+        requestAnimationFrame(loop);
+        return;
+    }
     if (!state.win && !state.lose) {
         updateItemUse(now);
         updatePlacedStationEffects(now);
@@ -3901,6 +4462,7 @@ function update(dt, now) {
         updatePendingVillagerEntries(now);
         updateAllVillagerHomeHealing(dt, now);
         updateMineCave(dt, now);
+        updateFinalBossArena(dt, now);
         updateIndoorNpcs(dt, now);
         updateIndoorProjectiles(dt, now);
         if (state.underground) {
@@ -3919,6 +4481,7 @@ function update(dt, now) {
             updateDynamicSpawns(now);
         }
         updateQuest();
+        autoSaveGame(now);
     }
     updateParticles(dt);
     updateFloatTexts(dt);
@@ -3995,6 +4558,11 @@ function updatePlayer(dt, now) {
         const terrainSlow = nearReedMat ? 0.94 : (now < (p.jumpPotionUntil || 0) ? 0.82 : 0.58);
         const jungleArmorFactor = inJungle && hasEquippedArmor('丛林叶披肩') ? 0.94 : 0.84;
         const speed = p.speed * boost * slowFactor * blockSlow * hungerFactor * aimSlow * (sprinting ? 1.55 : 1) * (inWater ? terrainSlow : 1) * (inMud ? terrainSlow : 1) * (inBamboo ? 0.9 : 1) * (inJungle ? jungleArmorFactor : 1) * armorMudSlow;
+        p.moving = true;
+        p.sprinting = sprinting;
+        p.inWater = inWater && !state.underground;
+        p.moveDir = dir;
+        p.lastMoveAt = now;
         p.facing = dir;
         if (state.underground) moveUndergroundEntity(p, dir.x * speed * dt, dir.y * speed * dt);
         else if (state.indoor) moveIndoorPlayer(p, dir.x * speed * dt, dir.y * speed * dt);
@@ -4007,6 +4575,9 @@ function updatePlayer(dt, now) {
         const sprintCost = inMud ? -56 : -38;
         p.stamina = clamp(p.stamina + (sprinting ? sprintCost : 24 * hungerStaminaFactor()) * dt, 0, 100);
     } else {
+        p.moving = false;
+        p.sprinting = false;
+        p.inWater = !state.indoor && !state.underground && terrainInfoAt(p.x, p.y).kind === 'water';
         p.blocking = isBlocking();
         if (!state.indoor && !state.underground && terrainInfoAt(p.x, p.y).kind === 'water') {
             const current = waterCurrentAt(p.x, p.y);
@@ -4017,6 +4588,9 @@ function updatePlayer(dt, now) {
     }
 
     p.attackDir = currentAimDir();
+    if (p.autoLockTarget && (!isValidAutoLockTarget(p.autoLockTarget, autoLockRangeForProfile(currentAttackProfile()) + 90) || now > (p.autoLockUntil || 0))) {
+        p.autoLockTarget = null;
+    }
     if (p.attackCooldown > 0) p.attackCooldown -= dt;
     if (isAimingThrowable() || isAimingDirectRanged()) return;
     if (now < p.dizzyUntil) return;
@@ -4123,7 +4697,7 @@ function updateAggroTotemCombat(station, now) {
 
 function updateVillageHostility() {
     if (!state.village) return;
-    for (const village of allVillages().filter(item => villageReputation(item) <= -3)) {
+    for (const village of activeVillages(900).filter(item => villageReputation(item) <= -3)) {
     if (!village.hostile) {
         village.hostile = true;
         showToast(`${village.tier === 'basic' ? '低级村庄' : '高级村庄'}声誉太低，本村开始驱逐你！`);
@@ -4658,6 +5232,7 @@ function updateOutdoorVillagers(dt, now) {
     maybeSendVillagersOutside(now);
     for (const npc of state.outdoorVillagers) {
         if (npc.hp <= 0) continue;
+        if (!shouldUpdateOutdoorNpc(npc)) continue;
         beginVillagerMotionFrame(npc);
         updateVillagerStatusEffects(npc, dt, now);
         if (npc.hp <= 0) continue;
@@ -4756,7 +5331,8 @@ function updateOutdoorVillagers(dt, now) {
             npc.returningHome = true;
             const homePoint = villageHouseExitPoint(building);
             moveOutdoorVillagerToward(npc, homePoint, 125, dt);
-            if (distance(npc, homePoint) <= 30) {
+            const doorPoint = { x: building.doorX, y: building.doorY };
+            if (distance(npc, homePoint) <= 36 || distance(npc, doorPoint) <= 86) {
                 returnOutdoorVillagerHome(npc);
             }
             finishVillagerMotionFrame(npc, now);
@@ -4833,11 +5409,11 @@ function updateProfessionWorkRoutine(npc, dt, now) {
 }
 
 function isForestVillage(village) {
-    return ['forest', 'pine', 'birch', 'maple'].includes(village?.skin);
+    return village?.tier === 'forest' || ['forest', 'pine', 'birch', 'maple'].includes(village?.skin) || village?.layoutName === 'forest-lodge';
 }
 
 function isMineVillage(village) {
-    return village?.skin === 'mine';
+    return village?.tier === 'mine' || village?.skin === 'mine' || village?.layoutName === 'mine-union';
 }
 
 function updateForestHunterTrapRoutine(npc, dt, now) {
@@ -5712,8 +6288,10 @@ function outdoorVillagerPathWaypoint(npc, target) {
 
 function firstBuildingBlockingSegment(start, target) {
     let best = null;
-    for (const village of allVillages()) {
+    const center = { x: (start.x + target.x) / 2, y: (start.y + target.y) / 2 };
+    for (const village of nearbyVillagesForPoint(center, distance(start, target) * 0.5 + 260)) {
         for (const building of village.buildings || []) {
+            if (shouldIgnoreHomeDoorCollision(start, building, target)) continue;
             const rect = expandedRect(villageBuildingCollisionRect(building), 34);
             if (!segmentSamplesHitRect(start, target, rect)) continue;
             const d = distance(start, rect);
@@ -5830,8 +6408,9 @@ function outdoorVillagerBuildingAvoidanceStep(npc, dx, dy) {
 
 function nearestVillageBuildingCollisionRect(entity) {
     let best = null;
-    for (const village of allVillages()) {
+    for (const village of nearbyVillagesForPoint(entity, 260)) {
         for (const building of village.buildings || []) {
+            if (shouldIgnoreHomeDoorCollision(entity, building)) continue;
             const rect = villageBuildingCollisionRect(building);
             if (!rectCircleOverlap({ ...rect, w: rect.w + 4, h: rect.h + 4 }, entity)) continue;
             const d = distance(entity, rect);
@@ -5856,6 +6435,14 @@ function villageBuildingCollisionRect(building) {
         w: building.w * 0.68,
         h: building.h * 0.34,
     };
+}
+
+function shouldIgnoreHomeDoorCollision(entity, building, target = null) {
+    if (!entity || entity.kind !== 'npc' || !entity.returningHome || entity.homeBuilding !== building) return false;
+    const door = { x: building.doorX, y: building.doorY };
+    const nearDoor = distance(entity, door) < Math.max(120, (building.h || 120) * 0.72);
+    const targetIsDoor = !target || distance(target, door) < Math.max(150, (building.h || 120) * 0.9);
+    return nearDoor && targetIsDoor;
 }
 
 function tryOutdoorVillagerAvoidance(npc, dx, dy) {
@@ -6421,8 +7008,8 @@ function followPlayerIntoHouse(npc) {
 function maybeSendVillagersOutside(now) {
     if (!state.village) return;
     const night = nightAmount() > 0.12;
-    for (const village of allVillages()) {
-    if (distance(state.player, village) > village.radius + 260) continue;
+    for (const village of activeVillages(360)) {
+    if (distance(state.player, village) > village.radius + 360) continue;
     for (const building of village.buildings) {
         if (building.destroyed) continue;
         building.interiorObjects ||= createIndoorObjects(building.kind, building);
@@ -6508,11 +7095,15 @@ function returnOutdoorVillagerHome(npc) {
 
 function updateAllVillagerHomeHealing(dt, now) {
     if (!state.village) return;
-    for (const village of allVillages()) for (const building of village.buildings) {
+    if (now < (state.nextHomeHealingAt || 0)) return;
+    const elapsed = Math.min(4, ((now - (state.lastHomeHealingAt || now)) / 1000) || dt);
+    state.lastHomeHealingAt = now;
+    state.nextHomeHealingAt = now + 1800;
+    for (const village of activeVillages(800)) for (const building of village.buildings) {
         if (!building.interiorObjects) continue;
         for (const npc of building.interiorObjects.filter(object => object.kind === 'npc' && !object.outside && object.hp > 0 && object.hp < object.maxHp && !object.playerAggro && !object.animalAggressor && object.mood !== 'angry')) {
             const rate = npc.hp < npc.maxHp * 0.3 ? 5.5 : 2.2;
-            npc.hp = Math.min(npc.maxHp, npc.hp + rate * dt);
+            npc.hp = Math.min(npc.maxHp, npc.hp + rate * elapsed);
             if (now >= (npc.nextHomeHealTextAt || 0)) {
                 npc.nextHomeHealTextAt = now + 2200;
                 if (state.indoor?.building === building) addFloatText('+休息', npc.x, npc.y - 50, '#9cffb7');
@@ -7565,6 +8156,7 @@ function moveIndoorPlayer(player, dx, dy) {
 }
 
 function indoorMovementBounds() {
+    if (state.indoor?.building?.kind === 'finalBossArena') return { left: 58, right: VIEW.width - 58, top: 58, bottom: VIEW.height - 58 };
     if (state.indoor?.building?.kind === 'mineCaveInterior') return { left: 90, right: VIEW.width - 90, top: 90, bottom: VIEW.height - 82 };
     return { left: 230, right: VIEW.width - 230, top: 182, bottom: VIEW.height - 170 };
 }
@@ -7684,8 +8276,9 @@ function collides(entity) {
         if (distance(entity, hive) < entity.radius + hive.radius * collisionScale) return true;
     }
     if (distance(entity, state.ruins) < entity.radius + state.ruins.radius && !state.ruins.opened) return true;
-    for (const village of allVillages()) {
+    for (const village of nearbyVillagesForPoint(entity, 360)) {
         for (const building of village.buildings) {
+            if (shouldIgnoreHomeDoorCollision(entity, building)) continue;
             if (isEnemyEntity(entity)) {
                 const nearHouse = Math.abs(entity.x - building.x) < entity.radius + building.w * 0.62
                     && Math.abs(entity.y - building.y) < entity.radius + building.h * 0.62;
@@ -7744,6 +8337,7 @@ function resourceCollisionScale(item, entity) {
 function updateBambooTraps(now) {
     for (const trap of state.bambooTraps) {
         if (trap.used) continue;
+        if (distance(trap, state.player) > ACTIVE_ENEMY_KEEP_DISTANCE && !state.enemies.some(enemy => enemy.hp > 0 && distance(enemy, trap) < 420)) continue;
         const radius = trap.kind === 'vineNetTrap' ? trap.radius + 58 : trap.radius;
         if (!state.indoor && !state.underground && trapCanHitPlayer(trap) && distance(state.player, trap) < state.player.radius + radius) {
             triggerGroundTrapOnPlayer(trap, now);
@@ -7895,6 +8489,7 @@ function getNearbyTallGrass(entity, radius) {
 function updateEnemies(dt, now) {
     updateWolfPackRoaming(now);
     state.enemies = state.enemies.filter(enemy => enemy.boss || enemy.hp <= 0 || distance(enemy, state.player) <= ACTIVE_ENEMY_KEEP_DISTANCE);
+    const fireFearSources = outdoorFireFearSources();
     for (const e of state.enemies) {
         if (e.hp <= 0) continue;
         updateEnemyPoison(e, dt, now);
@@ -7925,6 +8520,10 @@ function updateEnemies(dt, now) {
             e.hurtUntil = now + 180;
             spawnBurst(e.x, e.y - 10, '#5fae49', 14, 90, e.radius * 0.65);
             addFloatText('伏击', e.x, e.y - 48, '#9cffb7');
+        }
+        if (updateCreatureFireFear(e, dt, now, fireFearSources)) {
+            if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
+            continue;
         }
         if (updateAnimalVillagerConflict(e, dt, now)) {
             if (e.hurtUntil && now > e.hurtUntil) e.hurtUntil = 0;
@@ -8770,6 +9369,109 @@ function monsterKnockbackForce(e, verb = '') {
 
 function isPassiveCreature(kind) {
     return kind === 'hare' || kind === 'deer';
+}
+
+function isFireFearingCreature(entity) {
+    const kind = entity.mineKind || entity.kind;
+    return !entity.boss && FIRE_FEARING_CREATURES.has(kind);
+}
+
+function selectedItemIsFireLight() {
+    return ['torch', 'waxTorch', 'torchClub'].includes(selectedHotbarItem()) || state.equipment.utility === '火把';
+}
+
+function outdoorFireFearSources() {
+    const sources = [];
+    const p = state.player;
+    const add = (x, y, radius, strength = 1) => {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        if (distance({ x, y }, p) > ACTIVE_ENEMY_KEEP_DISTANCE + radius + 240) return;
+        sources.push({ x, y, radius, strength });
+    };
+    if (selectedItemIsFireLight()) add(p.x, p.y, selectedHotbarItem() === 'waxTorch' ? 250 : 220, 1.2);
+    add(state.camp.x, state.camp.y, state.camp.repaired ? 260 : 145, state.camp.repaired ? 1.08 : 0.75);
+    for (const torch of state.placedTorches || []) {
+        if (torch.kind === 'shadowLantern') continue;
+        add(torch.x, torch.y, torch.kind === 'waxTorch' ? 250 : 215, torch.kind === 'waxTorch' ? 1.1 : 1);
+    }
+    for (const fire of state.placedStations || []) {
+        if (fire.kind === 'campfire') add(fire.x, fire.y, 245, 1.08);
+    }
+    for (const lamp of state.roadLamps || []) {
+        add(lamp.x, lamp.y - 24, 210, 0.78);
+    }
+    for (const village of activeVillages(700)) {
+        for (const lamp of village.amenities?.lamps || []) add(lamp.x, lamp.y - 24, 225, 0.86);
+        if (village.amenities?.altar) add(village.amenities.altar.x, village.amenities.altar.y - 26, 230, 0.68);
+    }
+    return sources;
+}
+
+function strongestFireFearAt(entity, sources) {
+    if (!sources?.length || !isFireFearingCreature(entity)) return null;
+    let best = null;
+    for (const source of sources) {
+        const kind = entity.mineKind || entity.kind;
+        const radius = source.radius * (kind === 'bat' || kind === 'mineBat' || kind === 'mineCrystalBat' ? 1.24 : 1);
+        const dist = distance(entity, source);
+        if (dist > radius + entity.radius) continue;
+        const pressure = (1 - dist / Math.max(1, radius)) * (source.strength || 1);
+        if (!best || pressure > best.pressure) best = { ...source, dist, radius, pressure };
+    }
+    return best;
+}
+
+function rememberFireFearSource(entity, fire, now, safeMultiplier = 1.55) {
+    entity.fireFleeSource = {
+        x: fire.x,
+        y: fire.y,
+        radius: fire.radius,
+        safeRadius: Math.max(fire.safeRadius || 0, fire.radius * safeMultiplier + (entity.radius || 14)),
+        strength: fire.strength || 1,
+        until: now + 2200,
+    };
+}
+
+function rememberedFireFearSource(entity, now) {
+    const source = entity.fireFleeSource;
+    if (!source || now > source.until) {
+        entity.fireFleeSource = null;
+        return null;
+    }
+    const dist = distance(entity, source);
+    return {
+        ...source,
+        dist,
+        pressure: Math.max(0.18, 1 - dist / Math.max(1, source.safeRadius)),
+    };
+}
+
+function updateCreatureFireFear(e, dt, now, sources) {
+    const fire = strongestFireFearAt(e, sources) || rememberedFireFearSource(e, now);
+    if (!fire) return false;
+    rememberFireFearSource(e, fire, now);
+    const safeRadius = e.fireFleeSource?.safeRadius || fire.radius * 1.55 + e.radius;
+    if (fire.dist > safeRadius) {
+        e.fireFleeSource = null;
+        return false;
+    }
+    e.attackTarget = null;
+    e.windupUntil = 0;
+    e.strikeAt = 0;
+    e.leapUntil = 0;
+    e.chargeUntil = 0;
+    e.swoopUntil = 0;
+    e.retreatUntil = Math.max(e.retreatUntil || 0, now + 1200);
+    e.attackCooldown = Math.max(e.attackCooldown || 0, 1.2);
+    const jitter = Math.sin(now * 0.006 + e.spawnX * 0.03) * 0.32;
+    const away = normalize(e.x - fire.x - jitter * (e.y - fire.y), e.y - fire.y + jitter * (e.x - fire.x));
+    const speed = e.speed * (1.25 + clamp(fire.pressure, 0, 1) * 0.75);
+    moveEnemy(e, away.x * speed * dt, away.y * speed * dt);
+    if (now >= (e.nextFireFearTextAt || 0)) {
+        e.nextFireFearTextAt = now + 1400;
+        addFloatText('惧火', e.x, e.y - 44, '#ffb347');
+    }
+    return true;
 }
 
 function updatePassiveCreature(e, dt, now, dist) {
@@ -9937,7 +10639,7 @@ function interactPromptText(target) {
     if (target.type === 'mineCave') return '按 E 进入废弃矿洞';
     if (target.type === 'chest') return '按 E 打开木箱';
     if (target.type === 'camp') return '按 E 使用营地';
-    if (target.type === 'ruins') return state.ruins.opened ? '废墟门已打开' : '按 E 打开废墟门';
+    if (target.type === 'ruins') return finalRuinEntryUnlocked() ? '按 E 进入远古核心祭坛' : finalRuinLockText();
     return '按 E 互动';
 }
 
@@ -9945,6 +10647,7 @@ function indoorPromptText(object) {
     if (!object) return '';
     if (object.caveResource) return `长按 E 采集：${resourceName(object.kind)}`;
     if (object.action === 'leave') return '按 E 离开房屋';
+    if (object.action === 'finalCorePedestal') return object.placed ? `${object.label}已放置` : `按 E 放置：${RESOURCE_LABELS[object.core]}`;
     if (object.action === 'steal') return `按 E 打开：${object.label}`;
     if (object.action === 'npc') return villagerPromptText(object);
     if (object.action === 'sleep') return '村民的床，不能睡';
@@ -10511,6 +11214,7 @@ function openUndergroundChest(chest) {
     state.openChest = null;
     state.openIndoorContainer = {
         storage: chest.storage,
+        itemDurability: chest.itemDurability ||= {},
         villageOwned: false,
         ruinOwned: true,
         ownerObject: chest,
@@ -11105,6 +11809,7 @@ function nearestIndoorObject() {
     if (!state.indoor) return null;
     return state.indoor.objects
         .filter(object => !object.outside)
+        .filter(object => object.action || object.caveResource)
         .map(object => ({ object, d: distanceToRect(state.player, object) }))
         .filter(item => item.d < indoorInteractionRange(item.object))
         .sort((a, b) => a.d - b.d)[0]?.object || null;
@@ -11130,7 +11835,14 @@ function interactIndoor() {
     }
     switch (object.action) {
         case 'leave':
+            if (state.indoor?.building?.kind === 'finalBossArena' && finalBoss()) {
+                showToast('遗迹门被三枚核心封住了。必须先击败空心匠王。');
+                break;
+            }
             leaveVillageHouse();
+            break;
+        case 'finalCorePedestal':
+            placeFinalCoreOnPedestal(object);
             break;
         case 'forge':
             showToast('这里可作为锻造台使用。');
@@ -11261,16 +11973,83 @@ function readJungleRuinClue(object) {
 function stealFromIndoorContainer(object) {
     object.storage ||= { ...(object.loot || {}) };
     object.opened = true;
+    maybeAddStoryNoteToContainer(object, state.indoor?.building);
     state.openChest = null;
     state.openIndoorContainer = {
         storage: object.storage,
+        itemDurability: object.itemDurability ||= {},
         villageOwned: !object.ruinOwned,
         ruinOwned: !!object.ruinOwned,
         ownerObject: object,
         label: object.label,
     };
     toggleInventory(true);
-    showToast(object.ruinOwned ? `打开${object.label}。这是遗迹物资，不影响村庄声誉。` : `打开${object.label}。拿走物品会降低村庄声誉。里面可能藏有配方笔记。`);
+    showToast(object.ruinOwned ? `打开${object.label}。这是遗迹物资，不影响村庄声誉。` : `打开${object.label}。拿走物品会降低村庄声誉。里面可能藏有纸条或配方笔记。`);
+}
+
+function maybeAddStoryNoteToContainer(object, building) {
+    const key = storyNoteKeyForContainer(object, building);
+    if (!key) return '';
+    object.storage ||= {};
+    clearDuplicateStoryNotes(object.storage);
+    object.storage[key] = 1;
+    object.storyNoteAdded = true;
+    object.storyNoteKey = key;
+    state.generatedStoryNotes ||= {};
+    state.generatedStoryNotes[key] = true;
+    return key;
+}
+
+function storyNoteKeyForContainer(object, building) {
+    if (!building || object.storyNoteAdded || object.storyNoteTaken || object.storyNoteKey) return '';
+    if (Object.keys(object.storage || {}).some(isStoryNoteKey)) return '';
+    const role = building.kind;
+    const options = (building.kind?.startsWith('cult') ? ({
+        cultPriest: ['cultNotePriestDiary', 'cultNoteRootAltar'],
+        cultHerbalist: ['cultNoteRootSpeech', 'cultNoteRootAltar'],
+        cultHealer: ['cultNoteGreenBottle', 'cultNoteDream'],
+        cultGuard: ['cultNoteRootArmor', 'cultNoteDream'],
+        cultHunter: ['cultNoteRootSpeech', 'cultNoteGreenBottle'],
+        cultVillager: ['cultNoteDream', 'cultNoteRootSpeech'],
+    }) : ({
+        blacksmith: ['villageNoteDebt', 'villageNoteWeather'],
+        apothecary: ['villageNoteWeather', 'villageNoteFamily'],
+        kitchen: ['villageNoteKitchenList', 'villageNoteFamily'],
+        guard: ['villageNoteGuardShift', 'villageNoteFamily'],
+        guardFortress: ['villageNoteGuardShift', 'villageNoteMineWarning'],
+        merchant: ['villageNoteDebt', 'villageNoteFamily'],
+        carpenter: ['villageNoteWeather', 'villageNoteDebt'],
+        hunter: ['villageNoteWeather', 'villageNoteGuardShift'],
+        outerHunter: ['villageNoteWeather', 'villageNoteGuardShift'],
+        miner: ['villageNoteMineWarning', 'villageNoteFamily'],
+        farmer: ['villageNoteWeather', 'villageNoteKitchenList'],
+        elder: ['villageNoteFamily', 'villageNoteGuardShift'],
+        basicElder: ['villageNoteFamily', 'villageNoteWeather'],
+        basicVillager: ['villageNoteFamily', 'villageNoteDebt'],
+        unemployed: ['villageNoteFamily', 'villageNoteDebt'],
+    }))[role] || [];
+    const available = options.filter(key => !storyNoteAlreadyExists(key));
+    if (!available.length) return '';
+    const index = Math.floor(seededUnit((object.x || 0) + (object.y || 0), String(object.label || '').length) * available.length) % available.length;
+    return available[index];
+}
+
+function storyNoteAlreadyExists(key) {
+    state.generatedStoryNotes ||= {};
+    state.readStoryNotes ||= {};
+    return !!state.generatedStoryNotes[key] || !!state.readStoryNotes[key] || (state.inventory[key] || 0) > 0;
+}
+
+function clearDuplicateStoryNotes(storage = {}) {
+    let kept = false;
+    for (const key of Object.keys(storage)) {
+        if (!isStoryNoteKey(key)) continue;
+        if (kept) delete storage[key];
+        else {
+            storage[key] = Math.min(1, Math.max(0, storage[key] || 0));
+            kept = storage[key] > 0;
+        }
+    }
 }
 
 function learnRecipesFromVillageContainer(object) {
@@ -11316,7 +12095,12 @@ function takeIndoorResource(object, key, amount, message) {
         showToast('背包已满。');
         return;
     }
-    object.storage[key] -= moved;
+    if (isStoryNoteKey(key)) {
+        object.storage[key] = 0;
+        object.storyNoteTaken = true;
+    } else {
+        object.storage[key] -= moved;
+    }
     if (object.storage[key] <= 0) {
         delete object.storage[key];
         object.taken = true;
@@ -11328,6 +12112,7 @@ function takeIndoorResource(object, key, amount, message) {
 
 function takeTrinketFromRack(object) {
     object.storage ||= {};
+    maybeAddStoryNoteToContainer(object, state.indoor?.building);
     const key = Object.keys(object.storage).find(item => (object.storage[item] || 0) > 0);
     if (!key) {
         object.taken = true;
@@ -11409,55 +12194,100 @@ function villagerDialogueLines(role) {
             '如果你要进别人屋子，至少别把箱子翻得太响。',
         ],
         cultPriest: [
-            '绿母在根下听见每一次脚步。',
-            '你看见的是祭坛，我们听见的是心跳。',
-            '毒不是惩罚，是让身体记住丛林的语言。',
-            '不要问绿光从何而来。问得太久，绿光也会看见你。',
-            '藤语者驱使野兽，疗士缝合伤口，而我负责让大家记得母亲。',
-            '若祭坛在夜里变亮，说明有人在别处流血。',
+            '你不是第一个走到这里的外来者。大多数人在第一根会动的藤前就跑了。',
+            '外面的村庄建墙，是为了把自己和荒野分开。我们只是等墙长回去。',
+            '远古工匠留下了很多东西。石门、核心，还有会被人信以为真的名字。',
+            '别急着把你带来的东西献给我。我不是它的主人。',
+            '根比人有耐心。所以我们也学着慢一点说话。',
         ],
         cultHerbalist: [
-            '嘘，别惊动叶背后的眼睛。',
-            '蛇听不懂人话，但听得懂根须的命令。',
-            '我不控制它们，我只是把绿母的意思递过去。',
-            '如果我倒下，它们会忘记村民，也会忘记仇恨。',
-            '未受控的丛林生物靠近时，我必须出去作法。',
-            '你若没有招惹教会，我的兽不会咬你。',
+            '别说话。你脚下的根还没听完。',
+            '你听不见没关系，大多数人都听不见。',
+            '动物不是听我的，它们只是比你更懂安静。',
+            '昨天一只狼没有听令。它梦见了火。',
+            '蜂群最近不安。像是丢了什么声音。',
         ],
         cultHealer: [
-            '别动，伤口里有碎藤，我得先把它哄出来。',
-            '疗藤会补命，也会借命。你最好别问借的是谁的。',
-            '受控的兽也是村的一部分，它们受伤时也会回到绿光下。',
-            '缠住敌人比杀死敌人仁慈，因为绿母喜欢活着的根。',
-            '祭司谈信仰，藤语者谈命令，我只听见疼痛。',
-            '如果你被我的藤缠住，别挣扎，挣扎会越缠越深。',
+            '药先苦，梦才会清。',
+            '这不是毒，是让身体慢下来的东西。',
+            '别闻那口锅。它还没决定要治病还是杀人。',
+            '根有时会治好人，有时只是把人修成别的东西。',
+            '祭司最近睡得少。他说梦里有人问他的名字。',
         ],
         cultHunter: [
             '蛇纹不是装饰，是提醒我出手要像蛇一样省力。',
             '远处用吹箭，近了用毒矛，别同时拿两样，手会乱。',
             '丛林不会追猎物，丛林只等猎物走错一步。',
-            '我的箭头涂过毒谱架上的东西，别用手碰。',
+            '别把箭头拿起来闻。上一个这么做的人睡了两天。',
         ],
         cultGuard: [
-            '木甲会长进皮肤里，这样才挡得住夜里的爪子。',
-            '我站在根墙前，不是因为勇敢，是因为退路已经长满藤。',
-            '村战时，根盾先挡人，木锤再问话。',
-            '绿母不喜欢门，但她喜欢守门的人。',
+            '别站我后面，我转身慢。',
+            '腿麻了？不，已经不麻了。',
+            '这甲不是穿上的，是长上的。',
+            '祭司说这是荣幸。我还在学着相信。',
+            '别告诉祭司，我有时想念鞋。',
         ],
         cultVillager: [
-            '我们不修路。路会邀请不该来的脚。',
-            '夜里的树灯不是给人看的，是给树看的。',
-            '献祭不是死亡，有时只是把名字交给根。',
+            '别踩那片新芽，早上才长出来。',
+            '我们这里晚上不点太多火，容易让地下不安。',
+            '外村人总问路。路有什么好问的？根知道方向。',
+            '如果你听见墙里有响声，别敲回去。',
+            '小声点，藤语者正在听地。',
         ],
     })[role] || ['最近不太平，出门小心。'];
 }
 
 function advanceVillagerDialogue(npc) {
     if (!npc) return '';
+    if (isCultRole(npc.role)) return advanceCultDialogue(npc);
     const lines = villagerDialogueLines(npc.role);
     const index = npc.dialogueIndex || 0;
     npc.dialogueIndex = (index + 1) % lines.length;
     return lines[index % lines.length];
+}
+
+function isCultRole(role) {
+    return ['cultPriest', 'cultHerbalist', 'cultHealer', 'cultHunter', 'cultGuard', 'cultVillager'].includes(role);
+}
+
+function advanceCultDialogue(npc) {
+    const lines = cultDialogueLines(npc);
+    const index = npc.dialogueIndex || 0;
+    npc.dialogueIndex = (index + 1) % lines.length;
+    return lines[index % lines.length];
+}
+
+function cultDialogueLines(npc) {
+    const held = selectedHotbarItem();
+    const village = villageForTrader(npc);
+    if (villageReputation(village) <= -2) {
+        return [
+            '别进我屋。',
+            '孩子们已经被叫回树屋了。',
+            '你每走一步，根都在记。',
+            '别装成迷路的人。你不是。',
+        ];
+    }
+    if (storyCoreCount() >= 3) {
+        return npc.role === 'cultPriest'
+            ? ['现在我听见了。蜂群、晶脉、古藤……三种声音挤在一个人身边。', '你可以去根坛。但记住，根坛不是门。它是嘴。']
+            : ['……太吵了。', '你身边有三种声音，它们互相咬着。', '如果你去根坛，别期待它为你开门。门不是为人开的。'];
+    }
+    if ((state.inventory.ancientVineCore || 0) > 0) {
+        return npc.role === 'cultPriest'
+            ? ['你带着一段不该离开的东西。', '它没有责怪你。它只是一直在找回去的路。', '别急着献给我。我不是它的主人。']
+            : ['别靠近。你身上有很旧的声音。', '那东西不该在包里。它应该在土里。', '祭司会想看它。我不建议你让他看太久。'];
+    }
+    if (['torch', 'waxTorch', 'torchClub'].includes(held)) {
+        return ['火把拿低点，叶子会缩起来。', '我们不是怕火，只是不想让根疼。', '你这样走，今晚附近的蜂群不会回来。'];
+    }
+    if (['stoneAxe', 'ironAxe', 'stonePickaxe', 'ironPickaxe', 'ironwoodMachete', 'jungleMachete'].includes(held)) {
+        return ['拿斧子的人最好别靠树太近。', '铁镐敲石头的声音，会传到很深的地方。', '你的工具很亮。这里不喜欢太亮的东西。'];
+    }
+    if (villageReputation(village) >= 3) {
+        return ['你不像其他外村人那么急。', '祭司愿意见你？那你最好少说话，多听。', '你帮过我们，根会记得一点点。'];
+    }
+    return villagerDialogueLines(npc.role);
 }
 
 function dialogueSuffixForNpc(npc) {
@@ -12216,19 +13046,105 @@ function useCamp() {
 }
 
 function openRuins() {
-    if (state.ruins.opened) {
-        showToast('废墟门已经打开。Demo 完成！');
+    if (!finalRuinEntryUnlocked()) {
+        showToast(finalRuinLockText());
         return;
     }
-    if (state.inventory.key <= 0) {
-        showToast('废墟门紧锁着，需要先合成废墟钥匙。');
-        return;
-    }
-    state.inventory.key -= 1;
     state.ruins.opened = true;
-    state.win = true;
-    showToast('废墟门开启，荒野营地 Demo 完成！');
+    enterFinalBossArena();
+}
+
+function finalRuinEntryUnlocked() {
+    return storyCoreCount() >= 3 && guardianKingDefeated();
+}
+
+function guardianKingDefeated() {
+    return !state.enemies.some(enemy => enemy.boss && enemy.kind === 'golem' && enemy.hp > 0);
+}
+
+function finalRuinLockText() {
+    if (storyCoreCount() < 3) return `远古废墟没有回应。还需要三枚核心：${storyCoreCount()}/3。`;
+    if (!guardianKingDefeated()) return '远古废墟门内传来石像低吼。先击败守门石像王。';
+    return '远古废墟仍在沉默。';
+}
+
+function createFinalBossArenaBuilding() {
+    return {
+        kind: 'finalBossArena',
+        label: '远古核心祭坛',
+        x: state.ruins.x,
+        y: state.ruins.y,
+        doorX: state.ruins.x,
+        doorY: state.ruins.y + 80,
+        village: activeAdvancedVillage || state.village,
+        placedFinalCores: {},
+        bossSummoned: false,
+        interiorObjects: [
+            { kind: 'door', label: '遗迹出口', x: VIEW.width / 2, y: VIEW.height - 48, w: 120, h: 26, solid: true, action: 'leave' },
+            { kind: 'finalCorePedestal', label: '蜂王浆核心座', x: VIEW.width / 2 - 210, y: 350, w: 68, h: 54, solid: false, action: 'finalCorePedestal', core: 'royalJellyCore' },
+            { kind: 'finalCorePedestal', label: '晶核核心座', x: VIEW.width / 2 + 210, y: 350, w: 68, h: 54, solid: false, action: 'finalCorePedestal', core: 'crystalCore' },
+            { kind: 'finalCorePedestal', label: '古藤核心座', x: VIEW.width / 2, y: 500, w: 78, h: 58, solid: false, action: 'finalCorePedestal', core: 'ancientVineCore' },
+        ],
+    };
+}
+
+function enterFinalBossArena() {
+    const building = state.ruins.finalBossArena || createFinalBossArenaBuilding();
+    state.ruins.finalBossArena = building;
+    state.openChest = null;
+    state.openIndoorContainer = null;
+    state.indoorProjectiles = [];
+    state.indoor = {
+        building,
+        outsideX: state.ruins.x,
+        outsideY: state.ruins.y + state.ruins.radius + 30,
+        objects: building.interiorObjects,
+    };
+    state.player.x = VIEW.width / 2;
+    state.player.y = VIEW.height - 140;
+    camera.x = 0;
+    camera.y = 0;
+    showToast('进入远古核心祭坛。将三枚核心放回座位后，最终 Boss 会被召唤。');
+}
+
+function placeFinalCoreOnPedestal(pedestal) {
+    const building = state.indoor?.building;
+    if (!building || building.kind !== 'finalBossArena' || pedestal.placed) return;
+    const key = pedestal.core;
+    if ((state.inventory[key] || 0) <= 0) {
+        showToast(`缺少${RESOURCE_LABELS[key]}。`);
+        return;
+    }
+    state.inventory[key] -= 1;
+    pedestal.placed = true;
+    building.placedFinalCores ||= {};
+    building.placedFinalCores[key] = true;
+    spawnBurst(pedestal.x, pedestal.y - 22, key === 'royalJellyCore' ? '#ffd166' : (key === 'crystalCore' ? '#b77dff' : '#8cff66'), 24, 180, 34);
+    addFloatText('核心归位', pedestal.x, pedestal.y - 58, '#ffd166');
+    syncHotbarItems();
     renderHud();
+    if (['royalJellyCore', 'crystalCore', 'ancientVineCore'].every(item => building.placedFinalCores[item])) {
+        summonHollowArtisanKing(building);
+    } else {
+        showToast(`${RESOURCE_LABELS[key]}嵌入祭坛。`);
+    }
+}
+
+function summonHollowArtisanKing(building) {
+    if (building.bossSummoned) return;
+    building.bossSummoned = true;
+    building.interiorObjects = building.interiorObjects.filter(object => object.kind !== 'finalCorePedestal');
+    state.indoor.objects = building.interiorObjects;
+    const boss = mineCaveMonster('hollowArtisanKing', '空心匠王', VIEW.width / 2, 210);
+    boss.boss = true;
+    boss.finalBoss = true;
+    boss.phase = 1;
+    boss.nextSkillAt = performance.now() + 650;
+    boss.nextAttackAt = performance.now() + 900;
+    building.interiorObjects.push(boss);
+    state.cameraShake = Math.max(state.cameraShake, 18);
+    spawnBurst(VIEW.width / 2, 330, '#ffd166', 72, 360, 110);
+    showToast('祭坛塌入地下。空心匠王从永恒核心炉中站起。');
 }
 
 function attack(now = performance.now()) {
@@ -12271,9 +13187,13 @@ function attack(now = performance.now()) {
     p.attackCooldown = attackProfile.cooldown;
     p.attackUntil = now + (attackProfile.name.includes('蓄力') ? 260 : 160);
     p.attackVisualType = 'melee';
-    const attackDir = currentAimDir();
+    const attackDir = currentAimDirWithAutoLock(attackProfile, now);
     p.attackDir = attackDir;
     p.facing = attackDir;
+    p.attackStartedAt = now;
+    p.attackProfileStyle = attackProfile.style || 'slash';
+    p.attackComboStep = p.weaponCombo?.count || 1;
+    p.attackLungeUntil = now + 130;
     damageItemDurability(selectedHotbarItem(), weaponDurabilityUseCost(selectedHotbarItem(), attackProfile));
     if (attackProfile.dart) launchBambooKnifeProjectile(p, attackDir, now);
     const strike = { x: p.x + attackDir.x * p.radius, y: p.y + attackDir.y * p.radius };
@@ -12492,7 +13412,9 @@ function releaseDirectRanged(now = performance.now()) {
         showToast('体力不足，无法稳定发射。');
         return true;
     }
-    const dir = staffCast ? currentAimDir() : currentAimDirWithSpread(aim, held);
+    const lockProfile = rangedDef?.profile || { range: 430, cooldown: 0.8, name: RESOURCE_LABELS[aim.key] || aim.key };
+    const lockedDir = currentAimDirWithAutoLock(lockProfile, now);
+    const dir = staffCast ? lockedDir : currentAimDirWithSpread({ ...aim, lockedDir }, held);
     p.stamina = Math.max(0, p.stamina - cost);
     consumeHungerForAction(cost * 0.018);
     p.attackCooldown = rangedDef?.profile?.cooldown || (aim.key === 'slingshot' ? 0.95 : 0.82);
@@ -12500,6 +13422,8 @@ function releaseDirectRanged(now = performance.now()) {
     p.attackVisualType = 'ranged';
     p.attackDir = dir;
     p.facing = dir;
+    p.attackStartedAt = now;
+    p.attackProfileStyle = 'ranged';
     damageItemDurability(aim.key, isStaffWeapon(aim.key) ? 2 : 1);
     if (ammo) state.inventory[ammo] -= 1;
     const range = rangedDef?.profile?.range
@@ -12659,7 +13583,7 @@ function launchBambooKnifeProjectile(player, dir, now = performance.now()) {
 }
 
 function currentAimDirWithSpread(aim, charge) {
-    const dir = currentAimDir();
+    const dir = aim.lockedDir || currentAimDir();
     const maxSpread = aim.key === 'slingshot' ? 0.22 : (aim.key === 'sling' ? 0.16 : (aim.key === 'bambooCrossbow' ? 0.06 : 0.13));
     const spread = (1 - charge) * maxSpread * (hash2(performance.now() * 0.01, state.player.x * 0.01) - 0.5) * 2;
     const angle = Math.atan2(dir.y, dir.x) + spread;
@@ -12667,16 +13591,24 @@ function currentAimDirWithSpread(aim, charge) {
 }
 
 function throwableTargetForAim(aim, now = performance.now()) {
-    const dir = currentAimDir();
+    const cacheKey = `${Math.round(mouse.x / 6)}:${Math.round(mouse.y / 6)}:${Math.round(state.player.x / 8)}:${Math.round(state.player.y / 8)}:${aim.key}:${currentSceneKey()}`;
+    if (aim.cachedTarget && aim.cachedTargetKey === cacheKey && now < (aim.cachedTargetUntil || 0)) {
+        return aim.cachedTarget;
+    }
     const held = clamp((now - aim.startedAt) / 750, 0, 1);
     const distanceAhead = 170 + held * 150;
+    const dir = currentAimDirWithAutoLock({ range: distanceAhead + 80, cooldown: 0.7, name: RESOURCE_LABELS[aim.key] || aim.key }, now);
+    const target = state.player.autoLockTarget;
     const bounds = currentSceneBounds();
-    return {
-        x: clamp(state.player.x + dir.x * distanceAhead, 24, bounds.width - 24),
-        y: clamp(state.player.y + dir.y * distanceAhead, 24, bounds.height - 24),
+    aim.cachedTarget = {
+        x: clamp(target ? target.x : state.player.x + dir.x * distanceAhead, 24, bounds.width - 24),
+        y: clamp(target ? target.y : state.player.y + dir.y * distanceAhead, 24, bounds.height - 24),
         dir,
         held,
     };
+    aim.cachedTargetKey = cacheKey;
+    aim.cachedTargetUntil = now + 80;
+    return aim.cachedTarget;
 }
 
 function updateProjectiles(dt, now) {
@@ -12927,9 +13859,10 @@ function damageEnemy(hit, now, attackProfile = currentAttackProfile()) {
         hit.deathAt = now;
         markSpawnAreaCleared(hit.x, hit.y, now);
         const drops = grantEnemyDrops(hit);
+        const coreText = grantStoryCoreForDefeatedEnemy(hit);
         spawnBurst(hit.x, hit.y, '#ffffff', 24, 260, hit.radius);
         addFloatText(drops.floatText, hit.x, hit.y - 52, '#9cffb7');
-        showToast(`击败 ${hit.name}，获得 ${drops.toastText}`);
+        showToast(`击败 ${hit.name}，获得 ${drops.toastText}${coreText ? `、${coreText}` : ''}`);
     } else {
         showToast(`${hit.name} 被${attackProfile.name}击中，剩余 ${Math.ceil(Math.max(0, hit.hp))}/${hit.maxHp}`);
     }
@@ -13165,12 +14098,33 @@ function damageMineCaveMonster(monster, now, attackProfile = currentAttackProfil
         monster.hp = 0;
         monster.deathAt = now;
         monster.solid = false;
+        if (monster.finalBoss) {
+            completeFinalBossFight(now);
+            return;
+        }
         const drops = grantMineMonsterDrops(monster);
+        const coreText = monster.boss ? grantStoryCore('crystalCore') : '';
         addFloatText(drops, monster.x, monster.y - 52, '#9cffb7');
-        showToast(`${monster.label} 被击败，获得 ${drops}`);
+        showToast(`${monster.label} 被击败，获得 ${drops}${coreText ? `、${coreText}` : ''}`);
     } else {
         showToast(`${monster.label} 受伤，剩余 ${Math.ceil(monster.hp)}/${monster.maxHp}`);
     }
+}
+
+function grantStoryCoreForDefeatedEnemy(enemy) {
+    if (enemy.kind === 'waspQueen' || enemy.name === '黄蜂女王') return grantStoryCore('royalJellyCore');
+    if (enemy.ruinGuardian || enemy.kind === 'jungleRuinGuardian') return grantStoryCore('ancientVineCore');
+    return '';
+}
+
+function grantStoryCore(key) {
+    if (!key || (state.inventory[key] || 0) > 0) return '';
+    if (!addInventoryItem(key, 1)) return `${RESOURCE_LABELS[key]}装不下`;
+    state.storyCores ||= {};
+    state.storyCores[key] = true;
+    addFloatText(`+${RESOURCE_LABELS[key]}`, state.player.x, state.player.y - 72, '#ffd166');
+    updateReleaseObjectivePanel();
+    return `${RESOURCE_LABELS[key]} x1`;
 }
 
 function damageBatNest(nest, now, attackProfile = currentAttackProfile()) {
@@ -13483,6 +14437,46 @@ function backpackItemKeys() {
     return Object.keys(RESOURCE_LABELS).filter(key => (state.inventory[key] || 0) > 0 && !isHotbarItem(key) && !isEquippedItemKey(key));
 }
 
+function backpackSlotEntries() {
+    const entries = [];
+    for (const key of Object.keys(RESOURCE_LABELS)) {
+        const amount = Math.max(0, Math.floor(state.inventory[key] || 0));
+        if (amount <= 0) continue;
+        if (isDurableItem(key)) {
+            const values = durabilityValues(key);
+            const equippedCopy = isEquippedDurableCopy(key) ? 1 : 0;
+            const hotbarCopy = isHotbarItem(key) ? 1 : 0;
+            const hiddenCopies = Math.min(amount, equippedCopy + hotbarCopy);
+            for (let i = hiddenCopies; i < amount; i++) entries.push({ key, copyIndex: i, durability: Math.ceil(values[i] || durableMaxForItem(key)) });
+        } else {
+            if (isHotbarItem(key) || isEquippedItemKey(key)) continue;
+            entries.push({ key, amount });
+        }
+    }
+    return entries;
+}
+
+function isEquippedDurableCopy(key) {
+    return key === equippedItemKey('armorBody')
+        || key === equippedItemKey('armorCloak')
+        || key === equippedItemKey('armorHead')
+        || key === equippedItemKey('offhand');
+}
+
+function hiddenDurableCopyCount(key) {
+    return Math.min(Math.max(0, Math.floor(state.inventory[key] || 0)), (isEquippedDurableCopy(key) ? 1 : 0) + (isHotbarItem(key) ? 1 : 0));
+}
+
+function removeBackpackDurableCopy(key) {
+    const values = durabilityValues(key);
+    const index = Math.min(values.length - 1, hiddenDurableCopyCount(key));
+    const [durability] = values.splice(Math.max(0, index), 1);
+    state.inventory[key] = Math.max(0, (state.inventory[key] || 0) - 1);
+    if (state.inventory[key] > 0) state.itemDurability[key] = values;
+    else delete state.itemDurability?.[key];
+    return durability || durableMaxForItem(key);
+}
+
 function isEquippedItemKey(key) {
     const equipped = key === equippedItemKey('armorBody') || key === equippedItemKey('armorCloak') || key === equippedItemKey('armorHead') || key === equippedItemKey('offhand');
     return equipped && (state.inventory[key] || 0) <= 1;
@@ -13659,21 +14653,34 @@ function equippedWeaponKey() {
 }
 
 function hasBackpackSpaceFor(key) {
-    return (state.inventory[key] || 0) > 0 || isHotbarItem(key) || backpackItemKeys().length < BACKPACK_SLOT_LIMIT;
+    if (isDurableItem(key)) return backpackSlotEntries().length < BACKPACK_SLOT_LIMIT;
+    return (state.inventory[key] || 0) > 0 || isHotbarItem(key) || backpackSlotEntries().length < BACKPACK_SLOT_LIMIT;
 }
 
 function addInventoryItem(key, amount = 1) {
     if (amount <= 0) return true;
-    if (!hasBackpackSpaceFor(key)) return false;
+    if (isStoryNoteKey(key)) {
+        state.readStoryNotes ||= {};
+        if (state.inventory[key] > 0 || state.readStoryNotes[key]) return true;
+        if (!hasBackpackSpaceFor(key)) return false;
+        state.inventory[key] = 1;
+        state.generatedStoryNotes ||= {};
+        state.generatedStoryNotes[key] = true;
+        rememberItemDiscovery(key);
+        return true;
+    }
     if (isDurableItem(key)) {
-        state.inventory[key] = (state.inventory[key] || 0) + 1;
+        const copies = Math.max(1, Math.floor(amount));
+        if (backpackSlotEntries().length + copies > BACKPACK_SLOT_LIMIT) return false;
         state.itemDurability ||= {};
         const values = durabilityValues(key);
-        values[state.inventory[key] - 1] = durableMaxForItem(key);
+        for (let i = 0; i < copies; i++) values.push(durableMaxForItem(key));
+        state.inventory[key] = (state.inventory[key] || 0) + copies;
         state.itemDurability[key] = values;
         rememberItemDiscovery(key);
         return true;
     }
+    if (!hasBackpackSpaceFor(key)) return false;
     state.inventory[key] = (state.inventory[key] || 0) + amount;
     rememberItemDiscovery(key);
     return true;
@@ -13736,6 +14743,33 @@ function learnRecipesFromTask(role) {
     return learnRecipesByIds(TASK_RECIPE_IDS[role] || []);
 }
 
+function isStoryNoteKey(key) {
+    return [
+        'cultNoteDream', 'cultNoteRootSpeech', 'cultNoteGreenBottle', 'cultNoteRootArmor', 'cultNotePriestDiary', 'cultNoteRootAltar',
+        'villageNoteFamily', 'villageNoteDebt', 'villageNoteGuardShift', 'villageNoteWeather', 'villageNoteMineWarning', 'villageNoteKitchenList',
+    ].includes(key);
+}
+
+function readStoryNote(key) {
+    const text = {
+        cultNoteDream: '没寄出的家信：我在这里还好。他们说我睡觉时不再喊母亲了。这应该是好事吧？',
+        cultNoteRootSpeech: '听根日记：东边的根向水弯，南边的根停了很久。有一只蜂飞进屋里，又飞了出去。我不知道这是不是一句话。',
+        cultNoteGreenBottle: '绿瓶封条：不要靠近火。不要靠近耳朵。不要问它梦见了什么。',
+        cultNoteRootArmor: '根甲碎片：这副根甲从里面裂开，断口处不是木刺，是细小的白骨。',
+        cultNotePriestDiary: '祭司私记：第一次听见她时，我以为那是神。第二次听见她时，我以为那是母亲。第三次听见她时，我不敢再给她名字。',
+        cultNoteRootAltar: '根坛记录：三声靠近时，根会张开。不要说“门开了”。门不会流口水。',
+        villageNoteFamily: '没寄出的家书：今年雨来得早。等我攒够铜币，就把屋顶修好，再接你们来住。',
+        villageNoteDebt: '欠账纸条：铜币三枚，欠到下个集市。若我没回来，别去问我妻子。',
+        villageNoteGuardShift: '守夜排班：后半夜别让新人守南门。那里草太高，钟声传不过去。',
+        villageNoteWeather: '雨季便条：屋后那棵树倒向东边，说明明天会下大雨。先把粮架挪进屋。',
+        villageNoteMineWarning: '矿洞警告：第三声回响不是石头落地。听见之后不要喊同伴名字。',
+        villageNoteKitchenList: '厨房清单：肉要先烤，蘑菇要分开。厨师说红点蘑菇不能靠近汤锅。',
+    }[key] || '纸页潮湿，字迹已经看不清。';
+    state.readStoryNotes ||= {};
+    state.readStoryNotes[key] = true;
+    showToast(text);
+}
+
 function recipeLearningSuffix(names) {
     if (!names?.length) return '';
     return ` 学会配方：${names.slice(0, 3).join('、')}${names.length > 3 ? `等 ${names.length} 种` : ''}。`;
@@ -13744,8 +14778,8 @@ function recipeLearningSuffix(names) {
 function discardInventoryItem(key, amount = 1) {
     if ((state.inventory[key] || 0) <= 0) return;
     if (isDurableItem(key)) {
-        const removed = Math.min(amount, state.inventory[key]);
-        consumeDurableItemCopies(key, removed);
+        const removed = Math.min(amount, Math.max(0, (state.inventory[key] || 0) - hiddenDurableCopyCount(key)) || state.inventory[key]);
+        for (let i = 0; i < removed; i++) removeBackpackDurableCopy(key);
         syncHotbarItems();
         showToast(`丢弃 ${RESOURCE_LABELS[key] || key} x${removed}`);
         renderHud();
@@ -13774,9 +14808,38 @@ function chestItemKeys(chest) {
     return Object.keys(RESOURCE_LABELS).filter(key => (chest.storage?.[key] || 0) > 0);
 }
 
+function chestSlotEntries(chest) {
+    const entries = [];
+    for (const key of Object.keys(RESOURCE_LABELS)) {
+        const amount = Math.max(0, Math.floor(chest.storage?.[key] || 0));
+        if (amount <= 0) continue;
+        if (isDurableItem(key)) {
+            const values = chestDurabilityValues(chest, key);
+            for (let i = 0; i < amount; i++) entries.push({ key, copyIndex: i, durability: Math.ceil(values[i] || durableMaxForItem(key)) });
+        } else {
+            entries.push({ key, amount });
+        }
+    }
+    return entries;
+}
+
+function chestDurabilityValues(chest, key) {
+    chest.itemDurability ||= {};
+    const amount = Math.max(0, Math.floor(chest.storage?.[key] || 0));
+    const max = durableMaxForItem(key);
+    let values = Array.isArray(chest.itemDurability[key])
+        ? chest.itemDurability[key]
+        : (Number.isFinite(chest.itemDurability[key]) && chest.itemDurability[key] > 0 ? [chest.itemDurability[key]] : []);
+    values = values.map(value => Number.isFinite(value) && value > 0 ? Math.min(value, max) : max);
+    while (values.length < amount) values.push(max);
+    if (values.length > amount) values = values.slice(0, amount);
+    chest.itemDurability[key] = values;
+    return values;
+}
+
 function chestHasSpaceFor(chest, key) {
-    if (isDurableItem(key)) return (chest.storage?.[key] || 0) <= 0 && chestItemKeys(chest).length < CHEST_SLOT_LIMIT;
-    return (chest.storage?.[key] || 0) > 0 || chestItemKeys(chest).length < CHEST_SLOT_LIMIT;
+    if (isDurableItem(key)) return chestSlotEntries(chest).length < CHEST_SLOT_LIMIT;
+    return (chest.storage?.[key] || 0) > 0 || chestSlotEntries(chest).length < CHEST_SLOT_LIMIT;
 }
 
 function storeItemInChest(chest, key, amount = 1) {
@@ -13791,13 +14854,11 @@ function storeItemInChest(chest, key, amount = 1) {
     }
     const moved = isDurableItem(key) ? 1 : Math.min(amount, state.inventory[key]);
     if (isDurableItem(key)) {
-        const values = durabilityValues(key);
-        const storedDurability = values.shift() || durableMaxForItem(key);
-        state.inventory[key] -= moved;
+        const storedDurability = removeBackpackDurableCopy(key);
         chest.itemDurability ||= {};
-        chest.itemDurability[key] = storedDurability;
-        if (state.inventory[key] > 0) state.itemDurability[key] = values;
-        else delete state.itemDurability?.[key];
+        const chestValues = chestDurabilityValues(chest, key);
+        chestValues.push(storedDurability);
+        chest.itemDurability[key] = chestValues;
     } else {
         state.inventory[key] -= moved;
     }
@@ -13819,31 +14880,34 @@ function takeItemFromChest(chest, key, amount = 1) {
             showToast('背包已满，无法取出。');
             return;
         }
+        const chestValues = chestDurabilityValues(chest, key);
+        const takenDurability = chestValues.shift() || durableMaxForItem(key);
         state.inventory[key] = (state.inventory[key] || 0) + 1;
         state.itemDurability ||= {};
         const values = durabilityValues(key);
-        values[state.inventory[key] - 1] = Math.min(chest.itemDurability?.[key] || durableMaxForItem(key), durableMaxForItem(key));
+        values[state.inventory[key] - 1] = Math.min(takenDurability, durableMaxForItem(key));
         state.itemDurability[key] = values;
-        delete chest.itemDurability[key];
+        chest.itemDurability[key] = chestValues;
         rememberItemDiscovery(key);
     } else if (!addInventoryItem(key, moved)) {
         showToast('背包已满，无法取出。');
         return;
     }
-    chest.storage[key] -= moved;
-    if (chest.storage[key] <= 0) delete chest.storage[key];
+    if (isStoryNoteKey(key)) {
+        chest.storage[key] = 0;
+        if (chest.ownerObject) chest.ownerObject.storyNoteTaken = true;
+    } else {
+        chest.storage[key] -= moved;
+    }
+    if (chest.storage[key] <= 0) {
+        delete chest.storage[key];
+        delete chest.itemDurability?.[key];
+    }
     if (chest.villageOwned) {
         if (chest.ownerObject) {
             chest.ownerObject.opened = true;
-            if (!chest.ownerObject.stolen) {
-                chest.ownerObject.stolen = true;
-                const village = state.indoor?.building?.village || state.village;
-                const reputation = changeVillageReputation(village, -1);
-                const npc = state.indoor?.objects.find(item => item.kind === 'npc');
-                if (npc) setVillagerPlayerAggro(npc);
-                showToast(`拿走村民箱子里的 ${RESOURCE_LABELS[key] || key} x${moved}。本村声誉 -1（当前 ${reputation.toFixed(1)}）`);
-            } else {
-                showToast(`继续拿走 ${RESOURCE_LABELS[key] || key} x${moved}。`);
+            if (!handleVillageChestTheft(chest, `拿走村民箱子里的 ${RESOURCE_LABELS[key] || key} x${moved}`)) {
+                showToast(chest.ownerObject.unseenTheft ? `没人看见，你悄悄拿走 ${RESOURCE_LABELS[key] || key} x${moved}。` : `继续拿走 ${RESOURCE_LABELS[key] || key} x${moved}。`);
             }
         }
     } else {
@@ -13865,20 +14929,47 @@ function takeRecipeNoteFromChest(chest, key, moved) {
     const learned = recipeLearningSuffix(learnOneRecipeByIds(NOTE_RECIPE_IDS[source] || [])) || ' 没有新的可学配方。';
     if (chest.villageOwned && chest.ownerObject) {
         chest.ownerObject.opened = true;
-        if (!chest.ownerObject.stolen) {
-            chest.ownerObject.stolen = true;
-            const village = state.indoor?.building?.village || state.village;
-            const reputation = changeVillageReputation(village, -1);
-            const npc = state.indoor?.objects.find(item => item.kind === 'npc');
-            if (npc) setVillagerPlayerAggro(npc);
-            showToast(`读走村民箱子里的${RESOURCE_LABELS[key]}，本村声誉 -1（当前 ${reputation.toFixed(1)}）。${learned}`);
-        } else {
-            showToast(`读走${RESOURCE_LABELS[key]}。${learned}`);
+        if (!handleVillageChestTheft(chest, `读走村民箱子里的${RESOURCE_LABELS[key]}`, learned)) {
+            showToast(chest.ownerObject.unseenTheft ? `没人看见，你悄悄读走${RESOURCE_LABELS[key]}。${learned}` : `读走${RESOURCE_LABELS[key]}。${learned}`);
         }
     } else {
         showToast(`读走${RESOURCE_LABELS[key]}。${learned}`);
     }
     renderHud();
+}
+
+function handleVillageChestTheft(chest, actionText, suffix = '') {
+    if (!chest.villageOwned || !chest.ownerObject || chest.ownerObject.stolen) return false;
+    const witness = villageTheftWitness(chest.ownerObject);
+    if (!witness) {
+        chest.ownerObject.unseenTheft = true;
+        return false;
+    }
+    chest.ownerObject.stolen = true;
+    const village = state.indoor?.building?.village || state.village;
+    const reputation = changeVillageReputation(village, -1);
+    setVillagerPlayerAggro(witness);
+    showToast(`${witness.label}看见你${actionText}。本村声誉 -1（当前 ${reputation.toFixed(1)}）。${suffix}`);
+    return true;
+}
+
+function villageTheftWitness(container) {
+    if (!state.indoor?.objects?.length) return null;
+    const p = state.player;
+    return state.indoor.objects
+        .filter(item => item.kind === 'npc' && item.hp > 0 && !item.follower && !item.outside)
+        .filter(npc => distance(npc, p) <= 390 || distance(npc, container) <= 330)
+        .find(npc => npcCanSeeTheft(npc, container)) || null;
+}
+
+function npcCanSeeTheft(npc, container) {
+    const target = { x: (state.player.x + container.x) / 2, y: (state.player.y + container.y) / 2 };
+    const dx = target.x - npc.x;
+    const dy = target.y - npc.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 120) return true;
+    const facing = npc.facing === -1 ? -1 : 1;
+    return dx * facing > -24 && Math.abs(dy) < 190;
 }
 
 function rollDropAmount(spec, hit) {
@@ -14312,12 +15403,16 @@ function canReceiveRecipeOutput(item) {
 
 function canReceiveRecipeOutputs(item) {
     const outputKeys = Object.keys(item.outputs || {});
-    const newOutputSlots = outputKeys.filter(key => (state.inventory[key] || 0) <= 0 && !isHotbarItem(key)).length;
+    const newOutputSlots = outputKeys.reduce((sum, key) => {
+        if (isHotbarItem(key)) return sum;
+        if (isDurableItem(key)) return sum + Math.max(0, Math.floor(item.outputs[key] || 0));
+        return sum + ((state.inventory[key] || 0) <= 0 ? 1 : 0);
+    }, 0);
     if (newOutputSlots === 0) return true;
-    const currentSlots = backpackItemKeys().length;
+    const currentSlots = backpackSlotEntries().length;
     const freedSlots = Object.entries(item.cost)
         .filter(([key, amount]) => (state.inventory[key] || 0) > 0 && (state.inventory[key] || 0) <= amount && !isHotbarItem(key) && !outputKeys.includes(key))
-        .length;
+        .reduce((sum, [key]) => sum + (isDurableItem(key) ? Math.max(0, Math.floor(state.inventory[key] || 0)) : 1), 0);
     return currentSlots + newOutputSlots - freedSlots <= BACKPACK_SLOT_LIMIT;
 }
 
@@ -14439,6 +15534,10 @@ function craft(id) {
 
 function useInventoryItem(key) {
     if ((state.inventory[key] || 0) <= 0) return;
+    if (isStoryNoteKey(key)) {
+        readStoryNote(key);
+        return;
+    }
     const p = state.player;
     const simpleWeapon = simpleWeaponDef(key);
     if (simpleWeapon) {
@@ -15228,22 +16327,27 @@ function updateQuest() {
     if (state.win || state.lose) return;
     if (state.quest === 'collect-basic' && state.inventory.wood >= 4 && state.inventory.stone >= 4) state.quest = 'craft-tools';
     if (state.quest === 'craft-tools' && state.equipment.tool === '石镐') state.quest = 'mine-ore';
-    if (state.quest === 'mine-ore' && state.inventory.ore >= 6) state.quest = 'craft-weapon';
-    if (state.quest === 'craft-weapon' && state.equipment.weapon === '铁剑') state.quest = 'defeat-golem';
-    if (state.quest === 'defeat-golem' && state.inventory.crystal >= 3) state.quest = 'craft-key';
+    if (state.quest === 'mine-ore' && state.inventory.ore >= 4) state.quest = 'seek-cores';
+    if (state.quest === 'seek-cores' && storyCoreCount() >= 3) state.quest = 'final-altar';
 }
 
 function questText() {
+    if (state.quest === 'seek-cores') return `收集三个远古核心：蜂王浆 ${coreMark('royalJellyCore')} / 晶核 ${coreMark('crystalCore')} / 古藤 ${coreMark('ancientVineCore')}`;
     return {
-        'collect-basic': '采集木头和石头，营地已有可用营火。',
+        'collect-basic': '正式版目标：先采集木头和石头，准备基础工具。',
         'repair-camp': '营地已有可用营火，继续合成工具。',
-        'craft-tools': '合成石斧/石镐，向矿区推进。',
-        'mine-ore': '寻找随机生成的矿区采铁矿。',
-        'craft-weapon': '合成铁剑，准备挑战守门石像。',
-        'defeat-golem': '击败废墟附近的守门石像，获得魔晶。',
-        'craft-key': '合成废墟钥匙。',
-        'open-ruins': '前往右上角废墟门，按 E 开门。',
+        'craft-tools': '合成并装备石镐，开始正式冒险。',
+        'mine-ore': '在矿区采集铁矿，准备挑战矿洞晶核守卫。',
+        'final-altar': '三个核心已集齐。寻找远古祭台，准备最终挑战。',
     }[state.quest] || '探索荒野。';
+}
+
+function storyCoreCount() {
+    return ['royalJellyCore', 'crystalCore', 'ancientVineCore'].filter(key => (state.inventory[key] || 0) > 0).length;
+}
+
+function coreMark(key) {
+    return (state.inventory[key] || 0) > 0 ? '✓' : '□';
 }
 
 function renderHud() {
@@ -15263,13 +16367,14 @@ function renderHud() {
     inventory.addEventListener('drop', handleBackpackDrop);
     inventory.addEventListener('dragleave', handleBackpackDragLeave);
     const capacity = document.getElementById('inventory-capacity');
-    const backpackKeys = backpackItemKeys();
+    const backpackEntries = backpackSlotEntries();
     if (capacity) {
-        capacity.textContent = `背包 ${backpackKeys.length}/${BACKPACK_SLOT_LIMIT} 格`;
-        capacity.classList.toggle('full', backpackKeys.length >= BACKPACK_SLOT_LIMIT);
+        capacity.textContent = `背包 ${backpackEntries.length}/${BACKPACK_SLOT_LIMIT} 格`;
+        capacity.classList.toggle('full', backpackEntries.length >= BACKPACK_SLOT_LIMIT);
     }
     renderEquipmentPanel();
-    backpackKeys.forEach(key => {
+    backpackEntries.forEach(entry => {
+        const key = entry.key;
         const label = RESOURCE_LABELS[key] || key;
         const row = document.createElement('div');
         row.className = 'inventory-row';
@@ -15277,14 +16382,14 @@ function renderHud() {
         row.classList.toggle('selected-for-hotbar', state.selectedBackpackItem === key);
         row.classList.add('draggable');
         row.dataset.itemKey = key;
-        row.title = isDurableItem(key) ? `${label} 耐久 ${durabilityText(key)}。点击选择后，再点击快捷栏放入。` : `${label} x${state.inventory[key] || 0}。点击选择后，再点击快捷栏放入。`;
+        row.title = isDurableItem(key) ? `${label} 耐久 ${entry.durability}/${durableMaxForItem(key)}。点击选择后，再点击快捷栏放入。` : `${label} x${entry.amount}。点击选择后，再点击快捷栏放入。`;
         row.appendChild(createPixelIconElement(key, 'inventory-icon'));
         const name = document.createElement('span');
         name.className = 'inventory-name';
         name.textContent = label;
         row.appendChild(name);
         const count = document.createElement('strong');
-        count.textContent = isDurableItem(key) ? durabilityText(key) : (state.inventory[key] || 0);
+        count.textContent = isDurableItem(key) ? `${entry.durability}/${durableMaxForItem(key)}` : entry.amount;
         row.appendChild(count);
         const actions = document.createElement('div');
         actions.className = 'slot-actions';
@@ -15338,7 +16443,7 @@ function renderHud() {
         row.addEventListener('click', () => selectBackpackItemForHotbar(key));
         inventory.appendChild(row);
     });
-    for (let i = backpackKeys.length; i < BACKPACK_SLOT_LIMIT; i++) {
+    for (let i = backpackEntries.length; i < BACKPACK_SLOT_LIMIT; i++) {
         const emptySlot = document.createElement('div');
         emptySlot.className = 'inventory-row inventory-slot-empty';
         emptySlot.textContent = '';
@@ -15348,6 +16453,7 @@ function renderHud() {
     renderHotbarDropZone();
     renderChestStorage();
     renderTradePanel();
+    updateReleaseObjectivePanel();
 
     const recipes = document.getElementById('recipes');
     recipes.innerHTML = '';
@@ -15472,14 +16578,15 @@ function renderChestStorage() {
     panel.classList.toggle('hidden', !chest);
     panel.innerHTML = '';
     if (!chest) return;
-    const keys = chestItemKeys(chest);
+    const entries = chestSlotEntries(chest);
     const title = document.createElement('div');
     title.className = 'chest-title';
-    title.textContent = `${(chest.villageOwned || chest.ruinOwned) ? chest.label : '木箱'} ${keys.length}/${CHEST_SLOT_LIMIT} 格`;
+    title.textContent = `${(chest.villageOwned || chest.ruinOwned) ? chest.label : '木箱'} ${entries.length}/${CHEST_SLOT_LIMIT} 格`;
     panel.appendChild(title);
     const grid = document.createElement('div');
     grid.className = 'chest-grid';
-    keys.forEach(key => {
+    entries.forEach(entry => {
+        const key = entry.key;
         const row = document.createElement('button');
         row.type = 'button';
         row.className = 'inventory-row chest-row trade-row';
@@ -15489,12 +16596,12 @@ function renderChestStorage() {
         name.textContent = RESOURCE_LABELS[key] || key;
         row.appendChild(name);
         const count = document.createElement('strong');
-        count.textContent = chest.storage[key] || 0;
+        count.textContent = isDurableItem(key) ? `${entry.durability}/${durableMaxForItem(key)}` : entry.amount;
         row.appendChild(count);
         row.addEventListener('click', () => takeItemFromChest(chest, key, 1));
         grid.appendChild(row);
     });
-    for (let i = keys.length; i < CHEST_SLOT_LIMIT; i++) {
+    for (let i = entries.length; i < CHEST_SLOT_LIMIT; i++) {
         const empty = document.createElement('div');
         empty.className = 'inventory-row inventory-slot-empty';
         grid.appendChild(empty);
@@ -15903,10 +17010,17 @@ function isHotbarItem(key) {
 
 function syncHotbarItems() {
     normalizeDurableInventory();
+    normalizeStoryNotes();
     state.hotbarItems = (state.hotbarItems || Array(9).fill(null)).map(key => key && (state.inventory[key] || 0) > 0 ? key : null);
     while (state.hotbarItems.length < 9) state.hotbarItems.push(null);
     if (state.hotbarItems.length > 9) state.hotbarItems.length = 9;
     if (state.selectedBackpackItem && (state.inventory[state.selectedBackpackItem] || 0) <= 0) state.selectedBackpackItem = null;
+}
+
+function normalizeStoryNotes() {
+    for (const key of Object.keys(state.inventory || {})) {
+        if (isStoryNoteKey(key) && state.inventory[key] > 1) state.inventory[key] = 1;
+    }
 }
 
 function selectedHotbarItem() {
@@ -16157,7 +17271,7 @@ function updateMobileInventoryScale() {
 
 function canUseInventoryItem(key) {
     const usable = ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'ironAxe', 'ironPickaxe', 'ironSickle', 'stoneSpear', 'slingshot', 'bambooSpear', 'ironSword', 'crystalBlade', 'venomDagger', 'sinewBow', 'antlerSpear', 'stoneCoreHammer', 'leatherArmor', 'clothArmor', 'ironArmor', 'crystalArmor', 'minerLampHelmet', 'crystalLampHelmet', 'rabbitCloak', 'scorpionArmor', 'thickFurCoat', 'reedShellArmor', 'mireCoreArmor', 'jungleLeafCloak', 'buttressArmor', 'toxicMask', 'parasiticVineArmor', 'woodShield', 'ironShield', 'vineRoundShield', 'buttressShield', 'venom', 'beeDart', 'shadowEssence', 'coalBomb', 'poisonVial', 'campfire', 'torch', 'waxTorch', 'shadowLantern', 'bedroll', 'campCharm', 'antlerCharm', 'snare', 'bambooFence', 'bambooTrap', 'vineNetTrap', 'toxicVineSnare', 'poisonBambooTrap', 'potionTable', 'workbench', 'forge', 'beehiveBox', 'stoneCoreTotem', 'jungleTotem', 'reedMat', 'chest', 'antlerHorn', 'campFlag', 'berry', 'mushroom', 'lotus', 'cactusFruit', 'carrot', 'corn', 'tomato', 'repairKit', 'jerky', 'minerRation', 'vegetableSoup', 'honey', 'sap', 'meat', 'frogLeg', 'rabbitFoot', 'potion', 'honeySalve', 'royalJellyPotion', 'nightVisionPotion', 'jumpPotion', 'poisonResistPotion', 'shadowPotion', 'bandage', 'strongBandage', 'stew', 'salve', 'antidote', 'speedPotion', 'regenPotion', 'ironSkinPotion', 'mapleSnack', 'honeyRoastMeat', 'roastMeat', 'jungleSalve', 'vineStaminaDrink', 'poisonLeafWrap'];
-    return (!!simpleWeaponDef(key) || usable.includes(key)) && (state.inventory[key] || 0) > 0;
+    return (!!simpleWeaponDef(key) || usable.includes(key) || isStoryNoteKey(key)) && (state.inventory[key] || 0) > 0;
 }
 
 function recipeHasKnownMaterial(recipe) {
@@ -16443,6 +17557,10 @@ function currentSceneBounds() {
 }
 
 function drawIndoor(now) {
+    if (state.indoor?.building?.kind === 'finalBossArena') {
+        drawFinalBossArena(now);
+        return;
+    }
     if (state.indoor?.building?.kind === 'mineCaveInterior') {
         drawMineCaveInterior(now);
         return;
@@ -18286,6 +19404,10 @@ function drawIndoorObject(object) {
         drawMineCaveMonster(object);
         return;
     }
+    if (object.kind === 'finalCorePedestal') {
+        drawFinalCorePedestal(object);
+        return;
+    }
     if (object.kind === 'totem') {
         if (object.mineBoss) drawMineCrystalGuardian(object);
         else drawVillageTotem(object);
@@ -18663,7 +19785,9 @@ function drawMineCaveMonster(object) {
     }
     const hurt = (object.hurtUntil || 0) > performance.now();
     drawShadow(x, y + object.radius * 0.65, object.radius * 1.7, 5);
-    if (object.boss) {
+    if (object.finalBoss) {
+        drawHollowArtisanKing(object, x, y, hurt);
+    } else if (object.boss) {
         ctx.fillStyle = 'rgba(183,125,255,0.24)';
         ctx.fillRect(x - 30, y - 44, 60, 8);
         ctx.fillStyle = hurt ? '#ffffff' : '#303946';
@@ -18730,6 +19854,49 @@ function drawMineCaveMonster(object) {
         ctx.fillRect(x - 2, y - 4, 4, 4);
     }
     if (object.hp < object.maxHp) drawMiniBar(x, y - object.radius - 18, Math.max(0, object.hp) / object.maxHp, '#ff6b6b');
+}
+
+function drawHollowArtisanKing(object, x, y, hurt) {
+    const phase = object.phase || 1;
+    drawShadow(x, y + object.radius * 0.7, object.radius * 2.2, 8);
+    ctx.fillStyle = phase === 1 ? 'rgba(183,125,255,0.28)' : (phase === 2 ? 'rgba(255,209,102,0.25)' : 'rgba(140,255,102,0.24)');
+    ctx.fillRect(x - 42, y - 68, 84, 10);
+    ctx.fillStyle = hurt ? '#ffffff' : '#202832';
+    ctx.fillRect(x - 30, y - 48, 60, 78);
+    ctx.fillStyle = '#66737f';
+    ctx.fillRect(x - 22, y - 58, 44, 18);
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x - 42, y - 22, 16, 44);
+    ctx.fillRect(x + 26, y - 22, 16, 44);
+    ctx.fillStyle = phase === 1 ? '#b77dff' : (phase === 2 ? '#ffd166' : '#8cff66');
+    ctx.fillRect(x - 9, y - 64, 18, 22);
+    ctx.fillRect(x - 8, y - 10, 16, 28);
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(x - 3, y - 58, 6, 10);
+    ctx.strokeStyle = phase === 3 ? '#5fae49' : '#d8e5f2';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x - 44, y + 8);
+    ctx.quadraticCurveTo(x - 74, y + 42, x - 54, y + 68);
+    ctx.moveTo(x + 44, y + 8);
+    ctx.quadraticCurveTo(x + 74, y + 42, x + 54, y + 68);
+    ctx.stroke();
+    drawMiniBar(x, y - 88, Math.max(0, object.hp) / object.maxHp, phase === 1 ? '#b77dff' : (phase === 2 ? '#ffd166' : '#8cff66'));
+}
+
+function drawFinalCorePedestal(object) {
+    const x = object.x;
+    const y = object.y;
+    const color = object.core === 'royalJellyCore' ? '#ffd166' : (object.core === 'crystalCore' ? '#b77dff' : '#8cff66');
+    drawShadow(x, y + 20, 66, 9);
+    ctx.fillStyle = '#303946';
+    ctx.fillRect(x - 30, y - 18, 60, 38);
+    ctx.fillStyle = '#66737f';
+    ctx.fillRect(x - 22, y - 28, 44, 14);
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 8, y - 38, 16, 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillRect(x - 3, y - 34, 6, 6);
 }
 
 function drawMineMonsterDeathAnimation(object, x, y) {
@@ -19098,6 +20265,8 @@ function villageRoadWeight(x, y) {
 function villagePathData() {
     if (villagePathCache && villagePathCacheSeed === worldSeed) return villagePathCache;
     const primary = dryVillageRegion(worldRegionSet().village);
+    const mineRegion = mineVillageRegion();
+    const forestRegion = startingForestVillageRegion();
     const side = seededUnit(primary.seed || 1, 73) > 0.5 ? 1 : -1;
     const secondary = dryVillageRegion({
         x: clamp(primary.x + side * (4600 + seededUnit(primary.seed, 74) * 1200), 1100, WORLD.width - 1100),
@@ -19133,7 +20302,10 @@ function villagePathData() {
     return { region, layout, endpoints, garden };
     };
     villagePathCacheSeed = worldSeed;
-    const villages = [build(primary), build(secondary), build(tertiary)];
+    const villages = [primary, secondary, tertiary, mineRegion, forestRegion]
+        .filter(Boolean)
+        .filter((region, index, list) => list.findIndex(other => distance(region, other) < 80) === index)
+        .map(build);
     villagePathCache = { ...villages[0], villages };
     return villagePathCache;
 }
@@ -19539,7 +20711,7 @@ function drawWorldObjects(now) {
     drawDecorations();
     const drawables = [
         ...(isNearView(state.camp, 160) ? [{ y: state.camp.y, draw: () => drawCamp() }] : []),
-        ...allVillages().filter(village => isNearView(village, village.radius + 180)).flatMap(village => villageDrawables(village)),
+        ...visibleVillages(180).flatMap(village => villageDrawables(village)),
         ...(state.roadLamps || []).filter(lamp => isNearView(lamp, 120)).map(lamp => ({ y: lamp.y, draw: () => drawVillageLamp(lamp) })),
         ...(isNearView(state.ruins, 220) ? [{ y: state.ruins.y, draw: () => drawRuins() }] : []),
         ...(state.waspHives || []).filter(hive => isNearView(hive, 220)).map(hive => ({ y: hive.y + 24, draw: () => drawWaspHive(hive, now) })),
@@ -19588,13 +20760,15 @@ function villageDrawables(village) {
         items.push({ y: village.y - village.radius, draw: () => drawFortressVillageGround(village) });
         items.push(...fortressWallDrawables(village));
     }
-    village.amenities?.lamps?.forEach(lamp => items.push({ y: lamp.y, draw: () => drawVillageLamp(lamp) }));
-    if (village.amenities?.altar) items.push({ y: village.amenities.altar.y + 32, draw: () => drawGreenMotherAltar(village.amenities.altar) });
-    if (village.amenities?.flag) items.push({ y: village.amenities.flag.y + 46, draw: () => drawVillageFlag(village.amenities.flag, village) });
-    if (village.amenities?.noticeBoard) items.push({ y: village.amenities.noticeBoard.y + 20, draw: () => drawVillageNoticeBoard(village.amenities.noticeBoard) });
-    if (village.amenities?.bell) items.push({ y: village.amenities.bell.y + 26, draw: () => drawVillageBell(village.amenities.bell) });
-    if (village.well) items.push({ y: village.well.y + 16, draw: () => drawVillageWell(village.well) });
-    village.buildings.forEach(building => items.push({ y: building.y + building.h * 0.5, draw: () => drawVillageHouse(building) }));
+    village.amenities?.lamps?.filter(lamp => isNearView(lamp, 170)).forEach(lamp => items.push({ y: lamp.y, draw: () => drawVillageLamp(lamp) }));
+    if (village.amenities?.altar && isNearView(village.amenities.altar, 240)) items.push({ y: village.amenities.altar.y + 32, draw: () => drawGreenMotherAltar(village.amenities.altar) });
+    if (village.amenities?.flag && isNearView(village.amenities.flag, 150)) items.push({ y: village.amenities.flag.y + 46, draw: () => drawVillageFlag(village.amenities.flag, village) });
+    if (village.amenities?.noticeBoard && isNearView(village.amenities.noticeBoard, 130)) items.push({ y: village.amenities.noticeBoard.y + 20, draw: () => drawVillageNoticeBoard(village.amenities.noticeBoard) });
+    if (village.amenities?.bell && isNearView(village.amenities.bell, 130)) items.push({ y: village.amenities.bell.y + 26, draw: () => drawVillageBell(village.amenities.bell) });
+    if (village.well && isNearView(village.well, 130)) items.push({ y: village.well.y + 16, draw: () => drawVillageWell(village.well) });
+    village.buildings
+        .filter(building => isNearView(building, Math.max(building.w || 120, building.h || 120) + 70))
+        .forEach(building => items.push({ y: building.y + building.h * 0.5, draw: () => drawVillageHouse(building) }));
     return items;
 }
 
@@ -19609,7 +20783,11 @@ function fortressWallDrawables(village) {
     const bottom = village.y + h / 2;
     const chunk = 58;
     const items = [];
-    const push = segment => items.push({ y: segment.sortY, draw: () => drawFortressWallSegment(segment) });
+    const push = segment => {
+        if (isRectNearView(segment.x, segment.y, segment.w, segment.h, 90)) {
+            items.push({ y: segment.sortY, draw: () => drawFortressWallSegment(segment) });
+        }
+    };
     push({ kind: 'horizontal', edge: 'north', x: left, y: top, w: w / 2 - gateHalf, h: thickness, sortY: top + thickness });
     push({ kind: 'horizontal', edge: 'north', x: village.x + gateHalf, y: top, w: w / 2 - gateHalf, h: thickness, sortY: top + thickness });
     push({ kind: 'horizontal', edge: 'south', x: left, y: bottom - thickness, w: w / 2 - gateHalf, h: thickness, sortY: bottom });
@@ -19904,9 +21082,13 @@ function drawVillageHouse(building) {
     ctx.fillRect(left + 12, top + 44, building.w - 24, building.h - 42);
     ctx.fillStyle = style.wall;
     ctx.fillRect(left + 18, top + 50, building.w - 36, building.h - 54);
-    for (let yy = top + 54, row = 0; yy < top + building.h - 10; yy += 14, row++) {
-        ctx.fillStyle = row % 2 ? 'rgba(90, 52, 29, 0.45)' : 'rgba(40, 30, 20, 0.35)';
-        ctx.fillRect(left + 18, yy, building.w - 36, 4);
+    for (const row of cachedBuildingDecor(building, 'plainRows', () => {
+        const rows = [];
+        for (let oy = 54, index = 0; oy < building.h - 10; oy += 14, index++) rows.push({ oy, odd: index % 2 });
+        return rows;
+    })) {
+        ctx.fillStyle = row.odd ? 'rgba(90, 52, 29, 0.45)' : 'rgba(40, 30, 20, 0.35)';
+        ctx.fillRect(left + 18, top + row.oy, building.w - 36, 4);
     }
     drawVillageHouseSkinPattern(building, x, y, left, top, style);
     const roof = style.roof;
@@ -19947,6 +21129,12 @@ function drawVillageHouse(building) {
     drawVillageHouseDamageOverlay(building, x, y, left, top);
 }
 
+function cachedBuildingDecor(building, key, factory) {
+    building.decorCache ||= {};
+    building.decorCache[key] ||= factory();
+    return building.decorCache[key];
+}
+
 function drawForestVillageHouse(building, x, y, left, top, style) {
     const openShed = ['hunter', 'outerHunter', 'carpenter', 'kitchen'].includes(building.kind);
     drawShadow(x, y + building.h * 0.38, building.w * (openShed ? 0.98 : 0.72), 13);
@@ -19958,7 +21146,11 @@ function drawForestVillageHouse(building, x, y, left, top, style) {
         ctx.fillStyle = style.wall;
         ctx.fillRect(left + building.w * 0.18, top + 54, building.w * 0.64, building.h - 54);
         ctx.fillStyle = '#2f1d12';
-        for (let yy = top + 60; yy < top + building.h - 8; yy += 13) ctx.fillRect(left + building.w * 0.2, yy, building.w * 0.6, 4);
+        for (const row of cachedBuildingDecor(building, 'forestRows', () => {
+            const rows = [];
+            for (let oy = 60; oy < building.h - 8; oy += 13) rows.push(oy);
+            return rows;
+        })) ctx.fillRect(left + building.w * 0.2, top + row, building.w * 0.6, 4);
         ctx.fillStyle = '#1f1a12';
         ctx.fillRect(x - 13, y + building.h * 0.13, 26, 34);
     } else {
@@ -19976,7 +21168,9 @@ function drawForestVillageHouse(building, x, y, left, top, style) {
     ctx.closePath();
     ctx.fill();
     ctx.fillStyle = '#244d2a';
-    for (let i = 0; i < 5; i++) ctx.fillRect(left + 18 + i * 26, top + 35 + (i % 2) * 5, 22, 5);
+    for (const leaf of cachedBuildingDecor(building, 'forestLeaves', () => Array.from({ length: 5 }, (_, i) => ({ x: 18 + i * 26, y: 35 + (i % 2) * 5 })))) {
+        ctx.fillRect(left + leaf.x, top + leaf.y, 22, 5);
+    }
     if (building.kind === 'elder') {
         ctx.fillStyle = '#d6a06a';
         ctx.fillRect(x - 30, top + 38, 60, 6);
@@ -20033,17 +21227,23 @@ function drawMineVillageHouse(building, x, y, left, top, style) {
     ctx.fillStyle = style.wall;
     ctx.fillRect(left + 18, top + 60, building.w - 36, building.h - 62);
     ctx.fillStyle = 'rgba(216,229,242,0.18)';
-    for (let yy = top + 68, row = 0; yy < top + building.h - 10; yy += 18, row++) {
-        for (let xx = left + 24 + (row % 2) * 13; xx < left + building.w - 30; xx += 28) {
-            ctx.fillRect(xx, yy, 20, 7);
+    for (const brick of cachedBuildingDecor(building, 'mineBricks', () => {
+        const bricks = [];
+        for (let oy = 68, row = 0; oy < building.h - 10; oy += 18, row++) {
+            for (let ox = 24 + (row % 2) * 13; ox < building.w - 30; ox += 28) bricks.push({ ox, oy });
         }
-    }
+        return bricks;
+    })) ctx.fillRect(left + brick.ox, top + brick.oy, 20, 7);
     ctx.fillStyle = style.roof;
     ctx.fillRect(left + 8, top + 38, building.w - 16, 22);
     ctx.fillStyle = '#171d24';
     ctx.fillRect(left + 14, top + 31, building.w - 28, 10);
     ctx.fillStyle = '#8c98a4';
-    for (let xx = left + 18; xx < left + building.w - 24; xx += 28) ctx.fillRect(xx, top + 33, 18, 6);
+    for (const plate of cachedBuildingDecor(building, 'mineRoofPlates', () => {
+        const plates = [];
+        for (let ox = 18; ox < building.w - 24; ox += 28) plates.push(ox);
+        return plates;
+    })) ctx.fillRect(left + plate, top + 33, 18, 6);
     ctx.fillStyle = '#171d24';
     ctx.fillRect(x - 14, y + building.h * 0.12, 28, 38);
     ctx.fillStyle = '#ffd166';
@@ -20775,6 +21975,13 @@ function isNearView(item, margin = 0) {
         && item.x <= camera.x + VIEW.width + margin
         && item.y >= camera.y - margin
         && item.y <= camera.y + VIEW.height + margin;
+}
+
+function isRectNearView(x, y, w, h, margin = 0) {
+    return x + w >= camera.x - margin
+        && x <= camera.x + VIEW.width + margin
+        && y + h >= camera.y - margin
+        && y <= camera.y + VIEW.height + margin;
 }
 
 function drawCamp() {
@@ -23344,28 +24551,79 @@ function drawPlayerAtScreen(x, y, now) {
         drawPlayerDeathAnimation(x, y, now);
         return;
     }
-    const step = Math.sin(now / 90) * (keys.size ? 2 : 0);
+    drawAutoLockReticle(now);
+    const pose = playerAnimationPose(now);
+    const step = pose.step;
     drawShadow(x, y + 1, 34, 8);
     if (p.invincibleUntil > now && Math.floor(now / 80) % 2 === 0) ctx.globalAlpha = 0.55;
-    const lean = keys.size ? Math.sin(now / 110) * 2 : 0;
-    drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4);
+    const lean = pose.lean;
+    const sprite = playerSpriteForState(now);
+    drawSpriteGrounded(sprite, x + lean, y + step, 4);
     ctx.globalAlpha = 1;
     if (p.poisonUntil > now) {
         ctx.globalAlpha = 0.34 + Math.sin(now / 90) * 0.08;
-        drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4, { tint: '#8cff66' });
+        drawSpriteGrounded(sprite, x + lean, y + step, 4, { tint: '#8cff66' });
         ctx.globalAlpha = 1;
     }
     if ((p.slowUntil || 0) > now) {
         ctx.globalAlpha = 0.28 + Math.sin(now / 120) * 0.06;
-        drawSpriteGrounded('player', x + p.facing.x * Math.abs(lean), y + step, 4, { tint: '#7dcbe8' });
+        drawSpriteGrounded(sprite, x + lean, y + step, 4, { tint: '#7dcbe8' });
         ctx.globalAlpha = 1;
     }
-    drawArmorOverlay(x + p.facing.x * Math.abs(lean), y + step);
-    drawEquippedShieldOverlay(x + p.facing.x * Math.abs(lean), y + step, p);
+    drawArmorOverlay(x + lean, y + step);
+    drawEquippedShieldOverlay(x + lean, y + step, p);
     if (p.attackUntil > now && p.attackVisualType !== 'ranged') {
         drawAttackSlash(x, y, p.attackDir || p.facing, now);
     }
-    drawPlayerHandsAndWeapon(x, y + step, p, now);
+    if (!p.usingItem) drawPlayerHandsAndWeapon(x, y + step, p, now);
+}
+
+function playerSpriteForState(now) {
+    const p = state.player;
+    if (p.usingItem) {
+        const phase = Math.floor((now - p.usingItem.startedAt) / 160) % 2;
+        return phase ? 'playerEat2' : 'playerEat1';
+    }
+    if (p.inWater) return Math.floor(now / 180) % 2 ? 'playerSwim2' : 'playerSwim1';
+    if (p.sprinting && p.moving) return 'playerSprint';
+    if (p.moving) return Math.floor(now / 130) % 2 ? 'playerRun2' : 'playerRun1';
+    return 'player';
+}
+
+function playerAnimationPose(now) {
+    const p = state.player;
+    const moving = !!p.moving;
+    const swim = !!p.inWater;
+    const sprint = !!p.sprinting;
+    const cadence = swim ? 135 : (sprint ? 82 : 125);
+    const wave = moving || swim ? Math.sin(now / cadence) : 0;
+    const attackProgress = p.attackUntil > now ? attackVisualProgress() : 0;
+    return {
+        step: swim ? Math.sin(now / 160) * 0.8 : Math.abs(wave) * (sprint ? 1.25 : 0.65),
+        lean: moving && sprint ? wave * 0.45 : 0,
+        leg: wave,
+        arm: Math.sin(now / cadence + Math.PI),
+        attackProgress,
+    };
+}
+
+function drawAutoLockReticle(now) {
+    const target = state.player.autoLockTarget;
+    if (!target || now > (state.player.autoLockUntil || 0) || !isValidAutoLockTarget(target, autoLockRangeForProfile(currentAttackProfile()) + 120)) return;
+    const x = sceneX(target.x);
+    const y = sceneY(target.y);
+    const r = (target.radius || 18) + 8 + Math.sin(now / 90) * 2;
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y + (target.radius || 18) * 0.45, r * 1.18, Math.max(7, r * 0.36), 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 209, 102, 0.72)';
+    ctx.fillRect(x - 2, y - (target.radius || 18) - 16, 4, 9);
+    ctx.fillRect(x - 9, y - (target.radius || 18) - 9, 18, 3);
+    ctx.restore();
 }
 
 function drawArmorOverlay(x, y) {
@@ -23492,8 +24750,13 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
     const attacking = p.attackUntil > now;
     const heldItem = selectedHotbarItem();
     const attackProfile = currentAttackProfile();
-    const handX = x + dir.x * (attacking ? 22 : 15);
-    const handY = y - 31 + dir.y * 8 + (keys.size ? Math.sin(now / 90) * 1.5 : 0);
+    const attackProgress = attacking ? attackVisualProgress() : 0;
+    const side = { x: -dir.y, y: dir.x };
+    const comboSide = ((p.attackComboStep || 1) % 2 === 0 ? -1 : 1);
+    const style = p.attackProfileStyle || attackProfile.style || 'slash';
+    const weaponPose = weaponAnimationPose(style, attackProgress, p.attackComboStep || 1, attacking);
+    const handX = x + dir.x * (15 + weaponPose.handForward) + side.x * weaponPose.handSide;
+    const handY = y - 31 + dir.y * (8 + weaponPose.handForward * 0.22) + side.y * weaponPose.handSide + weaponPose.handLift + (p.moving ? Math.sin(now / 90) * 1.5 : 0);
     ctx.fillStyle = COLORS.skin;
     ctx.fillRect(handX - 4, handY - 4, 8, 8);
     if (p.blocking && state.equipment.shield !== '无') {
@@ -23531,11 +24794,11 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
         return;
     }
     if (isLegacyWeaponItem(heldItem)) {
-        drawLegacyWeaponInHand(heldItem, handX, handY, dir, attacking);
+        drawLegacyWeaponInHand(heldItem, handX, handY, dir, attacking, weaponPose);
         return;
     }
     if (simpleWeaponDef(heldItem)) {
-        drawSimpleWeaponInHand(heldItem, handX, handY, dir, attacking);
+        drawSimpleWeaponInHand(heldItem, handX, handY, dir, attacking, weaponPose);
         return;
     }
     const weaponLength = Math.max(20, attackProfile.range * 0.58);
@@ -23559,6 +24822,50 @@ function drawPlayerHandsAndWeapon(x, y, p, now) {
     }
 }
 
+function weaponAnimationPose(style, progress, combo = 1, attacking = false) {
+    if (!attacking) return { handForward: 0, handSide: 0, handLift: 0, weaponForward: 0, weaponSide: 0, rotation: 0 };
+    const side = combo % 2 === 0 ? -1 : 1;
+    const strike = Math.sin(progress * Math.PI);
+    if (style === 'ranged') {
+        return {
+            handForward: 8 * strike,
+            handSide: 0,
+            handLift: -2 * strike,
+            weaponForward: 4 * strike,
+            weaponSide: 0,
+            rotation: -0.08 * strike,
+        };
+    }
+    if (style === 'thrust' || style === 'stab' || style === 'rope') {
+        return {
+            handForward: 18 * strike,
+            handSide: 2 * side,
+            handLift: -2 * strike,
+            weaponForward: 18 * strike,
+            weaponSide: 0,
+            rotation: side * 0.04,
+        };
+    }
+    if (style === 'chop' || style === 'pick') {
+        return {
+            handForward: 9 * strike,
+            handSide: side * 4 * strike,
+            handLift: -10 * strike,
+            weaponForward: 7 * strike,
+            weaponSide: side * 3 * strike,
+            rotation: -0.95 + progress * 1.9,
+        };
+    }
+    return {
+        handForward: 8 * strike,
+        handSide: side * Math.sin(progress * Math.PI * 2) * 9,
+        handLift: -3 * strike,
+        weaponForward: 6 * strike,
+        weaponSide: side * 8 * strike,
+        rotation: side * (-0.78 + progress * 1.58),
+    };
+}
+
 function isHandWeaponItem(key) {
     return !!simpleWeaponDef(key) || ['stoneAxe', 'stonePickaxe', 'stoneSickle', 'ironAxe', 'ironPickaxe', 'ironSickle', 'stoneSpear', 'slingshot', 'sinewBow', 'bambooSpear', 'venomDagger', 'ironSword', 'crystalBlade', 'antlerSpear', 'stoneCoreHammer', 'wood', 'bamboo', 'stone'].includes(key) || !key;
 }
@@ -23573,12 +24880,16 @@ function directRangedPullAmount(key, attacking) {
     return attacking ? 0.45 : 0;
 }
 
-function drawLegacyWeaponInHand(key, handX, handY, dir, attacking) {
+function drawLegacyWeaponInHand(key, handX, handY, dir, attacking, pose = weaponAnimationPose('', 0, 1, false)) {
     const angle = Math.atan2(dir.y, dir.x);
     const progress = attackVisualProgress();
+    const side = { x: -dir.y, y: dir.x };
     ctx.save();
-    ctx.translate(handX + dir.x * (attacking ? 17 : 10), handY + dir.y * (attacking ? 17 : 10));
-    ctx.rotate(angle + (attacking ? Math.sin(progress * Math.PI) * 0.16 : 0));
+    ctx.translate(
+        handX + dir.x * ((attacking ? 17 : 10) + pose.weaponForward) + side.x * pose.weaponSide,
+        handY + dir.y * ((attacking ? 17 : 10) + pose.weaponForward) + side.y * pose.weaponSide
+    );
+    ctx.rotate(angle + (attacking ? Math.sin(progress * Math.PI) * 0.16 : 0) + pose.rotation);
     const shaft = '#5a341d';
     const stone = '#a8b3bd';
     const metal = '#d8e5f2';
@@ -23794,7 +25105,7 @@ function drawLegacySword(bladeColor, shineColor, length = 58, handleColor = '#5a
     ctx.stroke();
 }
 
-function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
+function drawSimpleWeaponInHand(key, handX, handY, dir, attacking, pose = weaponAnimationPose('', 0, 1, false)) {
     const def = simpleWeaponDef(key);
     if (!def) return;
     const angle = Math.atan2(dir.y, dir.x);
@@ -23802,9 +25113,13 @@ function drawSimpleWeaponInHand(key, handX, handY, dir, attacking) {
     const heavy = ['vineStoneHammer', 'resinHammer'].includes(key);
     const flexible = ['ropeSickle', 'frogWhip', 'poisonVineWhip', 'scorpionHook'].includes(key);
     const lunge = attacking ? (heavy ? Math.sin(attackProgress * Math.PI) * 4 : 7) : 0;
+    const side = { x: -dir.y, y: dir.x };
     ctx.save();
-    ctx.translate(handX + dir.x * (10 + lunge), handY + dir.y * (10 + lunge));
-    ctx.rotate(angle + weaponSwingRotation(key, attackProgress, attacking));
+    ctx.translate(
+        handX + dir.x * (10 + lunge + pose.weaponForward) + side.x * pose.weaponSide,
+        handY + dir.y * (10 + lunge + pose.weaponForward) + side.y * pose.weaponSide
+    );
+    ctx.rotate(angle + weaponSwingRotation(key, attackProgress, attacking) + pose.rotation);
     const staffHeld = isStaffWeapon(key);
     const visualScale = staffHeld ? 0.82 : (key === 'poisonVineBlowpipe' ? 0.85 : (flexible ? 0.95 : clamp((def.profile.range || 50) / 84, 0.72, 1.35)));
     ctx.scale(visualScale, visualScale);
@@ -24816,6 +26131,41 @@ function isGlowingMineMonster(enemy) {
     return enemy.mineKind === 'crystalBug' || enemy.mineKind === 'stoneCrawler' || enemy.boss;
 }
 
+function drawFinalBossArena(now) {
+    ctx.fillStyle = '#05070a';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    ctx.fillStyle = '#1b1722';
+    ctx.fillRect(24, 24, VIEW.width - 48, VIEW.height - 48);
+    ctx.fillStyle = '#292235';
+    ctx.fillRect(54, 54, VIEW.width - 108, VIEW.height - 108);
+    ctx.strokeStyle = 'rgba(255, 209, 102, 0.24)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(VIEW.width / 2, 382, 260, 132, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(140, 255, 102, 0.16)';
+    for (let i = 0; i < 3; i++) {
+        const a = -Math.PI / 2 + i * Math.PI * 2 / 3;
+        ctx.beginPath();
+        ctx.moveTo(VIEW.width / 2, 382);
+        ctx.lineTo(VIEW.width / 2 + Math.cos(a) * 235, 382 + Math.sin(a) * 118);
+        ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(183,125,255,0.18)';
+    ctx.fillRect(VIEW.width / 2 - 82, 184, 164, 22);
+    ctx.fillStyle = 'rgba(255,209,102,0.12)';
+    ctx.fillRect(54, 54, VIEW.width - 108, 22);
+    ctx.fillRect(54, VIEW.height - 76, VIEW.width - 108, 22);
+    state.indoor.objects
+        .slice()
+        .sort((a, b) => a.y - b.y)
+        .forEach(drawIndoorObject);
+    drawIndoorPlayer(now);
+    drawIndoorProjectiles();
+    drawIndoorLighting(now);
+    drawIndoorObjectLabels();
+}
+
 function drawMineCaveInterior(now) {
     ctx.fillStyle = '#05070a';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
@@ -24902,11 +26252,14 @@ function drawAttackSlash(x, y, dir, now) {
     const angle = Math.atan2(dir.y, dir.x);
     const range = currentAttackProfile().range;
     const style = currentAttackProfile().style;
+    const combo = state.player.attackComboStep || 1;
+    const comboSide = combo % 2 === 0 ? -1 : 1;
+    const comboTint = combo === 3 ? 'rgba(255, 209, 102, 0.98)' : 'rgba(255, 243, 176, 0.95)';
     const handX = x + dir.x * 22;
     const handY = y - 31 + dir.y * 8;
     ctx.save();
     ctx.translate(handX, handY);
-    ctx.rotate(angle);
+    ctx.rotate(angle + (combo === 2 ? 0.18 : (combo === 3 ? -0.12 : 0)));
     if (style === 'thrust' || style === 'stab' || style === 'pick') {
         const length = range;
         ctx.strokeStyle = style === 'pick' ? 'rgba(168, 179, 189, 0.95)' : 'rgba(255, 243, 176, 0.95)';
@@ -24933,28 +26286,32 @@ function drawAttackSlash(x, y, dir, now) {
         return;
     }
     if (style === 'chop') {
-        ctx.strokeStyle = 'rgba(255, 243, 176, 0.95)';
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = comboTint;
+        ctx.lineWidth = combo === 3 ? 11 : 8;
         ctx.beginPath();
-        ctx.arc(0, 0, range, -1.05 + progress * 0.55, 0.15 + progress * 0.55);
+        ctx.arc(0, 0, range, (-1.05 + progress * 0.55) * comboSide, (0.15 + progress * 0.55) * comboSide, comboSide < 0);
         ctx.stroke();
         ctx.strokeStyle = 'rgba(255, 159, 28, 0.7)';
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(0, 0, range * 0.72, -0.9 + progress * 0.45, -0.08 + progress * 0.45);
+        ctx.arc(0, 0, range * 0.72, (-0.9 + progress * 0.45) * comboSide, (-0.08 + progress * 0.45) * comboSide, comboSide < 0);
         ctx.stroke();
         ctx.restore();
         return;
     }
-    ctx.strokeStyle = 'rgba(255, 243, 176, 0.95)';
-    ctx.lineWidth = 7;
+    ctx.strokeStyle = comboTint;
+    ctx.lineWidth = combo === 3 ? 10 : 7;
     ctx.beginPath();
-    ctx.arc(0, 0, range, -0.85 + progress * 0.35, 0.55 + progress * 0.35);
+    if (combo === 3) {
+        ctx.arc(0, 0, range * 1.08, -0.95 + progress * 0.52, 0.75 + progress * 0.52);
+    } else {
+        ctx.arc(0, 0, range, (-0.85 + progress * 0.35) * comboSide, (0.55 + progress * 0.35) * comboSide, comboSide < 0);
+    }
     ctx.stroke();
     ctx.strokeStyle = 'rgba(255, 159, 28, 0.7)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, range * 0.72, -0.65 + progress * 0.25, 0.42 + progress * 0.25);
+    ctx.arc(0, 0, range * 0.72, (-0.65 + progress * 0.25) * comboSide, (0.42 + progress * 0.25) * comboSide, comboSide < 0);
     ctx.stroke();
     ctx.restore();
 }
@@ -25179,26 +26536,27 @@ function drawNightOverlay() {
         strength: nightVision ? 0.68 : Math.max(heldLight ? 0.48 : 0.36, gearLight?.strength || 0),
     });
     drawLight({ x: state.camp.x, y: state.camp.y, radius: state.camp.repaired ? 180 : 85, strength: 0.58 });
-    for (const village of allVillages()) {
+    for (const village of visibleVillages(260)) {
         for (const building of village.buildings || []) {
+            if (!isNearView(building, Math.max(building.w || 120, building.h || 120) + 190)) continue;
             if (village.tier !== 'jungleCult') {
                 drawLight({ x: building.x - 24, y: building.doorY + 8, radius: 124, strength: 0.5 });
                 drawLight({ x: building.x + 24, y: building.doorY + 8, radius: 124, strength: 0.5 });
             }
         }
-        for (const lamp of village.amenities?.lamps || []) {
+        for (const lamp of (village.amenities?.lamps || []).filter(item => isNearView(item, 240))) {
             drawLight({ x: lamp.x, y: lamp.y - 24, radius: village.tier === 'jungleCult' ? 170 : 150, strength: village.tier === 'jungleCult' ? 0.64 : 0.56 });
         }
-        if (village.amenities?.altar) drawLight({ x: village.amenities.altar.x, y: village.amenities.altar.y - 26, radius: 210, strength: 0.5 });
-        if (village.amenities?.bell) drawLight({ x: village.amenities.bell.x, y: village.amenities.bell.y - 12, radius: 105, strength: 0.36 });
+        if (village.amenities?.altar && isNearView(village.amenities.altar, 260)) drawLight({ x: village.amenities.altar.x, y: village.amenities.altar.y - 26, radius: 210, strength: 0.5 });
+        if (village.amenities?.bell && isNearView(village.amenities.bell, 160)) drawLight({ x: village.amenities.bell.x, y: village.amenities.bell.y - 12, radius: 105, strength: 0.36 });
     }
-    for (const lamp of state.roadLamps || []) {
+    for (const lamp of (state.roadLamps || []).filter(item => isNearView(item, 220))) {
         drawLight({ x: lamp.x, y: lamp.y - 24, radius: 145, strength: 0.54 });
     }
-    for (const torch of state.placedTorches) {
+    for (const torch of state.placedTorches.filter(item => isNearView(item, 220))) {
         drawLight(torchLightProfile(torch));
     }
-    for (const fire of state.placedStations) {
+    for (const fire of state.placedStations.filter(item => isNearView(item, 220))) {
         if (fire.kind === 'campfire') drawLight({ x: fire.x, y: fire.y, radius: 150, strength: 0.55 });
     }
     lightCtx.globalCompositeOperation = 'source-over';
@@ -25303,10 +26661,10 @@ function drawUiOverlay() {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 48px "Microsoft YaHei"';
         ctx.textAlign = 'center';
-        ctx.fillText(state.win ? '废墟开启！' : '冒险失败', VIEW.width / 2, VIEW.height / 2 - 16);
+        ctx.fillText(state.win ? (state.winTitle || '荒野平衡！') : '冒险失败', VIEW.width / 2, VIEW.height / 2 - 16);
         ctx.font = 'bold 20px "Microsoft YaHei"';
         if (state.win) {
-            ctx.fillText('你完成了荒野营地 Demo。', VIEW.width / 2, VIEW.height / 2 + 34);
+            wrapCenterText(state.winText || '你打开了远古废墟，荒野冒险进入下一章。', VIEW.width / 2, VIEW.height / 2 + 34, 720, 26);
         } else {
             ctx.fillText(state.deathMessage || '你倒下了。', VIEW.width / 2, VIEW.height / 2 + 30);
             ctx.font = 'bold 15px "Microsoft YaHei"';
@@ -25550,7 +26908,282 @@ function resourceName(kind) {
     return { tree: '树木', grassOakTree: '平原橡树', meadowBlossomTree: '花冠树', forestOakTree: '森林橡树', birchTree: '白桦树', pineTree: '松树', mapleTree: '枫树', deadTree: '枯树', darkTree: '暗绿树', swampCypressTree: '沼泽柏树', reedWillowTree: '湿地柳树', mineIronwoodTree: '矿脉铁木', ruinsElderTree: '遗迹古树', hardwoodTree: '丛林硬木', buttressRoot: '板根树', jungleLeafPlant: '丛林大叶', jungleVine: '藤蔓', jungleFruitBush: '热带果丛', jungleHerb: '丛林草药', jungleOrchid: '树上兰花', poisonBloom: '毒花', stump: '树桩', woodFence: '木栅栏', rock: '岩石', pebble: '小石子', grass: '草丛', tallGrass: '高草丛', reed: '芦苇', berry: '浆果丛', herb: '草药', mushroom: '蘑菇', toxicMushroom: '毒蘑菇', flower: '野花', meadowFlower: '花海花簇', lotus: '莲花', cactus: '仙人掌', cropCarrot: '胡萝卜田', cropCorn: '玉米田', cropTomato: '番茄田', ore: '铁矿', bamboo: '竹子', resinPatch: '树脂', sapPatch: '树液', beehive: '蜂巢', mudClump: '泥块' }[kind] || '资源';
 }
 
+const SAVE_KEY = 'maziqi.release.save.v1';
+
+function saveGame(manual = false) {
+    try {
+        if (!state || worldLoading) {
+            if (manual) showToast('世界仍在加载，暂时不能保存。');
+            return false;
+        }
+        const payload = {
+            version: 1,
+            savedAt: Date.now(),
+            worldSeed,
+            wildernessSettings: { ...wildernessSettings },
+            player: compactPlayerSave(),
+            inventory: { ...state.inventory },
+            itemDurability: state.itemDurability || {},
+            equipment: JSON.parse(JSON.stringify(state.equipment || {})),
+            hotbarItems: [...(state.hotbarItems || [])],
+            selectedHotbar: state.selectedHotbar || 0,
+            quest: state.quest,
+            storyCores: state.storyCores || {},
+            timeOfDay: state.timeOfDay,
+            discoveredMaterials: state.discoveredMaterials || {},
+            knownRecipes: state.knownRecipes || {},
+            learnedRecipeTeachers: state.learnedRecipeTeachers || {},
+            completedRecipeTasks: state.completedRecipeTasks || {},
+            foundRecipeNotes: state.foundRecipeNotes || {},
+            readStoryNotes: state.readStoryNotes || {},
+            villageTaskCompletions: state.villageTaskCompletions || {},
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+        state.lastAutoSaveAt = performance.now();
+        updateReleaseMenuUi();
+        if (manual) showToast('游戏已保存。');
+        return true;
+    } catch (error) {
+        console.error('Save failed', error);
+        if (manual) showToast('保存失败：浏览器存储不可用。');
+        return false;
+    }
+}
+
+function compactPlayerSave() {
+    const p = state.player;
+    return {
+        x: p.x,
+        y: p.y,
+        hp: p.hp,
+        maxHp: p.maxHp,
+        stamina: p.stamina,
+        hunger: p.hunger,
+        maxHunger: p.maxHunger,
+        facing: p.facing,
+        poisonUntil: p.poisonUntil,
+        regenUntil: p.regenUntil,
+        nightVisionUntil: p.nightVisionUntil,
+        speedBoostUntil: p.speedBoostUntil,
+    };
+}
+
+function autoSaveGame(now = performance.now()) {
+    if (state.pausedByMenu || state.inventoryOpen || state.lose || state.win) return;
+    if (now < (state.lastAutoSaveAt || 0) + 30000) return;
+    saveGame(false);
+}
+
+function hasSaveGame() {
+    try {
+        return !!localStorage.getItem(SAVE_KEY);
+    } catch (error) {
+        console.error('Save check failed', error);
+        return false;
+    }
+}
+
+function saveSummaryText() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return '没有本地存档。F6 可随时保存。';
+        const payload = JSON.parse(raw);
+        const savedAt = payload.savedAt ? new Date(payload.savedAt).toLocaleString() : '未知时间';
+        const cores = Object.values(payload.storyCores || {}).filter(Boolean).length;
+        return `最近存档：${savedAt} · 远古核心 ${cores}/3`;
+    } catch (error) {
+        console.error('Save summary failed', error);
+        return '存档信息无法读取。';
+    }
+}
+
+function updateReleaseObjectivePanel() {
+    const card = document.getElementById('release-objective-card');
+    if (!card || !state) return;
+    const cores = state.storyCores || {};
+    const setCore = (id, done) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = done ? '✓' : '□';
+    };
+    setCore('core-royal', !!cores.royalJellyCore);
+    setCore('core-crystal', !!cores.crystalCore);
+    setCore('core-vine', !!cores.ancientVineCore);
+    const title = document.getElementById('release-objective-title');
+    if (title) title.textContent = storyCoreCount() >= 3 ? '三枚核心已集齐，寻找最终祭坛。' : '击败蜂后、矿洞首领和遗迹守卫。';
+}
+
+function updateReleaseMenuUi() {
+    const continueButton = document.getElementById('continue-game-btn');
+    const loadButton = document.getElementById('manual-load-btn');
+    const summary = document.getElementById('save-summary');
+    const hasSave = hasSaveGame();
+    if (continueButton) continueButton.disabled = !hasSave;
+    if (loadButton) loadButton.disabled = !hasSave;
+    if (summary) summary.textContent = saveSummaryText();
+}
+
+function showReleaseMenu() {
+    const menu = document.getElementById('release-main-menu');
+    if (!menu || !state) return;
+    document.body.classList.add('game-fullscreen');
+    state.pausedByMenu = true;
+    keys.clear();
+    updateReleaseMenuUi();
+    menu.classList.remove('hidden');
+    document.getElementById('sidebar-toggle-btn')?.setAttribute('aria-pressed', 'true');
+}
+
+function enterGameFullscreen() {
+    document.body.classList.add('game-fullscreen');
+    updateMobileInventoryScale();
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(error => {
+            console.warn('Fullscreen request failed', error);
+        });
+    }
+}
+
+function hideReleaseMenu() {
+    const menu = document.getElementById('release-main-menu');
+    if (!menu || !state) return;
+    state.pausedByMenu = false;
+    menu.classList.add('hidden');
+    document.getElementById('sidebar-toggle-btn')?.setAttribute('aria-pressed', 'false');
+    enterGameFullscreen();
+}
+
+function startNewGameFromMenu() {
+    wildernessSettings.seedText = '';
+    const seedInput = document.getElementById('setting-seed');
+    if (seedInput) seedInput.value = '';
+    hideReleaseMenu();
+    regenerateWilderness('新的正式版冒险开始了。收集三枚远古核心，准备最终挑战。');
+    updateReleaseMenuUi();
+}
+
+function setupReleaseMenuUi() {
+    document.getElementById('continue-game-btn')?.addEventListener('click', () => {
+        if (loadGame()) hideReleaseMenu();
+    });
+    document.getElementById('new-game-btn')?.addEventListener('click', startNewGameFromMenu);
+    document.getElementById('manual-save-btn')?.addEventListener('click', () => {
+        saveGame(true);
+        updateReleaseMenuUi();
+    });
+    document.getElementById('manual-load-btn')?.addEventListener('click', () => {
+        if (loadGame()) hideReleaseMenu();
+    });
+    document.getElementById('menu-settings-btn')?.addEventListener('click', () => {
+        document.getElementById('menu-settings-panel')?.classList.toggle('hidden');
+        document.getElementById('setting-seed')?.focus();
+    });
+    updateReleaseMenuUi();
+}
+
+function setLoadingScreen(message = '正在布置村庄、资源和怪物') {
+    const screen = document.getElementById('loading-screen');
+    if (!screen) return;
+    const text = screen.querySelector('span');
+    if (text) text.textContent = message;
+    screen.classList.remove('hidden');
+}
+
+function hideLoadingScreen() {
+    document.getElementById('loading-screen')?.classList.add('hidden');
+}
+
+function ensureGameLoop() {
+    if (gameLoopStarted) return;
+    gameLoopStarted = true;
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+function runAfterLoadingPaint(message, task) {
+    const taskId = ++loadingTaskId;
+    worldLoading = true;
+    setLoadingScreen(message);
+    keys.clear();
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (taskId !== loadingTaskId) return;
+            try {
+                task();
+            } catch (error) {
+                console.error('World loading failed', error);
+                showToast('加载失败，请刷新页面重试。');
+            } finally {
+                if (taskId === loadingTaskId) {
+                    worldLoading = false;
+                    requestAnimationFrame(hideLoadingScreen);
+                }
+            }
+        });
+    });
+}
+
+function applySavePayload(payload) {
+    Object.assign(wildernessSettings, payload.wildernessSettings || {});
+    worldSeed = payload.worldSeed || worldSeed;
+    worldRegionsCacheSeed = null;
+    worldRegionsCache = null;
+    villagePathCacheSeed = null;
+    villagePathCache = null;
+    CAMP_POSITION = createCampPosition();
+    activeJungleCultVillage = null;
+    activeAdvancedVillage = null;
+    state = createState();
+    Object.assign(state.player, payload.player || {});
+    Object.assign(state.inventory, payload.inventory || {});
+    state.itemDurability = payload.itemDurability || {};
+    state.equipment = { ...state.equipment, ...(payload.equipment || {}) };
+    state.hotbarItems = payload.hotbarItems || state.hotbarItems;
+    state.selectedHotbar = payload.selectedHotbar || 0;
+    state.quest = payload.quest || state.quest;
+    state.storyCores = payload.storyCores || {};
+    state.timeOfDay = Number.isFinite(payload.timeOfDay) ? payload.timeOfDay : state.timeOfDay;
+    state.discoveredMaterials = payload.discoveredMaterials || {};
+    state.knownRecipes = payload.knownRecipes || {};
+    state.learnedRecipeTeachers = payload.learnedRecipeTeachers || {};
+    state.completedRecipeTasks = payload.completedRecipeTasks || {};
+    state.foundRecipeNotes = payload.foundRecipeNotes || {};
+    state.readStoryNotes = payload.readStoryNotes || {};
+    state.villageTaskCompletions = payload.villageTaskCompletions || {};
+    state.pausedByMenu = false;
+    normalizeDurableInventory();
+    syncHotbarItems();
+    renderHud();
+    updateWildernessSettingLabels();
+    updateReleaseMenuUi();
+    ensureGameLoop();
+}
+
+function loadGame() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) {
+            showToast('没有找到存档。');
+            return false;
+        }
+        const payload = JSON.parse(raw);
+        if (!payload || payload.version !== 1) {
+            showToast('存档版本不兼容。');
+            return false;
+        }
+        runAfterLoadingPaint('正在读取存档并恢复世界...', () => {
+            applySavePayload(payload);
+            showToast('存档已加载。');
+        });
+        return true;
+    } catch (error) {
+        console.error('Load failed', error);
+        showToast('读取存档失败。');
+        return false;
+    }
+}
+
 function loop(now) {
+    if (!state) return;
     const dt = Math.min(0.033, (now - lastTime) / 1000);
     lastTime = now;
     update(dt, now);
@@ -25558,13 +27191,34 @@ function loop(now) {
 
 window.addEventListener('keydown', event => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    if (!state && key !== 'F9') {
+        event.preventDefault();
+        return;
+    }
+    if (key === 'F6') {
+        event.preventDefault();
+        saveGame(true);
+        return;
+    }
+    if (key === 'F9') {
+        event.preventDefault();
+        loadGame();
+        return;
+    }
+    if (key === 'Escape') {
+        event.preventDefault();
+        if (state.pausedByMenu) hideReleaseMenu();
+        else if (state.inventoryOpen) toggleInventory(false);
+        else showReleaseMenu();
+        return;
+    }
+    if (state.pausedByMenu) {
+        event.preventDefault();
+        return;
+    }
     if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E', 'q', 'Q', 'k', 'K', 'i', 'I', 'Escape', 'Shift'].includes(key)) event.preventDefault();
     if (key === 'i') {
         toggleInventory();
-        return;
-    }
-    if (key === 'Escape' && state.inventoryOpen) {
-        toggleInventory(false);
         return;
     }
     if (state.inventoryOpen) return;
@@ -25617,6 +27271,7 @@ window.addEventListener('keydown', event => {
 });
 
 window.addEventListener('keyup', event => {
+    if (!state) return;
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (key === ' ' && state.player.throwableAim) releaseThrowable();
     if (key === ' ' && state.player.rangedAim) releaseDirectRanged();
@@ -25836,6 +27491,7 @@ function setupMobileControls() {
     document.querySelectorAll('[data-mobile-action]').forEach(button => {
         const action = button.dataset.mobileAction;
         button.addEventListener('pointerdown', event => {
+            if (!state) return;
             event.preventDefault();
             if (action === 'attack') {
                 setMouseToFacing();
@@ -25854,6 +27510,7 @@ function setupMobileControls() {
             }
         });
         button.addEventListener('pointerup', event => {
+            if (!state) return;
             event.preventDefault();
             if (action === 'attack') {
                 clearTimeout(touchInput.aimLongPressTimer);
@@ -25868,6 +27525,7 @@ function setupMobileControls() {
             }
         });
         button.addEventListener('pointercancel', () => {
+            if (!state) return;
             if (action === 'attack') {
                 cancelMobileAimGesture();
             }
@@ -25876,23 +27534,28 @@ function setupMobileControls() {
         });
         button.addEventListener('click', event => {
             event.preventDefault();
+            if (!state) return;
             if (action === 'use') useSelectedHotbarItem();
             if (action === 'inventory') toggleInventory();
         });
     });
     canvas.addEventListener('pointerdown', event => {
+        if (!state) return;
         if (event.pointerType === 'mouse') return;
         beginMobileAimGesture(event);
     });
     canvas.addEventListener('pointermove', event => {
+        if (!state) return;
         if (event.pointerType === 'mouse') return;
         updateMobileAimGesture(event);
     });
     canvas.addEventListener('pointerup', event => {
+        if (!state) return;
         if (event.pointerType === 'mouse') return;
         endMobileAimGesture(event);
     });
     canvas.addEventListener('pointercancel', event => {
+        if (!state) return;
         if (event.pointerType === 'mouse') return;
         cancelMobileAimGesture(event);
     });
@@ -25909,6 +27572,7 @@ canvas.addEventListener('contextmenu', event => {
 });
 
 canvas.addEventListener('mousedown', event => {
+    if (!state) return;
     if (performance.now() - (touchInput.lastAimEndedAt || 0) < 450) return;
     if (state.inventoryOpen) return;
     if (event.button === 2) {
@@ -25932,6 +27596,7 @@ canvas.addEventListener('mousedown', event => {
 });
 
 canvas.addEventListener('mouseup', event => {
+    if (!state) return;
     if (event.button === 2) {
         mouse.blocking = false;
         return;
@@ -25952,6 +27617,7 @@ canvas.addEventListener('mouseup', event => {
 });
 
 canvas.addEventListener('mouseleave', () => {
+    if (!state) return;
     if (state.player.throwableAim) releaseThrowable();
     if (state.player.rangedAim) releaseDirectRanged();
     if (state.player.meleeCharge) releaseMeleeCharge();
@@ -25973,14 +27639,30 @@ function resetWorldCaches() {
 }
 
 function regenerateWilderness(message = '新的随机地图开始了。先收集木头和石头修复营地。') {
-    document.getElementById('loading-screen')?.classList.remove('hidden');
-    worldSeed = createWorldSeed();
-    resetWorldCaches();
-    state = createState();
-    ensurePlayerSafeOutdoorPosition();
-    showToast(message);
-    renderHud();
-    requestAnimationFrame(() => document.getElementById('loading-screen')?.classList.add('hidden'));
+    const menuWasOpen = !document.getElementById('release-main-menu')?.classList.contains('hidden');
+    runAfterLoadingPaint('正在重新生成地形、村庄和怪物...', () => {
+        worldSeed = createWorldSeed();
+        resetWorldCaches();
+        state = createState();
+        state.pausedByMenu = menuWasOpen;
+        ensurePlayerSafeOutdoorPosition();
+        showToast(message);
+        renderHud();
+        updateReleaseMenuUi();
+        ensureGameLoop();
+    });
+}
+
+function startInitialGame() {
+    document.body.classList.add('game-fullscreen');
+    runAfterLoadingPaint('首次生成世界中，请稍候...', () => {
+        state = createState();
+        ensurePlayerSafeOutdoorPosition();
+        renderHud();
+        showReleaseMenu();
+        showToast('自由移动探索。靠近资源按 E 采集，空格或鼠标攻击。');
+        ensureGameLoop();
+    });
 }
 
 function readWildernessSettingsFromUi() {
@@ -26024,15 +27706,10 @@ function setupWildernessSettingsUi() {
     updateWildernessSettingLabels();
 }
 
-function toggleDesktopGameFullscreen(force = null) {
-    const enabled = force === null ? !document.body.classList.contains('game-fullscreen') : !!force;
-    document.body.classList.toggle('game-fullscreen', enabled);
+function openReleaseMenu() {
+    showReleaseMenu();
     const button = document.getElementById('sidebar-toggle-btn');
-    if (button) {
-        button.textContent = enabled ? '显示侧栏' : '全屏游戏';
-        button.setAttribute('aria-pressed', String(enabled));
-    }
-    updateMobileInventoryScale();
+    if (button) button.setAttribute('aria-pressed', 'true');
 }
 
 document.getElementById('restart-btn').addEventListener('click', () => {
@@ -26043,9 +27720,9 @@ document.getElementById('restart-btn').addEventListener('click', () => {
 });
 
 document.getElementById('inventory-close-btn').addEventListener('click', () => toggleInventory(false));
-document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => toggleDesktopGameFullscreen());
+document.getElementById('sidebar-toggle-btn')?.addEventListener('click', openReleaseMenu);
 document.getElementById('villager-trade-btn')?.addEventListener('click', () => {
-    if (state.pendingTrader) openVillagerTrade(state.pendingTrader);
+    if (state?.pendingTrader) openVillagerTrade(state.pendingTrader);
 });
 
 document.getElementById('inventory-overlay').addEventListener('click', event => {
@@ -26053,9 +27730,6 @@ document.getElementById('inventory-overlay').addEventListener('click', event => 
 });
 
 setupWildernessSettingsUi();
+setupReleaseMenuUi();
 setupMobileControls();
-ensurePlayerSafeOutdoorPosition();
-renderHud();
-showToast('自由移动探索。靠近资源按 E 采集，空格或鼠标攻击。');
-requestAnimationFrame(() => document.getElementById('loading-screen')?.classList.add('hidden'));
-requestAnimationFrame(loop);
+startInitialGame();

@@ -3,39 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>荒野工匠 Demo</title>
+    <title>荒野工匠</title>
     <link rel="stylesheet" href="adventure.css">
 </head>
 <body>
     <main id="game-shell">
-        <section id="intro-panel">
-            <p class="eyebrow">采集 · 合成 · 冒险</p>
-            <h1>荒野工匠 Demo</h1>
-            <p>在开放荒野中自由探索，修复营地，合成工具和装备，击败守门石像，打开古代废墟。</p>
-            <div class="controls">
-                <span>移动：WASD / 方向键</span>
-                <span>采集：长按 E</span>
-                <span>交互：按 E</span>
-                <span>攻击：鼠标左键 / 空格</span>
-                <span>投掷：选中煤火弹后按住攻击键瞄准，松开投出</span>
-                <span>格挡：F / 右键</span>
-                <span>冲刺：Shift</span>
-                <span>背包/合成：I</span>
-                <span>手机：左侧摇杆移动，右侧按钮操作</span>
-            </div>
-        </section>
-
         <section id="play-area">
             <div id="canvas-wrap">
+                <div id="release-main-menu" class="release-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="release-menu-title">
+                    <section class="release-menu-card">
+                        <p class="eyebrow">正式版路线</p>
+                        <h1 id="release-menu-title">荒野工匠</h1>
+                        <p>生存、结交村庄、收集三枚远古核心，开启最终挑战。</p>
+                        <div class="release-menu-actions">
+                            <button id="continue-game-btn" type="button">继续游戏</button>
+                            <button id="new-game-btn" type="button">新游戏</button>
+                            <button id="manual-save-btn" type="button">保存</button>
+                            <button id="manual-load-btn" type="button">读取</button>
+                            <button id="menu-settings-btn" type="button">世界设置</button>
+                        </div>
+                        <small id="save-summary">尚未检查存档</small>
+                        <section id="menu-settings-panel" class="release-menu-panel hidden" aria-label="世界设置">
+                            <h2>世界设置</h2>
+                            <label class="settings-row">
+                                <span>世界种子</span>
+                                <input id="setting-seed" type="text" placeholder="留空随机">
+                            </label>
+                            <label class="settings-row">
+                                <span>怪物密度</span>
+                                <input id="setting-monster-density" type="range" min="0.5" max="2" step="0.1" value="1">
+                                <strong id="setting-monster-density-label">1.0x</strong>
+                            </label>
+                            <label class="settings-row">
+                                <span>白天长度</span>
+                                <input id="setting-day-length" type="range" min="140" max="420" step="10" value="230">
+                                <strong id="setting-day-length-label">230秒</strong>
+                            </label>
+                            <label class="settings-row">
+                                <span>丛林规模</span>
+                                <input id="setting-jungle-scale" type="range" min="0.5" max="2.2" step="0.1" value="1">
+                                <strong id="setting-jungle-scale-label">1.0x</strong>
+                            </label>
+                            <label class="settings-row">
+                                <span>森林规模</span>
+                                <input id="setting-forest-scale" type="range" min="0.5" max="2" step="0.1" value="1">
+                                <strong id="setting-forest-scale-label">1.0x</strong>
+                            </label>
+                            <label class="settings-row">
+                                <span>村庄规模</span>
+                                <input id="setting-village-scale" type="range" min="0.7" max="1.8" step="0.1" value="1">
+                                <strong id="setting-village-scale-label">1.0x</strong>
+                            </label>
+                            <label class="settings-row">
+                                <span>村庄间距</span>
+                                <input id="setting-village-distance" type="range" min="0.6" max="1.8" step="0.1" value="1">
+                                <strong id="setting-village-distance-label">1.0x</strong>
+                            </label>
+                            <label class="settings-row">
+                                <span>教派房距</span>
+                                <input id="setting-cult-spacing" type="range" min="80" max="500" step="10" value="150">
+                                <strong id="setting-cult-spacing-label">150</strong>
+                            </label>
+                            <label class="settings-row settings-check-row">
+                                <span>铁堡村</span>
+                                <input id="setting-fortress-enabled" type="checkbox" checked>
+                                <strong>生成</strong>
+                            </label>
+                            <button id="apply-wilderness-settings-btn" type="button">应用并重生荒野</button>
+                        </section>
+                        <section id="menu-controls-panel" class="release-menu-panel">
+                            <h2>操作</h2>
+                            <div class="controls">
+                                <span>移动：WASD / 方向键</span>
+                                <span>采集/交互：E</span>
+                                <span>攻击：鼠标左键 / 空格</span>
+                                <span>格挡：F / 右键</span>
+                                <span>冲刺：Shift</span>
+                                <span>背包/合成：I</span>
+                                <span>菜单：Esc</span>
+                            </div>
+                        </section>
+                    </section>
+                </div>
                 <canvas id="game-canvas" width="960" height="640" aria-label="荒野工匠游戏画面"></canvas>
                 <div id="loading-screen">
                     <div class="loading-spinner"></div>
                     <strong>生成荒野中...</strong>
                     <span>正在布置村庄、资源和怪物</span>
+                    <div class="loading-progress"><i></i></div>
                 </div>
                 <div id="toast">靠近资源后长按 E 采集。</div>
+                <div id="release-objective-card" aria-live="polite">
+                    <strong>主线目标</strong>
+                    <p id="release-objective-title">收集远古核心</p>
+                    <div class="core-row"><span id="core-royal">□</span>蜂王浆核心</div>
+                    <div class="core-row"><span id="core-crystal">□</span>晶核核心</div>
+                    <div class="core-row"><span id="core-vine">□</span>古藤核心</div>
+                </div>
                 <button id="villager-trade-btn" class="hidden" type="button">交易</button>
-                <button id="sidebar-toggle-btn" type="button" aria-pressed="false">全屏游戏</button>
+                <button id="sidebar-toggle-btn" type="button" aria-pressed="false">菜单</button>
                 <div id="mobile-controls" aria-hidden="true">
                     <div id="mobile-joystick" aria-label="移动摇杆">
                         <div id="mobile-joystick-thumb"></div>
@@ -100,60 +166,12 @@
                     <ol>
                         <li>采集资源并修复营地篝火。</li>
                         <li>合成石镐、铁剑和防具。</li>
-                        <li>击败守门石像，合成废墟钥匙。</li>
-                        <li>打开右上角古代废墟完成 Demo。</li>
+                        <li>击败三大首领，取得远古核心。</li>
+                        <li>集齐核心后寻找最终祭坛。</li>
                     </ol>
                     <button id="restart-btn" type="button">重新开始</button>
                 </div>
 
-                <div class="panel" id="wilderness-settings-panel">
-                    <h2>荒野设置</h2>
-                    <label class="settings-row">
-                        <span>世界种子</span>
-                        <input id="setting-seed" type="text" placeholder="留空随机">
-                    </label>
-                    <label class="settings-row">
-                        <span>怪物密度</span>
-                        <input id="setting-monster-density" type="range" min="0.5" max="2" step="0.1" value="1">
-                        <strong id="setting-monster-density-label">1.0x</strong>
-                    </label>
-                    <label class="settings-row">
-                        <span>白天长度</span>
-                        <input id="setting-day-length" type="range" min="140" max="420" step="10" value="230">
-                        <strong id="setting-day-length-label">230秒</strong>
-                    </label>
-                    <label class="settings-row">
-                        <span>丛林规模</span>
-                        <input id="setting-jungle-scale" type="range" min="0.5" max="2.2" step="0.1" value="1">
-                        <strong id="setting-jungle-scale-label">1.0x</strong>
-                    </label>
-                    <label class="settings-row">
-                        <span>森林规模</span>
-                        <input id="setting-forest-scale" type="range" min="0.5" max="2" step="0.1" value="1">
-                        <strong id="setting-forest-scale-label">1.0x</strong>
-                    </label>
-                    <label class="settings-row">
-                        <span>村庄规模</span>
-                        <input id="setting-village-scale" type="range" min="0.7" max="1.8" step="0.1" value="1">
-                        <strong id="setting-village-scale-label">1.0x</strong>
-                    </label>
-                    <label class="settings-row">
-                        <span>村庄间距</span>
-                        <input id="setting-village-distance" type="range" min="0.6" max="1.8" step="0.1" value="1">
-                        <strong id="setting-village-distance-label">1.0x</strong>
-                    </label>
-                    <label class="settings-row">
-                        <span>教派房距</span>
-                        <input id="setting-cult-spacing" type="range" min="80" max="500" step="10" value="150">
-                        <strong id="setting-cult-spacing-label">150</strong>
-                    </label>
-                    <label class="settings-row settings-check-row">
-                        <span>铁堡村</span>
-                        <input id="setting-fortress-enabled" type="checkbox" checked>
-                        <strong>生成</strong>
-                    </label>
-                    <button id="apply-wilderness-settings-btn" type="button">应用并重生荒野</button>
-                </div>
             </aside>
         </section>
     </main>
